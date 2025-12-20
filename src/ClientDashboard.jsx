@@ -12,12 +12,17 @@ const MedicareDashboard = () => {
   const [selectedOutcomes, setSelectedOutcomes] = useState([]);
   const [searchText, setSearchText] = useState("");
   const [listId, setListId] = useState("");
-  const [startDate, setStartDate] = useState("2025-12-15");
+  const [startDate, setStartDate] = useState(
+  new Date().toISOString().split("T")[0]
+);
   const [startTime, setStartTime] = useState("");
   const [endDate, setEndDate] = useState("");
   const [endTime, setEndTime] = useState("");
   const [timeRange, setTimeRange] = useState("");
   const [campaignId, setCampaignId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortColumn, setSortColumn] = useState("id"); // Default sort by ID
+  const [sortDirection, setSortDirection] = useState("asc"); // 'asc' or 'desc'
 
   
   // Modal states
@@ -126,7 +131,7 @@ useEffect(() => {
       }
 
       const res = await fetch(
-        `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/${campaignId}/dashboard?start_date=2025-12-15&page=1&page_size=50`,
+        `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/${campaignId}/dashboard?start_date=${startDate}&page=${currentPage}&page_size=25`,
         {
           headers: {
             accept: "application/json",
@@ -155,7 +160,13 @@ useEffect(() => {
     }
   };
   fetchData();
-}, [campaignId]);
+}, [campaignId, startDate, currentPage]);
+
+// Reset to page 1 when filters change
+useEffect(() => {
+  setCurrentPage(1);
+}, [searchText, listId, selectedOutcomes, startTime, endDate, endTime]);
+
 
   const summaryChartRef = useRef(null);
   const mainChartRef = useRef(null);
@@ -517,6 +528,43 @@ useEffect(() => {
 }
 
     return true;
+  }).sort((a, b) => {
+    let aValue, bValue;
+    
+    // Get values based on sort column
+    switch (sortColumn) {
+      case "id":
+        aValue = a.id;
+        bValue = b.id;
+        break;
+      case "phone":
+        aValue = a.phone.toLowerCase();
+        bValue = b.phone.toLowerCase();
+        break;
+      case "listId":
+        aValue = a.listId.toString().toLowerCase();
+        bValue = b.listId.toString().toLowerCase();
+        break;
+      case "category":
+        aValue = a.category.toLowerCase();
+        bValue = b.category.toLowerCase();
+        break;
+      case "timestamp":
+        aValue = parseTimestamp(a.timestamp)?.getTime() || 0;
+        bValue = parseTimestamp(b.timestamp)?.getTime() || 0;
+        break;
+      default:
+        aValue = a.id;
+        bValue = b.id;
+    }
+    
+    // Compare values
+    let comparison = 0;
+    if (aValue < bValue) comparison = -1;
+    if (aValue > bValue) comparison = 1;
+    
+    // Apply sort direction
+    return sortDirection === "asc" ? comparison : -comparison;
   });
 
   // Calculate outcomes based on TOTAL records (not filtered) - percentages stay constant
@@ -562,12 +610,25 @@ useEffect(() => {
   const handleReset = () => {
     setSearchText("");
     setListId("");
-    setStartDate("2025-12-15");
+    setStartDate(new Date().toISOString().split("T")[0]);
     setStartTime("");
     setEndDate("");
     setEndTime("");
     setSelectedOutcomes([]);
     setTimeRange("");
+    setCurrentPage(1);
+  };
+
+  // Handle column sorting
+  const handleSort = (column) => {
+    if (sortColumn === column) {
+      // Toggle direction if same column
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // New column, default to ascending
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
   };
 
   // Handle opening transcript modal
@@ -1792,20 +1853,101 @@ useEffect(() => {
                 <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "800px" }}>
                   <thead>
                     <tr style={{ borderBottom: "2px solid #e5e5e5" }}>
-                      <th style={{ textAlign: "left", padding: "12px 16px", fontWeight: 500, color: "#333", fontSize: "13px" }}>
-                        #
+                      <th 
+                        onClick={() => handleSort("id")}
+                        style={{ 
+                          textAlign: "left", 
+                          padding: "12px 16px", 
+                          fontWeight: 500, 
+                          color: "#333", 
+                          fontSize: "13px",
+                          cursor: "pointer",
+                          userSelect: "none",
+                          position: "relative"
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          #
+                          {sortColumn === "id" && (
+                            <i className={`bi bi-chevron-${sortDirection === "asc" ? "up" : "down"}`} style={{ fontSize: "12px" }}></i>
+                          )}
+                        </div>
                       </th>
-                      <th style={{ textAlign: "left", padding: "12px 16px", fontWeight: 500, color: "#333", fontSize: "13px" }}>
-                        Phone No
+                      <th 
+                        onClick={() => handleSort("phone")}
+                        style={{ 
+                          textAlign: "left", 
+                          padding: "12px 16px", 
+                          fontWeight: 500, 
+                          color: "#333", 
+                          fontSize: "13px",
+                          cursor: "pointer",
+                          userSelect: "none"
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          Phone No
+                          {sortColumn === "phone" && (
+                            <i className={`bi bi-chevron-${sortDirection === "asc" ? "up" : "down"}`} style={{ fontSize: "12px" }}></i>
+                          )}
+                        </div>
                       </th>
-                      <th style={{ textAlign: "left", padding: "12px 16px", fontWeight: 500, color: "#333", fontSize: "13px" }}>
-                        List ID
+                      <th 
+                        onClick={() => handleSort("listId")}
+                        style={{ 
+                          textAlign: "left", 
+                          padding: "12px 16px", 
+                          fontWeight: 500, 
+                          color: "#333", 
+                          fontSize: "13px",
+                          cursor: "pointer",
+                          userSelect: "none"
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          List ID
+                          {sortColumn === "listId" && (
+                            <i className={`bi bi-chevron-${sortDirection === "asc" ? "up" : "down"}`} style={{ fontSize: "12px" }}></i>
+                          )}
+                        </div>
                       </th>
-                      <th style={{ textAlign: "left", padding: "12px 16px", fontWeight: 500, color: "#333", fontSize: "13px" }}>
-                        Response Category
+                      <th 
+                        onClick={() => handleSort("category")}
+                        style={{ 
+                          textAlign: "left", 
+                          padding: "12px 16px", 
+                          fontWeight: 500, 
+                          color: "#333", 
+                          fontSize: "13px",
+                          cursor: "pointer",
+                          userSelect: "none"
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          Response Category
+                          {sortColumn === "category" && (
+                            <i className={`bi bi-chevron-${sortDirection === "asc" ? "up" : "down"}`} style={{ fontSize: "12px" }}></i>
+                          )}
+                        </div>
                       </th>
-                      <th style={{ textAlign: "left", padding: "12px 16px", fontWeight: 500, color: "#333", fontSize: "13px" }}>
-                        Timestamp (US EST/EDT)
+                      <th 
+                        onClick={() => handleSort("timestamp")}
+                        style={{ 
+                          textAlign: "left", 
+                          padding: "12px 16px", 
+                          fontWeight: 500, 
+                          color: "#333", 
+                          fontSize: "13px",
+                          cursor: "pointer",
+                          userSelect: "none"
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          Timestamp (US EST/EDT)
+                          {sortColumn === "timestamp" && (
+                            <i className={`bi bi-chevron-${sortDirection === "asc" ? "up" : "down"}`} style={{ fontSize: "12px" }}></i>
+                          )}
+                        </div>
                       </th>
                       <th style={{ textAlign: "left", padding: "12px 16px", fontWeight: 500, color: "#333", fontSize: "13px" }}>
                         Transcript
@@ -1901,11 +2043,12 @@ useEffect(() => {
               {/* Pagination */}
               <div style={{ marginTop: "24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
                 <div style={{ fontSize: "13px", color: "#666" }}>
-                  Showing {dashboardData?.pagination?.page || 1} of {dashboardData?.pagination?.total_pages || 1} (Total
-                  records: {filteredCallRecords.length})
+                  Showing page {currentPage} of {dashboardData?.pagination?.total_pages || 1} (Total
+                  records: {dashboardData?.pagination?.total_records || 0})
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                   <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
@@ -1916,36 +2059,55 @@ useEffect(() => {
                       backgroundColor: "white",
                       fontSize: "13px",
                       fontWeight: 500,
-                      cursor: "not-allowed",
-                      opacity: 0.5,
+                      cursor: currentPage === 1 ? "not-allowed" : "pointer",
+                      opacity: currentPage === 1 ? 0.5 : 1,
                     }}
-                    disabled
+                    disabled={currentPage === 1}
                   >
                     <i className="bi bi-chevron-left"></i>
                     Previous
                   </button>
 
                   <div style={{ display: "flex", gap: "4px" }}>
-                    {[1, 2, 3, 4, 5].map((page) => (
-                      <button
-                        key={page}
-                        style={{
-                          padding: "6px 12px",
-                          border: page === 1 ? "none" : "1px solid #ddd",
-                          borderRadius: "4px",
-                          backgroundColor: page === 1 ? "#1a73e8" : "white",
-                          color: page === 1 ? "white" : "#333",
-                          fontSize: "13px",
-                          fontWeight: 500,
-                          cursor: "pointer",
-                        }}
-                      >
-                        {page}
-                      </button>
-                    ))}
+                    {(() => {
+                      const totalPages = dashboardData?.pagination?.total_pages || 1;
+                      const pages = [];
+                      const maxPagesToShow = 5;
+                      
+                      let startPage = Math.max(1, currentPage - 2);
+                      let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+                      
+                      if (endPage - startPage < maxPagesToShow - 1) {
+                        startPage = Math.max(1, endPage - maxPagesToShow + 1);
+                      }
+                      
+                      for (let i = startPage; i <= endPage; i++) {
+                        pages.push(i);
+                      }
+                      
+                      return pages.map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          style={{
+                            padding: "6px 12px",
+                            border: page === currentPage ? "none" : "1px solid #ddd",
+                            borderRadius: "4px",
+                            backgroundColor: page === currentPage ? "#1a73e8" : "white",
+                            color: page === currentPage ? "white" : "#333",
+                            fontSize: "13px",
+                            fontWeight: 500,
+                            cursor: "pointer",
+                          }}
+                        >
+                          {page}
+                        </button>
+                      ));
+                    })()}
                   </div>
 
                   <button
+                    onClick={() => setCurrentPage(prev => Math.min(dashboardData?.pagination?.total_pages || 1, prev + 1))}
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
@@ -1957,8 +2119,10 @@ useEffect(() => {
                       color: "#333",
                       fontSize: "13px",
                       fontWeight: 500,
-                      cursor: "pointer",
+                      cursor: currentPage === (dashboardData?.pagination?.total_pages || 1) ? "not-allowed" : "pointer",
+                      opacity: currentPage === (dashboardData?.pagination?.total_pages || 1) ? 0.5 : 1,
                     }}
+                    disabled={currentPage === (dashboardData?.pagination?.total_pages || 1)}
                   >
                     Next
                     <i className="bi bi-chevron-right"></i>
@@ -2199,6 +2363,12 @@ useEffect(() => {
         /* Base responsive settings */
         * {
           box-sizing: border-box;
+        }
+        
+        /* Sortable table header hover effect */
+        th[style*="cursor: pointer"]:hover {
+          background-color: #f5f5f5;
+          transition: background-color 0.2s;
         }
         
         /* Tablet and below (768px) */

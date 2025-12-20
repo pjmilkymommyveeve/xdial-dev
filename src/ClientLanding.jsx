@@ -328,7 +328,7 @@ const styles = `
     line-height: 1.3;
     font-size: 14px;
     padding: 1.5rem 0rem;
-    zoom: 0.65;
+    zoom: 0.75;
   }
 
   .container {
