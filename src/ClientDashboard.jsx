@@ -18,25 +18,32 @@ const MedicareDashboard = () => {
   const [startTime, setStartTime] = useState("");
   const [endDate, setEndDate] = useState("");
   const [endTime, setEndTime] = useState("");
-  const [timeRange, setTimeRange] = useState("");
+  const [timeRange, setTimeRange] = useState("Last 5 Minutes");
   const [campaignId, setCampaignId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortColumn, setSortColumn] = useState("id"); // Default sort by ID
   const [sortDirection, setSortDirection] = useState("asc"); // 'asc' or 'desc'
+  const [fetchTrigger, setFetchTrigger] = useState(0); // Trigger for manual data fetching
 
   // Modal states
   const [showTranscriptModal, setShowTranscriptModal] = useState(false);
   const [selectedCallRecord, setSelectedCallRecord] = useState(null);
 
+  // KEY FIX: Get campaign ID and force reload on mount
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get("campaign_id");
     if (id) {
       setCampaignId(id);
+      // Force reset state when navigating back
+      setDashboardData(null);
+      setLoading(true);
+      setError(null);
+      setCurrentView("dashboard");
     } else {
       window.location.href = "/client-landing";
     }
-  }, []);
+  }, []); // Only run once on mount
   const parseTimestamp = (timestamp) => {
     try {
       if (!timestamp) return null;
@@ -212,7 +219,7 @@ const MedicareDashboard = () => {
       }
     };
     fetchData();
-  }, [campaignId, startDate]); // Only refetch when campaign or start date changes
+  }, [campaignId, fetchTrigger]); // Only refetch when campaign changes or Apply Filters is clicked
 
   // Reset to page 1 when filters change
 
@@ -229,7 +236,7 @@ const MedicareDashboard = () => {
         "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
       backgroundColor: "#f5f5f5",
       color: "#333",
-      zoom: "0.9"
+      zoom: "0.9",
     },
     header: {
       backgroundColor: "#fff",
@@ -409,6 +416,7 @@ const MedicareDashboard = () => {
     Rebuttal: "Not Interested",
     Busy: "Not Interested",
     "Already Customer": "Not Interested",
+    "Spanish Answer Machine": "Answering Machine",
     "Repeat Pitch": "Not Interested",
     DNQ: "Do Not Qualify",
     "Do not qualify": "Do Not Qualify",
@@ -517,44 +525,6 @@ const MedicareDashboard = () => {
         !record.listId.toString().toLowerCase().includes(listId.toLowerCase())
       ) {
         return false;
-      }
-
-      // Filter by time range dropdown (Last 5 Minutes, etc.)
-      if (timeRange && record.timestamp) {
-        const recordDate = new Date(record.timestamp);
-        const now = new Date();
-        let minutesAgo = 0;
-
-        switch (timeRange) {
-          case "Last 5 Minutes":
-            minutesAgo = 5;
-            break;
-          case "Last 15 Minutes":
-            minutesAgo = 15;
-            break;
-          case "Last 1 Hour":
-            minutesAgo = 60;
-            break;
-          case "Today":
-            const startOfToday = new Date(
-              now.getFullYear(),
-              now.getMonth(),
-              now.getDate()
-            );
-            if (recordDate < startOfToday) {
-              return false;
-            }
-            break;
-          default:
-            break;
-        }
-
-        if (minutesAgo > 0) {
-          const cutoffTime = new Date(now.getTime() - minutesAgo * 60000);
-          if (recordDate < cutoffTime) {
-            return false;
-          }
-        }
       }
 
       // Filter by date/time range
@@ -666,6 +636,98 @@ const MedicareDashboard = () => {
     };
   });
 
+  // Calculate outcomes filtered by time range (for Engaged/Drop-Off sections)
+  const getTimeFilteredRecords = () => {
+    if (!timeRange) return callRecords;
+    
+    const now = new Date();
+    let minutesBack = 0;
+
+    switch (timeRange) {
+      case "Last 5 Minutes":
+        minutesBack = 5;
+        break;
+      case "Last 15 Minutes":
+        minutesBack = 15;
+        break;
+      case "Last 1 Hour":
+        minutesBack = 60;
+        break;
+      case "Today":
+        const startOfToday = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate()
+        );
+        return callRecords.filter((record) => {
+          if (!record.timestamp) return false;
+          const recordDate = parseTimestamp(record.timestamp);
+          return recordDate && recordDate >= startOfToday;
+        });
+      default:
+        return callRecords;
+    }
+
+    // For time-based filters (not "Today")
+    if (minutesBack > 0) {
+      // Find the most recent call timestamp
+      const allTimestamps = callRecords
+        .map((r) => parseTimestamp(r.timestamp))
+        .filter((d) => d !== null)
+        .sort((a, b) => b - a); // Sort descending (newest first)
+
+      if (allTimestamps.length === 0) {
+        return [];
+      }
+
+      const mostRecentCallTime = allTimestamps[0];
+      const startTime = new Date(mostRecentCallTime.getTime() - minutesBack * 60000);
+
+      // Filter records within the time range
+      return callRecords.filter((record) => {
+        if (!record.timestamp) return false;
+        const recordDate = parseTimestamp(record.timestamp);
+        return (
+          recordDate &&
+          recordDate >= startTime &&
+          recordDate <= mostRecentCallTime
+        );
+      });
+    }
+
+    return callRecords;
+  };
+
+  const timeFilteredRecords = getTimeFilteredRecords();
+
+  const timeFilteredOutcomes = ALLOWED_CATEGORIES.map((catName) => {
+    const cat = dashboardData?.all_categories?.find(
+      (c) => c.name === catName || c.original_name === catName
+    );
+    const countInTimeFiltered = timeFilteredRecords.filter(
+      (r) => r.category === catName
+    ).length;
+    return {
+      id: catName.toLowerCase().replace(/\s/g, "-"),
+      label: catName,
+      icon: OUTCOME_ICON_MAP[catName] || "bi-circle-fill",
+      count: countInTimeFiltered,
+      percentage: timeFilteredRecords.length
+        ? Math.round((countInTimeFiltered / timeFilteredRecords.length) * 100)
+        : 0,
+      color:
+        cat &&
+        cat.color &&
+        cat.color !== "#818589" &&
+        cat.color !== "#bbb" &&
+        cat.color !== "#eceff4"
+          ? cat.color
+          : VIBRANT_COLORS[catName] || "#1a73e8",
+      bgColor: "#fff",
+    };
+  });
+
+
   // Calculate totals for statistics view
   const qualifiedCount = filteredCallRecords.filter(
     (r) => r.category === "Qualified"
@@ -673,6 +735,15 @@ const MedicareDashboard = () => {
   const totalCalls = filteredCallRecords.length;
   const qualifiedPercentage =
     totalCalls > 0 ? Math.round((qualifiedCount / totalCalls) * 100) : 0;
+
+  // Calculate qualified percentage for time-filtered records (used in summary section)
+  const timeFilteredQualifiedCount = timeFilteredRecords.filter(
+    (r) => r.category === "Qualified"
+  ).length;
+  const timeFilteredQualifiedPercentage =
+    timeFilteredRecords.length > 0
+      ? Math.round((timeFilteredQualifiedCount / timeFilteredRecords.length) * 100)
+      : 0;
 
   // Handle outcome filter click (multi-select by default)
   const handleOutcomeClick = (catName) => {
@@ -702,6 +773,7 @@ const MedicareDashboard = () => {
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) {
       setCurrentPage(1);
+    setFetchTrigger(prev => prev + 1); // Trigger data fetch with reset dates
     }
   }, [totalFilteredRecords, totalPages]);
 
@@ -710,7 +782,15 @@ const MedicareDashboard = () => {
     // Do nothing
   };
 
+  // Handle Apply Filters button
+  const handleApplyFilters = () => {
+    setLoading(true);
+    setCurrentPage(1);
+    setFetchTrigger(prev => prev + 1); // Increment to trigger useEffect
+  };
+
   const handleReset = () => {
+    setLoading(true);
     setSearchText("");
     setListId("");
     setStartDate(new Date().toISOString().split("T")[0]);
@@ -720,6 +800,7 @@ const MedicareDashboard = () => {
     setSelectedOutcomes([]);
     setTimeRange("");
     setCurrentPage(1);
+    setFetchTrigger(prev => prev + 1); // Trigger data fetch with reset dates
   };
 
   // Handle column sorting
@@ -775,77 +856,117 @@ const MedicareDashboard = () => {
       return { labels: [], transferredData: [], hangupData: [] };
     }
 
-    // Get today's date
-    const today = new Date();
-    const todayStr = formatDateForComparison(today);
+    // Get the current time
+    const now = new Date();
 
-    // Filter records for today only
-    const todayRecords = callRecords.filter((record) => {
-      if (!record.timestamp) return false;
-      const recordDate = parseTimestamp(record.timestamp);
-      if (!recordDate) return false;
-      const recordDateStr = formatDateForComparison(recordDate);
-      return recordDateStr === todayStr;
-    });
+    // Filter records based on selected time range
+    let filteredRecords = [];
+    let startTime = null;
+    let minutesBack = 0;
 
-    if (todayRecords.length === 0) {
+    switch (timeRange) {
+      case "Last 5 Minutes":
+        minutesBack = 5;
+        break;
+      case "Last 15 Minutes":
+        minutesBack = 15;
+        break;
+      case "Last 1 Hour":
+        minutesBack = 60;
+        break;
+      case "Today":
+        // Get all records from today
+        const startOfToday = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate()
+        );
+        filteredRecords = callRecords.filter((record) => {
+          if (!record.timestamp) return false;
+          const recordDate = parseTimestamp(record.timestamp);
+          return recordDate && recordDate >= startOfToday;
+        });
+        break;
+      default:
+        return { labels: [], transferredData: [], hangupData: [] };
+    }
+
+    // For time-based filters (not "Today")
+    if (minutesBack > 0) {
+      // Find the most recent call timestamp
+      const allTimestamps = callRecords
+        .map((r) => parseTimestamp(r.timestamp))
+        .filter((d) => d !== null)
+        .sort((a, b) => b - a); // Sort descending (newest first)
+
+      if (allTimestamps.length === 0) {
+        return { labels: [], transferredData: [], hangupData: [] };
+      }
+
+      const mostRecentCallTime = allTimestamps[0];
+      startTime = new Date(mostRecentCallTime.getTime() - minutesBack * 60000);
+
+      // Filter records within the time range
+      filteredRecords = callRecords.filter((record) => {
+        if (!record.timestamp) return false;
+        const recordDate = parseTimestamp(record.timestamp);
+        return (
+          recordDate &&
+          recordDate >= startTime &&
+          recordDate <= mostRecentCallTime
+        );
+      });
+    }
+
+    if (filteredRecords.length === 0) {
       return { labels: [], transferredData: [], hangupData: [] };
     }
 
-    // Find the earliest call time today
-    let earliestMinutes = Infinity;
-    todayRecords.forEach((record) => {
-      const recordDate = parseTimestamp(record.timestamp);
-      if (recordDate) {
-        const minutes = getMinutesFromStartOfDay(recordDate);
-        if (minutes < earliestMinutes) {
-          earliestMinutes = minutes;
-        }
-      }
-    });
+    // Get the time range for the graph
+    const timestamps = filteredRecords
+      .map((r) => parseTimestamp(r.timestamp))
+      .filter((d) => d !== null)
+      .sort((a, b) => a - b);
 
-    // If no valid records, return empty
-    if (earliestMinutes === Infinity) {
-      return { labels: [], transferredData: [], hangupData: [] };
-    }
+    const earliestTime = timestamps[0];
+    const latestTime = timestamps[timestamps.length - 1];
 
-    // Round down to nearest 5-minute interval
-    const startInterval = Math.floor(earliestMinutes / 5) * 5;
-
-    // Determine the end interval (current time or last call time, whichever is later)
-    const currentMinutes = getMinutesFromStartOfDay(new Date());
-    let latestMinutes = 0;
-    todayRecords.forEach((record) => {
-      const recordDate = parseTimestamp(record.timestamp);
-      if (recordDate) {
-        const minutes = getMinutesFromStartOfDay(recordDate);
-        if (minutes > latestMinutes) {
-          latestMinutes = minutes;
-        }
-      }
-    });
-    const endInterval = Math.max(currentMinutes, latestMinutes);
-
-    // Create 5-minute interval labels and data
+    // Create minute-by-minute labels and data
     const labels = [];
     const transferredData = [];
     const hangupData = [];
 
-    for (let interval = startInterval; interval <= endInterval; interval += 5) {
-      labels.push(interval.toString());
+    // Round down to the nearest minute
+    const startMinute = new Date(earliestTime);
+    startMinute.setSeconds(0, 0);
 
-      // Count calls up to this interval (cumulative)
+    const endMinute = new Date(latestTime);
+    endMinute.setSeconds(59, 999);
+
+    // Generate data for each minute
+    let currentMinute = new Date(startMinute);
+    while (currentMinute <= endMinute) {
+      const nextMinute = new Date(currentMinute.getTime() + 60000);
+
+      // Format label as HH:MM
+      const hours = currentMinute.getHours();
+      const minutes = currentMinute.getMinutes();
+      const displayHour = hours % 12 || 12;
+      const ampm = hours < 12 ? "AM" : "PM";
+      labels.push(
+        `${displayHour}:${minutes.toString().padStart(2, "0")} ${ampm}`
+      );
+
+      // Count calls in this minute (cumulative)
       let transferredCount = 0;
       let hangupCount = 0;
 
-      todayRecords.forEach((record) => {
+      filteredRecords.forEach((record) => {
         const recordDate = parseTimestamp(record.timestamp);
         if (!recordDate) return;
 
-        const recordMinutes = getMinutesFromStartOfDay(recordDate);
-
-        // Only count calls that happened before or at this interval
-        if (recordMinutes <= interval) {
+        // Count all calls up to and including this minute
+        if (recordDate <= nextMinute) {
           if (ENGAGED_OUTCOMES.includes(record.category)) {
             transferredCount++;
           } else if (DROPOFF_OUTCOMES.includes(record.category)) {
@@ -856,11 +977,37 @@ const MedicareDashboard = () => {
 
       transferredData.push(transferredCount);
       hangupData.push(hangupCount);
+
+      currentMinute = nextMinute;
     }
 
     return { labels, transferredData, hangupData };
   };
+  // KEY FIX: Cleanup charts on unmount and view change
+  useEffect(() => {
+    return () => {
+      if (summaryChartInstance.current) {
+        summaryChartInstance.current.destroy();
+        summaryChartInstance.current = null;
+      }
+      if (mainChartInstance.current) {
+        mainChartInstance.current.destroy();
+        mainChartInstance.current = null;
+      }
+    };
+  }, []);
 
+  // KEY FIX: Destroy charts when switching views
+  useEffect(() => {
+    if (currentView !== "statistics" && mainChartInstance.current) {
+      mainChartInstance.current.destroy();
+      mainChartInstance.current = null;
+    }
+    if (!showSummaryGraph && summaryChartInstance.current) {
+      summaryChartInstance.current.destroy();
+      summaryChartInstance.current = null;
+    }
+  }, [currentView, showSummaryGraph]);
   // Initialize summary chart
   useEffect(() => {
     if (showSummaryGraph && summaryChartRef.current) {
@@ -956,201 +1103,222 @@ const MedicareDashboard = () => {
         summaryChartInstance.current = null;
       }
     };
-  }, [showSummaryGraph, callRecords]);
+  }, [showSummaryGraph, callRecords, timeRange]);
 
-  // Function to process statistics data based on filters
-  // Function to process statistics data based on filters
   const processStatisticsData = () => {
-    if (!callRecords || callRecords.length === 0) {
-      return { labels: [], datasets: [] };
-    }
+  if (!callRecords || callRecords.length === 0) {
+    return { labels: [], datasets: [] };
+  }
 
-    // Get all valid timestamps
-    const allTimestamps = callRecords
-      .map((r) => parseTimestamp(r.timestamp))
-      .filter((d) => d !== null);
+  // Filter records based on date/time selection
+  let filteredData = callRecords.filter((record) => {
+    if (!record.timestamp) return false;
+    
+    const recordDate = parseTimestamp(record.timestamp);
+    if (!recordDate) return false;
 
-    if (allTimestamps.length === 0) {
-      return { labels: [], datasets: [] };
-    }
-
-    // Sort timestamps to find earliest and latest
-    allTimestamps.sort((a, b) => a - b);
-    const earliestDate = allTimestamps[0];
-    const latestDate = allTimestamps[allTimestamps.length - 1];
-
-    // Check if all data is within a single day
-    const earliestDateStr = formatDateForComparison(earliestDate);
-    const latestDateStr = formatDateForComparison(latestDate);
-    const isSingleDay = earliestDateStr === latestDateStr;
-
-    // If no specific categories selected (All Calls), show all categories
-    const categoriesToShow =
-      selectedOutcomes.length === 0 ? ALLOWED_CATEGORIES : selectedOutcomes;
-
-    // Filter records based on selected categories only (not date, use all data)
-    const filtered = callRecords.filter((record) => {
-      // Check if category is selected (if All Calls, include all)
-      if (
-        selectedOutcomes.length > 0 &&
-        !selectedOutcomes.includes(record.category)
-      ) {
+    // Apply start date/time filter
+    if (startDate) {
+      const startDateTime = parseUserInputDate(startDate, startTime);
+      if (startDateTime && recordDate < startDateTime) {
         return false;
       }
-      return true;
+    }
+
+    // Apply end date/time filter
+    if (endDate) {
+      const endDateTime = parseUserInputDate(endDate, endTime || "23:59:59");
+      if (endDateTime && recordDate > endDateTime) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  // Filter by selected categories
+  if (selectedOutcomes.length > 0) {
+    filteredData = filteredData.filter((record) =>
+      selectedOutcomes.includes(record.category)
+    );
+  }
+
+  if (filteredData.length === 0) {
+    return { labels: [], datasets: [] };
+  }
+
+  // Get timestamps for filtered data
+  const allTimestamps = filteredData
+    .map((r) => parseTimestamp(r.timestamp))
+    .filter((d) => d !== null)
+    .sort((a, b) => a - b);
+
+  if (allTimestamps.length === 0) {
+    return { labels: [], datasets: [] };
+  }
+
+  const earliestDate = allTimestamps[0];
+  const latestDate = allTimestamps[allTimestamps.length - 1];
+
+  // Check if all data is within a single day
+  const earliestDateStr = formatDateForComparison(earliestDate);
+  const latestDateStr = formatDateForComparison(latestDate);
+  const isSingleDay = earliestDateStr === latestDateStr;
+
+  // Categories to show
+  const categoriesToShow =
+    selectedOutcomes.length === 0 ? ALLOWED_CATEGORIES : selectedOutcomes;
+
+  // KEY CHANGE: Determine view mode based on start/end date selection
+  const showDateView = startDate && endDate && startDate !== endDate;
+
+  if (showDateView || !isSingleDay) {
+    // DATE VIEW: Group by date
+    const dateMap = new Map();
+    const allDates = new Set();
+
+    filteredData.forEach((record) => {
+      const recordDate = parseTimestamp(record.timestamp);
+      if (!recordDate) return;
+
+      const dateStr = formatDateForComparison(recordDate);
+      if (!dateStr) return;
+
+      allDates.add(dateStr);
+
+      if (!dateMap.has(dateStr)) {
+        dateMap.set(dateStr, {});
+      }
+
+      const dateData = dateMap.get(dateStr);
+      if (!dateData[record.category]) {
+        dateData[record.category] = 0;
+      }
+      dateData[record.category]++;
     });
 
-    if (filtered.length === 0) {
-      return { labels: [], datasets: [] };
-    }
+    const sortedDates = Array.from(allDates).sort();
 
-    // If single day, group by hour; otherwise group by date
-    if (isSingleDay) {
-      // Group by hour (0-23)
-      const hourMap = new Map();
-
-      // Get the start and end hours from actual data
-      const dataTimestamps = filtered
-        .map((r) => parseTimestamp(r.timestamp))
-        .filter((d) => d !== null);
-
-      const startHour = Math.min(...dataTimestamps.map((d) => d.getHours()));
-      const endHour = Math.max(...dataTimestamps.map((d) => d.getHours()));
-
-      // Initialize only the hours that have data or are in between
-      for (let hour = startHour; hour <= endHour; hour++) {
-        hourMap.set(hour, {});
-      }
-
-      filtered.forEach((record) => {
-        const recordDate = parseTimestamp(record.timestamp);
-        if (!recordDate) return;
-
-        const hour = recordDate.getHours();
-        if (!hourMap.has(hour)) return; // Skip if outside our range
-
-        const hourData = hourMap.get(hour);
-        if (!hourData[record.category]) {
-          hourData[record.category] = 0;
-        }
-        hourData[record.category]++;
+    const labels = sortedDates.map((dateStr) => {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
       });
+    });
 
-      // Create labels for the actual hour range
-      const labels = [];
-      for (let hour = startHour; hour <= endHour; hour++) {
-        const displayHour = hour % 12 || 12;
-        const ampm = hour < 12 ? "AM" : "PM";
-        labels.push(`${displayHour} ${ampm}`);
-      }
-
-      // Create datasets for each category to show
-      const datasets = categoriesToShow.map((category) => {
-        const data = [];
-        for (let hour = startHour; hour <= endHour; hour++) {
-          const hourData = hourMap.get(hour);
-          data.push(hourData[category] || 0);
-        }
-
-        // Find the outcome to get its color
-        const outcome = outcomes.find((o) => o.label === category);
-        const color = outcome ? outcome.color : "#1a73e8";
-
-        // Convert hex to rgba for background and border
-        const hexToRgba = (hex, alpha) => {
-          const r = parseInt(hex.slice(1, 3), 16);
-          const g = parseInt(hex.slice(3, 5), 16);
-          const b = parseInt(hex.slice(5, 7), 16);
-          return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-        };
-
-        return {
-          label: category,
-          data: data,
-          borderColor: hexToRgba(color, 0.5),
-          backgroundColor: hexToRgba(color, 0.08),
-          fill: true,
-          tension: 0.4,
-          pointRadius: 2,
-          pointHoverRadius: 4,
-          borderWidth: 1,
-        };
-      });
-
-      return { labels, datasets };
-    } else {
-      // Group records by date and category
-      const dateMap = new Map();
-
-      // Get all unique dates from the data
-      const allDates = new Set();
-      filtered.forEach((record) => {
-        const recordDate = parseTimestamp(record.timestamp);
-        if (!recordDate) return;
-
-        const dateStr = formatDateForComparison(recordDate);
-        if (!dateStr) return;
-
-        allDates.add(dateStr);
-
-        if (!dateMap.has(dateStr)) {
-          dateMap.set(dateStr, {});
-        }
-
+    const datasets = categoriesToShow.map((category) => {
+      const data = sortedDates.map((dateStr) => {
         const dateData = dateMap.get(dateStr);
-        if (!dateData[record.category]) {
-          dateData[record.category] = 0;
-        }
-        dateData[record.category]++;
+        return dateData && dateData[category] ? dateData[category] : 0;
       });
 
-      // Sort dates
-      const sortedDates = Array.from(allDates).sort();
+      const outcome = outcomes.find((o) => o.label === category);
+      const color = outcome ? outcome.color : "#1a73e8";
 
-      // Create labels from sorted dates
-      const labels = sortedDates.map((dateStr) => {
-        const date = new Date(dateStr);
-        return date.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-        });
-      });
+      const hexToRgba = (hex, alpha) => {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      };
 
-      // Create datasets for each category to show
-      const datasets = categoriesToShow.map((category) => {
-        const data = sortedDates.map((dateStr) => {
-          const dateData = dateMap.get(dateStr);
-          return dateData && dateData[category] ? dateData[category] : 0;
-        });
+      return {
+        label: category,
+        data: data,
+        borderColor: hexToRgba(color, 0.5),
+        backgroundColor: hexToRgba(color, 0.08),
+        fill: true,
+        tension: 0.4,
+        pointRadius: 2,
+        pointHoverRadius: 4,
+        borderWidth: 1,
+      };
+    });
 
-        // Find the outcome to get its color
-        const outcome = outcomes.find((o) => o.label === category);
-        const color = outcome ? outcome.color : "#1a73e8";
+    return { labels, datasets };
+  } else {
+    // HOURLY VIEW: Group by hour for single day
+    const hourMap = new Map();
 
-        // Convert hex to rgba for background and border
-        const hexToRgba = (hex, alpha) => {
-          const r = parseInt(hex.slice(1, 3), 16);
-          const g = parseInt(hex.slice(3, 5), 16);
-          const b = parseInt(hex.slice(5, 7), 16);
-          return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-        };
+    // If time filters are specified, use them; otherwise use data range
+    let startHour, endHour;
 
-        return {
-          label: category,
-          data: data,
-          borderColor: hexToRgba(color, 0.5),
-          backgroundColor: hexToRgba(color, 0.08),
-          fill: true,
-          tension: 0.4,
-          pointRadius: 2,
-          pointHoverRadius: 4,
-          borderWidth: 1,
-        };
-      });
-
-      return { labels, datasets };
+    if (startTime || endTime) {
+      // If times are specified, use those boundaries
+      const startDateTime = parseUserInputDate(startDate, startTime || "00:00");
+      const endDateTime = parseUserInputDate(endDate || startDate, endTime || "23:59");
+      
+      if (startDateTime) startHour = startDateTime.getHours();
+      if (endDateTime) endHour = endDateTime.getHours();
+    } else {
+      // No time filters - use actual data range
+      const dataHours = allTimestamps.map((d) => d.getHours());
+      startHour = Math.min(...dataHours);
+      endHour = Math.max(...dataHours);
     }
-  };
+
+    // Initialize hours in range
+    for (let hour = startHour; hour <= endHour; hour++) {
+      hourMap.set(hour, {});
+    }
+
+    filteredData.forEach((record) => {
+      const recordDate = parseTimestamp(record.timestamp);
+      if (!recordDate) return;
+
+      const hour = recordDate.getHours();
+      if (!hourMap.has(hour)) return;
+
+      const hourData = hourMap.get(hour);
+      if (!hourData[record.category]) {
+        hourData[record.category] = 0;
+      }
+      hourData[record.category]++;
+    });
+
+    // Create labels for hour range
+    const labels = [];
+    for (let hour = startHour; hour <= endHour; hour++) {
+      const displayHour = hour % 12 || 12;
+      const ampm = hour < 12 ? "AM" : "PM";
+      labels.push(`${displayHour} ${ampm}`);
+    }
+
+    // Create datasets
+    const datasets = categoriesToShow.map((category) => {
+      const data = [];
+      for (let hour = startHour; hour <= endHour; hour++) {
+        const hourData = hourMap.get(hour);
+        data.push(hourData[category] || 0);
+      }
+
+      const outcome = outcomes.find((o) => o.label === category);
+      const color = outcome ? outcome.color : "#1a73e8";
+
+      const hexToRgba = (hex, alpha) => {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      };
+
+      return {
+        label: category,
+        data: data,
+        borderColor: hexToRgba(color, 0.5),
+        backgroundColor: hexToRgba(color, 0.08),
+        fill: true,
+        tension: 0.4,
+        pointRadius: 2,
+        pointHoverRadius: 4,
+        borderWidth: 1,
+      };
+    });
+
+    return { labels, datasets };
+  }
+};
 
   // Initialize main statistics chart
   useEffect(() => {
@@ -1238,35 +1406,56 @@ const MedicareDashboard = () => {
     };
   }, [currentView]);
 
-  // Update chart when filters change
-  // Update chart when filters change
-useEffect(() => {
+  useEffect(() => {
   if (currentView === "statistics" && mainChartInstance.current) {
     const chartData = processStatisticsData();
 
-    // Determine if single day based on actual data
-    const allTimestamps = callRecords
-      .map((r) => parseTimestamp(r.timestamp))
-      .filter((d) => d !== null);
+    // Determine view mode based on date selection
+    const showDateView = startDate && endDate && startDate !== endDate;
     
+    // Determine if single day from actual filtered data
     let isSingleDay = false;
-    if (allTimestamps.length > 0) {
-      allTimestamps.sort((a, b) => a - b);
-      const earliestDateStr = formatDateForComparison(allTimestamps[0]);
-      const latestDateStr = formatDateForComparison(allTimestamps[allTimestamps.length - 1]);
-      isSingleDay = earliestDateStr === latestDateStr;
+    if (!showDateView) {
+      const filteredTimestamps = callRecords
+        .filter((r) => {
+          if (!r.timestamp) return false;
+          const recordDate = parseTimestamp(r.timestamp);
+          if (!recordDate) return false;
+
+          if (startDate) {
+            const startDateTime = parseUserInputDate(startDate, startTime);
+            if (startDateTime && recordDate < startDateTime) return false;
+          }
+
+          if (endDate) {
+            const endDateTime = parseUserInputDate(endDate, endTime || "23:59:59");
+            if (endDateTime && recordDate > endDateTime) return false;
+          }
+
+          return true;
+        })
+        .map((r) => parseTimestamp(r.timestamp))
+        .filter((d) => d !== null);
+
+      if (filteredTimestamps.length > 0) {
+        filteredTimestamps.sort((a, b) => a - b);
+        const earliestDateStr = formatDateForComparison(filteredTimestamps[0]);
+        const latestDateStr = formatDateForComparison(
+          filteredTimestamps[filteredTimestamps.length - 1]
+        );
+        isSingleDay = earliestDateStr === latestDateStr;
+      }
     }
 
     // Update x-axis title based on view mode
-    mainChartInstance.current.options.scales.x.title.text = isSingleDay
-      ? "Time (Hour)"
-      : "Date";
+    mainChartInstance.current.options.scales.x.title.text = 
+      (showDateView || !isSingleDay) ? "Date" : "Time (Hour)";
 
     mainChartInstance.current.data.labels = chartData.labels;
     mainChartInstance.current.data.datasets = chartData.datasets;
     mainChartInstance.current.update();
   }
-}, [selectedOutcomes, currentView, callRecords]);
+}, [selectedOutcomes, currentView, callRecords, startDate, startTime, endDate, endTime]);
 
   useEffect(() => {
     if (dashboardData) {
@@ -1396,27 +1585,87 @@ useEffect(() => {
                 />
               </div>
 
-              {/* Auto-detected date range display */}
-            
+              {/* KEY FIX: Add Date/Time filters for Statistics */}
+              <div style={styles.datetimeRow}>
+                <div style={styles.inputGroup}>
+                  <label style={styles.inputLabel}>
+                    Start Date (US EST/EDT)
+                  </label>
+                  <input
+                    type="date"
+                    style={styles.input}
+                    value={startDate}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      // If end date is before start date, update it
+                      if (endDate && e.target.value > endDate) {
+                        setEndDate(e.target.value);
+                      }
+                    }}
+                  />
+                </div>
+                <div style={styles.inputGroup}>
+                  <label style={styles.inputLabel}>
+                    Start Time (US EST/EDT)
+                  </label>
+                  <input
+                    type="time"
+                    style={styles.input}
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                  />
+                </div>
+                <div style={styles.inputGroup}>
+                  <label style={styles.inputLabel}>End Date (US EST/EDT)</label>
+                  <input
+                    type="date"
+                    style={styles.input}
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    min={startDate} // Prevent selecting date before start
+                  />
+                </div>
+                <div style={styles.inputGroup}>
+                  <label style={styles.inputLabel}>End Time (US EST/EDT)</label>
+                  <input
+                    type="time"
+                    style={styles.input}
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                  />
+                </div>
+              </div>
 
-              <button
-                onClick={handleReset}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  color: "#666",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: "13px",
-                  fontWeight: 500,
-                  padding: "8px",
-                }}
-              >
-                <i className="bi bi-arrow-clockwise"></i>
-                Reset Filters
-              </button>
+              <div style={{ display: "flex", gap: "12px", marginTop: "16px", flexWrap: "wrap" }}>
+                <button
+                  onClick={handleApplyFilters}
+                  style={{
+                    ...styles.btn,
+                    ...styles.btnPrimary,
+                  }}
+                >
+                  <i className="bi bi-funnel-fill"></i>
+                  Apply Filters
+                </button>
+                <button
+                  onClick={handleReset}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    color: "#666",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "13px",
+                    fontWeight: 500,
+                    padding: "8px",
+                  }}
+                >
+                  <i className="bi bi-arrow-clockwise"></i>
+                  Reset Filters
+                </button>
+              </div>
             </div>
 
             {/* Statistics Content */}
@@ -1442,24 +1691,76 @@ useEffect(() => {
                     Calls Over Time
                   </div>
                   <div style={{ fontSize: "13px", color: "#777" }}>
-                    {(() => {
-                      const timestamps = callRecords
-                        .map((r) => parseTimestamp(r.timestamp))
-                        .filter((d) => d !== null);
-                      if (timestamps.length === 0) return "No data available";
+  {(() => {
+    // Check if different dates are selected
+    const showDateView = startDate && endDate && startDate !== endDate;
 
-                      const dates = timestamps.map((d) =>
-                        formatDateForComparison(d)
-                      );
-                      const uniqueDates = [...new Set(dates)];
+    if (showDateView) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+      return `Daily breakdown across ${daysDiff} days (${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
+    }
 
-                      if (uniqueDates.length === 1) {
-                        return "Hourly breakdown for the selected day";
-                      } else {
-                        return `Daily breakdown across ${uniqueDates.length} days`;
-                      }
-                    })()}
-                  </div>
+    // Filter records by selected date/time
+    const filteredTimestamps = callRecords
+      .filter((r) => {
+        if (!r.timestamp) return false;
+        const recordDate = parseTimestamp(r.timestamp);
+        if (!recordDate) return false;
+
+        if (startDate) {
+          const startDateTime = parseUserInputDate(startDate, startTime);
+          if (startDateTime && recordDate < startDateTime) return false;
+        }
+
+        if (endDate) {
+          const endDateTime = parseUserInputDate(endDate, endTime || "23:59:59");
+          if (endDateTime && recordDate > endDateTime) return false;
+        }
+
+        return true;
+      })
+      .map((r) => parseTimestamp(r.timestamp))
+      .filter((d) => d !== null);
+
+    if (filteredTimestamps.length === 0) return "No data available for selected date range";
+
+    filteredTimestamps.sort((a, b) => a - b);
+    const earliestDate = filteredTimestamps[0];
+    const latestDate = filteredTimestamps[filteredTimestamps.length - 1];
+
+    const earliestDateStr = formatDateForComparison(earliestDate);
+    const latestDateStr = formatDateForComparison(latestDate);
+    const isSingleDay = earliestDateStr === latestDateStr;
+
+    if (isSingleDay) {
+      // Determine hour range
+      let startHour, endHour;
+      
+      if (startTime || endTime) {
+        const startDateTime = parseUserInputDate(startDate, startTime || "00:00");
+        const endDateTime = parseUserInputDate(endDate || startDate, endTime || "23:59");
+        startHour = startDateTime ? startDateTime.getHours() : earliestDate.getHours();
+        endHour = endDateTime ? endDateTime.getHours() : latestDate.getHours();
+      } else {
+        startHour = earliestDate.getHours();
+        endHour = latestDate.getHours();
+      }
+
+      const formatHour = (h) => {
+        const display = h % 12 || 12;
+        const ampm = h < 12 ? "AM" : "PM";
+        return `${display} ${ampm}`;
+      };
+      
+      return `Hourly breakdown from ${formatHour(startHour)} to ${formatHour(endHour)} on ${earliestDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+    } else {
+      const daysDiff = Math.ceil((latestDate - earliestDate) / (1000 * 60 * 60 * 24)) + 1;
+      return `Daily breakdown across ${daysDiff} days (${earliestDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${latestDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
+    }
+  })()}
+</div>
                 </div>
 
                 {/* Legend */}
@@ -1507,7 +1808,6 @@ useEffect(() => {
                 </div>
 
                 {/* Stats */}
-               
 
                 {/* Chart */}
                 <div style={{ height: "400px", position: "relative" }}>
@@ -1762,24 +2062,36 @@ useEffect(() => {
                 </div>
               </div>
 
-              <button
-                onClick={handleReset}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  color: "#666",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: "13px",
-                  fontWeight: 500,
-                  padding: "8px",
-                }}
-              >
-                <i className="bi bi-arrow-clockwise"></i>
-                Reset
-              </button>
+              <div style={{ display: "flex", gap: "12px", marginTop: "16px", flexWrap: "wrap" }}>
+                <button
+                  onClick={handleApplyFilters}
+                  style={{
+                    ...styles.btn,
+                    ...styles.btnPrimary,
+                  }}
+                >
+                  <i className="bi bi-funnel-fill"></i>
+                  Apply Filters
+                </button>
+                <button
+                  onClick={handleReset}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    color: "#666",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "13px",
+                    fontWeight: 500,
+                    padding: "8px",
+                  }}
+                >
+                  <i className="bi bi-arrow-clockwise"></i>
+                  Reset
+                </button>
+              </div>
 
               {/* Filter by Call Outcomes */}
               <div style={{ marginTop: "24px" }}>
@@ -2082,7 +2394,7 @@ useEffect(() => {
                       boxShadow: "0 1px 2px #e5eaf2",
                     }}
                   >
-                    {qualifiedPercentage}.0%
+                    {timeRange ? timeFilteredQualifiedPercentage : qualifiedPercentage}.0%
                   </div>
                 </div>
               )}
@@ -2125,7 +2437,7 @@ useEffect(() => {
                             Neutral: "bi-circle",
                             "Unclear Response": "bi-info-circle",
                           };
-                          const cat = outcomes.find((o) => o.label === catName);
+                          const cat = timeFilteredOutcomes.find((o) => o.label === catName);
                           return cat ? (
                             <div
                               key={catName}
@@ -2207,7 +2519,7 @@ useEffect(() => {
                           "User Hang Up": "bi-telephone-minus-fill",
                           Inaudible: "bi-volume-mute",
                         };
-                        const cat = outcomes.find((o) => o.label === catName);
+                        const cat = timeFilteredOutcomes.find((o) => o.label === catName);
                         return cat ? (
                           <div
                             key={catName}
@@ -2276,7 +2588,9 @@ useEffect(() => {
                         Summary Calls Over Time
                       </div>
                       <div style={{ fontSize: "12px", color: "#777" }}>
-                        Calls transferred vs hangups by minute
+                        {timeRange
+                          ? `${timeRange} - Calls transferred vs hangups`
+                          : "Calls transferred vs hangups by minute"}
                       </div>
                     </div>
                     <div
@@ -2295,7 +2609,7 @@ useEffect(() => {
                             color: "#1a73e8",
                           }}
                         >
-                          {qualifiedCount.toLocaleString()}
+                          {timeRange ? timeFilteredQualifiedCount.toLocaleString() : qualifiedCount.toLocaleString()}
                         </div>
                         <div style={{ fontSize: "15px", color: "#888" }}>
                           Total Qualified
@@ -2308,7 +2622,7 @@ useEffect(() => {
                           }}
                         >
                           <i className="bi bi-arrow-up"></i>{" "}
-                          {qualifiedPercentage}%
+                          {timeRange ? timeFilteredQualifiedPercentage : qualifiedPercentage}%
                         </div>
                       </div>
                       <button

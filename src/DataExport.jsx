@@ -19,16 +19,22 @@ const [showClientHeader, setShowClientHeader] = useState(false);
     new Date().toISOString().split("T")[0]
   );
   const [endTime, setEndTime] = useState("17:00");
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get("campaign_id");
+  // KEY FIX: Get campaign ID and force reload
+useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("campaign_id");
 
-    if (id) {
-      setCampaignId(id);
-    } else {
-      window.location.href = "/client-landing";
-    }
-  }, []);
+  if (id) {
+    setCampaignId(id);
+    // Force reset state
+    setExportOptions(null);
+    setLoading(true);
+    setSelectedLists([]);
+    setSelectedDispositions([]);
+  } else {
+    window.location.href = "/client-landing";
+  }
+}, []);
   useEffect(() => {
   const fromRecordings = sessionStorage.getItem("from_recordings");
 
@@ -125,7 +131,7 @@ useEffect(() => {
       sessionStorage.getItem("access_token");
 
     const payload = {
-      // ✅ IMPORTANT: Empty array means "ALL"
+      // âœ… IMPORTANT: Empty array means "ALL"
       list_ids:
         selectedLists.length === exportOptions.list_ids.length
           ? []
@@ -140,7 +146,7 @@ useEffect(() => {
       end_date: `${endDate}T${endTime}:00`,
     };
 
-    console.group("📤 EXPORT REQUEST");
+    console.group("ðŸ“¤ EXPORT REQUEST");
     console.log("URL:", `https://api.xlitecore.xdialnetworks.com/api/v1/export/${campaignId}/download`);
     console.log("Payload:", payload);
     console.groupEnd();
@@ -158,26 +164,26 @@ useEffect(() => {
       }
     );
 
-    console.group("📥 EXPORT RESPONSE");
+    console.group("ðŸ“¥ EXPORT RESPONSE");
     console.log("Status:", response.status);
     console.log("Headers:", [...response.headers.entries()]);
     console.groupEnd();
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error("❌ BACKEND ERROR:", errText);
+      console.error("âŒ BACKEND ERROR:", errText);
       throw new Error(`Export failed with status ${response.status}`);
     }
 
     const csvText = await response.text();
 
-    console.group("📄 CSV DEBUG");
+    console.group("ðŸ“„ CSV DEBUG");
     console.log("Length:", csvText.length);
     console.log("Preview:", csvText.slice(0, 500));
     console.groupEnd();
 
     if (csvText.trim().split("\n").length <= 1) {
-      console.warn("⚠️ CSV contains headers only (no matching records)");
+      console.warn("âš ï¸ CSV contains headers only (no matching records)");
     }
 
     const blob = new Blob([csvText], { type: "text/csv;charset=utf-8;" });
@@ -191,7 +197,7 @@ useEffect(() => {
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
   } catch (err) {
-    console.error("❌ EXPORT ERROR:", err);
+    console.error("âŒ EXPORT ERROR:", err);
     alert("Export failed. Check console logs.");
   } finally {
     setExporting(false);
@@ -649,7 +655,7 @@ useEffect(() => {
                               />
                             )}
                           </svg>
-                          {category.combined_name}
+                          {category.name}
                         </label>
                       </div>
                     );
@@ -717,7 +723,7 @@ useEffect(() => {
                       );
                       return (
                         <span key={disp} className="badge badge-outline">
-                          {category?.combined_name || disp}
+                          {category?.name || disp}
                         </span>
                       );
                     })}
@@ -807,12 +813,12 @@ useEffect(() => {
               </div>
               <div className="card-content info-card">
                 <p>
-                  • CSV files include all call details: ID, phone number, List
+                  â€¢ CSV files include all call details: ID, phone number, List
                   ID, disposition, timestamp, and recording URL
                 </p>
-                <p>• Large exports may take a few moments to generate</p>
-                <p>• Files are automatically named with the current date</p>
-                <p>• Only your call data will be exported</p>
+                <p>â€¢ Large exports may take a few moments to generate</p>
+                <p>â€¢ Files are automatically named with the current date</p>
+                <p>â€¢ Only your call data will be exported</p>
               </div>
             </div>
           </div>

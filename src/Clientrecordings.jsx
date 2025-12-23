@@ -33,16 +33,32 @@ const ClientRecordings = () => {
   const audioRef = useRef(null);
 
   // Get campaign ID from URL
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const id = urlParams.get('campaign_id');
-    if (id) {
-      setCampaignId(id);
-    } else {
-      window.location.href = '/client-landing';
+  // KEY FIX: Get campaign ID and force reload
+useEffect(() => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const id = urlParams.get('campaign_id');
+  if (id) {
+    setCampaignId(id);
+    // Force reset state
+    setRecordings([]);
+    setLoading(true);
+    setError(null);
+  } else {
+    window.location.href = '/client-landing';
+  }
+}, []);
+// KEY FIX: Cleanup audio on unmount
+useEffect(() => {
+  return () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
     }
-  }, []);
-
+    setShowPlayer(false);
+    setIsPlaying(false);
+    setCurrentRecording(null);
+  };
+}, []);
   // Fetch client name
   const fetchClientName = async () => {
     try {
