@@ -813,12 +813,12 @@ useEffect(() => {
               </div>
               <div className="card-content info-card">
                 <p>
-                  â€¢ CSV files include all call details: ID, phone number, List
+                   CSV files include all call details: ID, phone number, List
                   ID, disposition, timestamp, and recording URL
                 </p>
-                <p>â€¢ Large exports may take a few moments to generate</p>
-                <p>â€¢ Files are automatically named with the current date</p>
-                <p>â€¢ Only your call data will be exported</p>
+                <p>• Large exports may take a few moments to generate</p>
+                <p>• Files are automatically named with the current date</p>
+                <p>• Only your call data will be exported</p>
               </div>
             </div>
           </div>
