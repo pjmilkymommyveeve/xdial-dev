@@ -15,8 +15,7 @@ api.interceptors.request.use(
   (config) => {
     // Get token from localStorage or sessionStorage
     const token = 
-      localStorage.getItem('access_token') || 
-      sessionStorage.getItem('access_token');
+      localStorage.getItem('access_token');
     
     // If token exists, add it to headers
     if (token) {
@@ -46,7 +45,7 @@ api.interceptors.response.use(
         localStorage.removeItem('user_id');
         localStorage.removeItem('username');
         localStorage.removeItem('role');
-        sessionStorage.clear();
+  
         
         // Redirect to login
         window.location.href = '/';

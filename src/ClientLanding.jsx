@@ -11,8 +11,7 @@ const ClientLanding = () => {
 
   const getAuthToken = () => {
     return (
-      localStorage.getItem("access_token") ||
-      sessionStorage.getItem("access_token")
+      localStorage.getItem("access_token")
     );
   };
 
@@ -26,7 +25,7 @@ const fetchCampaignData = async () => {
       throw new Error("No authentication token found. Please login again.");
     }
 
-    const clientId = localStorage.getItem("user_id") || sessionStorage.getItem("user_id");
+    const clientId = localStorage.getItem("user_id");
 
     if (!clientId) {
       throw new Error("User ID not found. Please login again.");
@@ -77,7 +76,6 @@ const fetchCampaignData = async () => {
     localStorage.removeItem("user_id");
     localStorage.removeItem("username");
     localStorage.removeItem("role");
-    sessionStorage.clear();
     window.location.href = "/";
   };
 

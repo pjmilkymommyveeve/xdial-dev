@@ -3,18 +3,17 @@ import { useState } from 'react';
 const LoginPage = () => {
   const [formData, setFormData] = useState({
     username: '',
-    password: '',
-    rememberMe: false
+    password: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: value
     }));
     setError('');
     setSuccess('');
@@ -56,39 +55,23 @@ const LoginPage = () => {
         throw new Error(data.detail || 'Login failed. Please check your credentials.');
       }
 
-      if (formData.rememberMe) {
-        localStorage.setItem('access_token', data.access_token);
-        localStorage.setItem('user_id', data.user_id);
-        localStorage.setItem('username', data.username);
-        localStorage.setItem('role', data.role);
-      } else {
-        sessionStorage.setItem('access_token', data.access_token);
-        sessionStorage.setItem('user_id', data.user_id);
-        sessionStorage.setItem('username', data.username);
-        sessionStorage.setItem('role', data.role);
-      }
+      // Store in localStorage only
+      localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('user_id', data.user_id);
+      localStorage.setItem('username', data.username);
+      localStorage.setItem('role', data.role);
 
       setSuccess('Login successful! Redirecting...');
 
       setTimeout(() => {
-  window.location.href = '/client-landing';
-}, 1500);
+        window.location.href = '/client-landing';
+      }, 1500);
 
     } catch (err) {
       setError(err.message || 'An error occurred during login');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleForgotPassword = (e) => {
-    e.preventDefault();
-    if (!formData.username) {
-      setError('Please enter your username');
-      return;
-    }
-    setError('');
-    setSuccess(`Password reset link sent to ${formData.username}`);
   };
 
   return (
@@ -234,51 +217,6 @@ const LoginPage = () => {
           background-color: #F3F4F6;
           cursor: not-allowed;
           opacity: 0.6;
-        }
-
-        .form-footer {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          font-size: 0.813rem;
-        }
-
-        .checkbox-wrapper {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          cursor: pointer;
-        }
-
-        .checkbox-input {
-          width: 18px;
-          height: 18px;
-          cursor: pointer;
-          accent-color: #4F46E5;
-        }
-
-        .checkbox-input:disabled {
-          cursor: not-allowed;
-          opacity: 0.5;
-        }
-
-        .checkbox-label {
-          color: #6B7280;
-          font-weight: 400;
-          cursor: pointer;
-          user-select: none;
-        }
-
-        .forgot-password {
-          color: #4F46E5;
-          font-weight: 500;
-          text-decoration: none;
-          transition: color 0.2s ease;
-        }
-
-        .forgot-password:hover {
-          color: #3730A3;
-          text-decoration: underline;
         }
 
         .login-btn {
@@ -450,26 +388,6 @@ const LoginPage = () => {
               required
               disabled={loading}
             />
-          </div>
-
-          <div className="form-footer">
-            <div className="checkbox-wrapper">
-              <input
-                type="checkbox"
-                id="rememberMe"
-                name="rememberMe"
-                className="checkbox-input"
-                checked={formData.rememberMe}
-                onChange={handleChange}
-                disabled={loading}
-              />
-              <label htmlFor="rememberMe" className="checkbox-label">
-                Remember me
-              </label>
-            </div>
-            <a href="#" className="forgot-password" onClick={handleForgotPassword}>
-              Forgot password?
-            </a>
           </div>
 
           <button type="submit" className="login-btn" disabled={loading}>

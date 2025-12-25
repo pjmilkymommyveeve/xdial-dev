@@ -100,7 +100,7 @@ export default function ClientHeader({
             localStorage.removeItem("user_id");
             localStorage.removeItem("username");
             localStorage.removeItem("role");
-            sessionStorage.clear();
+        
             window.location.href = "/";
           }}
         >

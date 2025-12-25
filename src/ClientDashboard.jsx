@@ -133,16 +133,20 @@ const MedicareDashboard = () => {
       setError(null);
       try {
         const token =
-          localStorage.getItem("access_token") ||
-          sessionStorage.getItem("access_token");
+          localStorage.getItem("access_token");
 
         if (!token) {
           throw new Error("No authentication token found. Please login again.");
         }
 
         // First, fetch the first page to get total pages info
-        const firstPageRes = await fetch(
-          `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/${campaignId}/dashboard?start_date=${startDate}&page=1&page_size=25`,
+        let apiUrl = `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/${campaignId}/dashboard?start_date=${startDate}`;
+if (endDate && endDate !== startDate) {
+  apiUrl += `&end_date=${endDate}`;
+}
+apiUrl += `&page=1&page_size=25`;
+
+const firstPageRes = await fetch(apiUrl,
           {
             headers: {
               accept: "application/json",
@@ -170,9 +174,14 @@ const MedicareDashboard = () => {
         // Fetch all remaining pages in parallel
         const pagePromises = [];
         for (let page = 2; page <= totalPages; page++) {
-          pagePromises.push(
-            fetch(
-              `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/${campaignId}/dashboard?start_date=${startDate}&page=${page}&page_size=25`,
+  let pageUrl = `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/${campaignId}/dashboard?start_date=${startDate}`;
+  if (endDate && endDate !== startDate) {
+    pageUrl += `&end_date=${endDate}`;
+  }
+  pageUrl += `&page=${page}&page_size=25`;
+  
+  pagePromises.push(
+    fetch(pageUrl,
               {
                 headers: {
                   accept: "application/json",
@@ -221,8 +230,7 @@ const MedicareDashboard = () => {
     if (fetchTrigger > 0) {
       fetchData();
     }
-  }, [campaignId, fetchTrigger]); // Removed startDate dependency // Keep dependencies as is // Only refetch when campaign changes or Apply Filters is clicked
-
+}, [campaignId, fetchTrigger, endDate]);
   // Reset to page 1 when filters change
 
   const summaryChartRef = useRef(null);
@@ -1130,12 +1138,12 @@ const MedicareDashboard = () => {
       }
 
       // Apply end date/time filter
-      if (endDate) {
-        const endDateTime = parseUserInputDate(endDate, endTime || "23:59:59");
-        if (endDateTime && recordDate > endDateTime) {
-          return false;
-        }
-      }
+      if (endDate && endDate !== startDate) {
+  const endDateTime = parseUserInputDate(endDate, endTime || "23:59:59");
+  if (endDateTime && recordDate > endDateTime) {
+    return false;
+  }
+}
 
       return true;
     });
@@ -1564,7 +1572,7 @@ const MedicareDashboard = () => {
               localStorage.removeItem("user_id");
               localStorage.removeItem("username");
               localStorage.removeItem("role");
-              sessionStorage.clear();
+           
               window.location.href = "/";
             }}
           >
@@ -1681,25 +1689,34 @@ const MedicareDashboard = () => {
                     Calls Over Time
                   </div>
                   <div style={{ fontSize: "13px", color: "#777" }}>
-                    {(() => {
-                      // Check if different dates are selected
-                      const showDateView =
-                        startDate && endDate && startDate !== endDate;
+  {(() => {
+    // Check if different dates are selected (and end date is actually set)
+    const showDateView =
+      startDate && endDate && startDate !== endDate;
 
-                      if (showDateView) {
-                        const start = new Date(startDate);
-                        const end = new Date(endDate);
-                        const daysDiff =
-                          Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-                        return `Daily breakdown across ${daysDiff} days (${start.toLocaleDateString(
-                          "en-US",
-                          { month: "short", day: "numeric" }
-                        )} - ${end.toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })})`;
-                      }
-
+    if (showDateView) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const daysDiff =
+        Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+      return `Daily breakdown across ${daysDiff} days (${start.toLocaleDateString(
+        "en-US",
+        { month: "short", day: "numeric" }
+      )} - ${end.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      })})`;
+    }
+    
+    // If only start date is selected (no end date or end date equals start date)
+    if (startDate && (!endDate || startDate === endDate)) {
+      const singleDate = new Date(startDate);
+      return `Hourly breakdown for ${singleDate.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      })}`;
+    }
                       // Filter records by selected date/time
                       const filteredTimestamps = callRecords
                         .filter((r) => {
