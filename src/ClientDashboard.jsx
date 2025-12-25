@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import Chart from "chart.js/auto";
-import api from './api';
+import api from "./api";
 import DataExport from "./DataExport";
 const MedicareDashboard = () => {
   const [currentView, setCurrentView] = useState("dashboard");
@@ -13,9 +13,7 @@ const MedicareDashboard = () => {
   const [selectedOutcomes, setSelectedOutcomes] = useState([]);
   const [searchText, setSearchText] = useState("");
   const [listId, setListId] = useState("");
-  const [startDate, setStartDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [startDate, setStartDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endDate, setEndDate] = useState("");
   const [endTime, setEndTime] = useState("");
@@ -31,16 +29,15 @@ const MedicareDashboard = () => {
   const [selectedCallRecord, setSelectedCallRecord] = useState(null);
 
   // KEY FIX: Get campaign ID and force reload on mount
+  // Get campaign ID on mount - don't auto-load data
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get("campaign_id");
     if (id) {
       setCampaignId(id);
-      // Force reset state when navigating back
-      setDashboardData(null);
-      setLoading(true);
-      setError(null);
       setCurrentView("dashboard");
+      // Set today's date as default
+      setStartDate(new Date().toISOString().split("T")[0]);
     } else {
       window.location.href = "/client-landing";
     }
@@ -128,68 +125,103 @@ const MedicareDashboard = () => {
   // ClientDashboard.jsx - Update fetchData useEffect to fetch all pages
   // Fetch dashboard data from API
   // ClientDashboard.jsx - Update fetchData useEffect to fetch all pages
- useEffect(() => {
-  const fetchData = async () => {
-    if (!campaignId) return;
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!campaignId || !startDate) return; // Don't fetch without campaign ID and start date
 
-    setLoading(true);
-    setError(null);
-    try {
-      // First page request - NO NEED TO MANUALLY ADD TOKEN!
-      const firstPageRes = await api.get(
-        `/campaigns/${campaignId}/dashboard?start_date=${startDate}&page=1&page_size=25`
-      );
+      setLoading(true);
+      setError(null);
+      try {
+        const token =
+          localStorage.getItem("access_token") ||
+          sessionStorage.getItem("access_token");
 
-      const firstPageData = firstPageRes.data;
-      const totalPages = firstPageData.pagination?.total_pages || 1;
+        if (!token) {
+          throw new Error("No authentication token found. Please login again.");
+        }
 
-      if (totalPages === 1) {
-        setDashboardData(firstPageData);
-        setLoading(false);
-        return;
-      }
-
-      // Fetch remaining pages
-      const pagePromises = [];
-      for (let page = 2; page <= totalPages; page++) {
-        pagePromises.push(
-          api.get(
-            `/campaigns/${campaignId}/dashboard?start_date=${startDate}&page=${page}&page_size=25`
-          )
+        // First, fetch the first page to get total pages info
+        const firstPageRes = await fetch(
+          `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/${campaignId}/dashboard?start_date=${startDate}&page=1&page_size=25`,
+          {
+            headers: {
+              accept: "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
         );
+
+        if (firstPageRes.status === 401) {
+          throw new Error("Session expired. Please login again.");
+        }
+
+        if (!firstPageRes.ok) throw new Error("Failed to fetch dashboard data");
+
+        const firstPageData = await firstPageRes.json();
+        const totalPages = firstPageData.pagination?.total_pages || 1;
+
+        // If there's only one page, use it directly
+        if (totalPages === 1) {
+          setDashboardData(firstPageData);
+          setLoading(false);
+          return;
+        }
+
+        // Fetch all remaining pages in parallel
+        const pagePromises = [];
+        for (let page = 2; page <= totalPages; page++) {
+          pagePromises.push(
+            fetch(
+              `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/${campaignId}/dashboard?start_date=${startDate}&page=${page}&page_size=25`,
+              {
+                headers: {
+                  accept: "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            ).then((res) => res.json())
+          );
+        }
+
+        const additionalPages = await Promise.all(pagePromises);
+
+        // Combine all calls from all pages
+        const allCalls = [
+          ...firstPageData.calls,
+          ...additionalPages.flatMap((pageData) => pageData.calls || []),
+        ];
+
+        // Create combined data object
+        const combinedData = {
+          ...firstPageData,
+          calls: allCalls,
+          pagination: {
+            ...firstPageData.pagination,
+            total_records: allCalls.length,
+            current_page: 1,
+            total_pages: 1,
+          },
+        };
+
+        setDashboardData(combinedData);
+        setLoading(false);
+      } catch (err) {
+        setError(err.message);
+        setLoading(false);
+
+        if (err.message.includes("login")) {
+          setTimeout(() => {
+            window.location.href = "/";
+          }, 2000);
+        }
       }
+    };
 
-      const additionalPages = await Promise.all(pagePromises);
-
-      // Combine all calls
-      const allCalls = [
-        ...firstPageData.calls,
-        ...additionalPages.flatMap((res) => res.data.calls || []),
-      ];
-
-      const combinedData = {
-        ...firstPageData,
-        calls: allCalls,
-        pagination: {
-          ...firstPageData.pagination,
-          total_records: allCalls.length,
-          current_page: 1,
-          total_pages: 1,
-        },
-      };
-
-      setDashboardData(combinedData);
-      setTimeout(() => setLoading(false), 100);
-    } catch (err) {
-      setError(err.response?.data?.message || err.message);
-      setLoading(false);
-      
-      // The interceptor will handle 401 and redirect automatically
-      // No need for manual redirect here
+    // Only fetch if fetchTrigger > 0 (meaning Apply Filters was clicked)
+    if (fetchTrigger > 0) {
+      fetchData();
     }
-  };
-  fetchData();
-}, [campaignId, fetchTrigger, startDate]); // Keep dependencies as is // Only refetch when campaign changes or Apply Filters is clicked
+  }, [campaignId, fetchTrigger]); // Removed startDate dependency // Keep dependencies as is // Only refetch when campaign changes or Apply Filters is clicked
 
   // Reset to page 1 when filters change
 
@@ -609,7 +641,7 @@ const MedicareDashboard = () => {
   // Calculate outcomes filtered by time range (for Engaged/Drop-Off sections)
   const getTimeFilteredRecords = () => {
     if (!timeRange) return callRecords;
-    
+
     const now = new Date();
     let minutesBack = 0;
 
@@ -651,7 +683,9 @@ const MedicareDashboard = () => {
       }
 
       const mostRecentCallTime = allTimestamps[0];
-      const startTime = new Date(mostRecentCallTime.getTime() - minutesBack * 60000);
+      const startTime = new Date(
+        mostRecentCallTime.getTime() - minutesBack * 60000
+      );
 
       // Filter records within the time range
       return callRecords.filter((record) => {
@@ -697,7 +731,6 @@ const MedicareDashboard = () => {
     };
   });
 
-
   // Calculate totals for statistics view
   const qualifiedCount = filteredCallRecords.filter(
     (r) => r.category === "Qualified"
@@ -712,7 +745,9 @@ const MedicareDashboard = () => {
   ).length;
   const timeFilteredQualifiedPercentage =
     timeFilteredRecords.length > 0
-      ? Math.round((timeFilteredQualifiedCount / timeFilteredRecords.length) * 100)
+      ? Math.round(
+          (timeFilteredQualifiedCount / timeFilteredRecords.length) * 100
+        )
       : 0;
 
   // Handle outcome filter click (multi-select by default)
@@ -743,7 +778,7 @@ const MedicareDashboard = () => {
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) {
       setCurrentPage(1);
-    setFetchTrigger(prev => prev + 1); // Trigger data fetch with reset dates
+      setFetchTrigger((prev) => prev + 1); // Trigger data fetch with reset dates
     }
   }, [totalFilteredRecords, totalPages]);
 
@@ -754,13 +789,11 @@ const MedicareDashboard = () => {
 
   // Handle Apply Filters button
   const handleApplyFilters = () => {
-    
     setCurrentPage(1);
-    setFetchTrigger(prev => prev + 1); // Increment to trigger useEffect
+    setFetchTrigger((prev) => prev + 1); // Increment to trigger useEffect
   };
 
   const handleReset = () => {
-    setLoading(true);
     setSearchText("");
     setListId("");
     setStartDate(new Date().toISOString().split("T")[0]);
@@ -770,7 +803,8 @@ const MedicareDashboard = () => {
     setSelectedOutcomes([]);
     setTimeRange("");
     setCurrentPage(1);
-    setFetchTrigger(prev => prev + 1); // Trigger data fetch with reset dates
+    setLoading(true);
+    setFetchTrigger((prev) => prev + 1); // Trigger data fetch with reset values
   };
 
   // Handle column sorting
@@ -1076,352 +1110,364 @@ const MedicareDashboard = () => {
   }, [showSummaryGraph, callRecords, timeRange]);
 
   const processStatisticsData = () => {
-  if (!callRecords || callRecords.length === 0) {
-    return { labels: [], datasets: [] };
-  }
-
-  // Filter records based on date/time selection
-  let filteredData = callRecords.filter((record) => {
-    if (!record.timestamp) return false;
-    
-    const recordDate = parseTimestamp(record.timestamp);
-    if (!recordDate) return false;
-
-    // Apply start date/time filter
-    if (startDate) {
-      const startDateTime = parseUserInputDate(startDate, startTime);
-      if (startDateTime && recordDate < startDateTime) {
-        return false;
-      }
+    if (!callRecords || callRecords.length === 0) {
+      return { labels: [], datasets: [] };
     }
 
-    // Apply end date/time filter
-    if (endDate) {
-      const endDateTime = parseUserInputDate(endDate, endTime || "23:59:59");
-      if (endDateTime && recordDate > endDateTime) {
-        return false;
-      }
-    }
+    // Filter records based on date/time selection
+    let filteredData = callRecords.filter((record) => {
+      if (!record.timestamp) return false;
 
-    return true;
-  });
-
-  // Filter by selected categories
-  if (selectedOutcomes.length > 0) {
-    filteredData = filteredData.filter((record) =>
-      selectedOutcomes.includes(record.category)
-    );
-  }
-
-  if (filteredData.length === 0) {
-    return { labels: [], datasets: [] };
-  }
-
-  // Get timestamps for filtered data
-  const allTimestamps = filteredData
-    .map((r) => parseTimestamp(r.timestamp))
-    .filter((d) => d !== null)
-    .sort((a, b) => a - b);
-
-  if (allTimestamps.length === 0) {
-    return { labels: [], datasets: [] };
-  }
-
-  const earliestDate = allTimestamps[0];
-  const latestDate = allTimestamps[allTimestamps.length - 1];
-
-  // Check if all data is within a single day
-  const earliestDateStr = formatDateForComparison(earliestDate);
-  const latestDateStr = formatDateForComparison(latestDate);
-  const isSingleDay = earliestDateStr === latestDateStr;
-
-  // Categories to show
-  const categoriesToShow =
-    selectedOutcomes.length === 0 ? ALLOWED_CATEGORIES : selectedOutcomes;
-
-  // KEY CHANGE: Determine view mode based on start/end date selection
-  const showDateView = startDate && endDate && startDate !== endDate;
-
-  if (showDateView || !isSingleDay) {
-    // DATE VIEW: Group by date
-    const dateMap = new Map();
-    const allDates = new Set();
-
-    filteredData.forEach((record) => {
       const recordDate = parseTimestamp(record.timestamp);
-      if (!recordDate) return;
+      if (!recordDate) return false;
 
-      const dateStr = formatDateForComparison(recordDate);
-      if (!dateStr) return;
-
-      allDates.add(dateStr);
-
-      if (!dateMap.has(dateStr)) {
-        dateMap.set(dateStr, {});
+      // Apply start date/time filter
+      if (startDate) {
+        const startDateTime = parseUserInputDate(startDate, startTime);
+        if (startDateTime && recordDate < startDateTime) {
+          return false;
+        }
       }
 
-      const dateData = dateMap.get(dateStr);
-      if (!dateData[record.category]) {
-        dateData[record.category] = 0;
+      // Apply end date/time filter
+      if (endDate) {
+        const endDateTime = parseUserInputDate(endDate, endTime || "23:59:59");
+        if (endDateTime && recordDate > endDateTime) {
+          return false;
+        }
       }
-      dateData[record.category]++;
+
+      return true;
     });
 
-    const sortedDates = Array.from(allDates).sort();
+    // Filter by selected categories
+    if (selectedOutcomes.length > 0) {
+      filteredData = filteredData.filter((record) =>
+        selectedOutcomes.includes(record.category)
+      );
+    }
 
-    const labels = sortedDates.map((dateStr) => {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      });
-    });
+    // Categories to show
+    const categoriesToShow =
+      selectedOutcomes.length === 0 ? ALLOWED_CATEGORIES : selectedOutcomes;
 
-    const datasets = categoriesToShow.map((category) => {
-      const data = sortedDates.map((dateStr) => {
+    // KEY CHANGE: Determine view mode based on start/end date selection
+    const showDateView = startDate && endDate && startDate !== endDate;
+
+    if (showDateView) {
+      // DATE VIEW: Show all dates in range, with zeros for missing data
+      const dateMap = new Map();
+
+      // Create all dates in the range
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const allDates = [];
+
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dateStr = formatDateForComparison(d);
+        allDates.push(dateStr);
+        dateMap.set(dateStr, {}); // Initialize with empty object
+      }
+
+      // Fill in actual data
+      filteredData.forEach((record) => {
+        const recordDate = parseTimestamp(record.timestamp);
+        if (!recordDate) return;
+
+        const dateStr = formatDateForComparison(recordDate);
+        if (!dateStr || !dateMap.has(dateStr)) return;
+
         const dateData = dateMap.get(dateStr);
-        return dateData && dateData[category] ? dateData[category] : 0;
+        if (!dateData[record.category]) {
+          dateData[record.category] = 0;
+        }
+        dateData[record.category]++;
       });
 
-      const outcome = outcomes.find((o) => o.label === category);
-      const color = outcome ? outcome.color : "#1a73e8";
+      const labels = allDates.map((dateStr) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        });
+      });
 
-      const hexToRgba = (hex, alpha) => {
-        const r = parseInt(hex.slice(1, 3), 16);
-        const g = parseInt(hex.slice(3, 5), 16);
-        const b = parseInt(hex.slice(5, 7), 16);
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-      };
+      const datasets = categoriesToShow.map((category) => {
+        const data = allDates.map((dateStr) => {
+          const dateData = dateMap.get(dateStr);
+          return dateData && dateData[category] ? dateData[category] : 0;
+        });
 
-      return {
-        label: category,
-        data: data,
-        borderColor: hexToRgba(color, 0.5),
-        backgroundColor: hexToRgba(color, 0.08),
-        fill: true,
-        tension: 0.4,
-        pointRadius: 2,
-        pointHoverRadius: 4,
-        borderWidth: 1,
-      };
-    });
+        const outcome = outcomes.find((o) => o.label === category);
+        const color = outcome ? outcome.color : "#1a73e8";
 
-    return { labels, datasets };
-  } else {
-    // HOURLY VIEW: Group by hour for single day
-    const hourMap = new Map();
+        const hexToRgba = (hex, alpha) => {
+          const r = parseInt(hex.slice(1, 3), 16);
+          const g = parseInt(hex.slice(3, 5), 16);
+          const b = parseInt(hex.slice(5, 7), 16);
+          return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        };
 
-    // If time filters are specified, use them; otherwise use data range
-    let startHour, endHour;
+        return {
+          label: category,
+          data: data,
+          borderColor: hexToRgba(color, 0.5),
+          backgroundColor: hexToRgba(color, 0.08),
+          fill: true,
+          tension: 0.4,
+          pointRadius: 2,
+          pointHoverRadius: 4,
+          borderWidth: 1,
+        };
+      });
 
-    if (startTime || endTime) {
-      // If times are specified, use those boundaries
-      const startDateTime = parseUserInputDate(startDate, startTime || "00:00");
-      const endDateTime = parseUserInputDate(endDate || startDate, endTime || "23:59");
-      
-      if (startDateTime) startHour = startDateTime.getHours();
-      if (endDateTime) endHour = endDateTime.getHours();
+      return { labels, datasets };
     } else {
-      // No time filters - use actual data range
-      const dataHours = allTimestamps.map((d) => d.getHours());
-      startHour = Math.min(...dataHours);
-      endHour = Math.max(...dataHours);
-    }
-
-    // Initialize hours in range
-    for (let hour = startHour; hour <= endHour; hour++) {
-      hourMap.set(hour, {});
-    }
-
-    filteredData.forEach((record) => {
-      const recordDate = parseTimestamp(record.timestamp);
-      if (!recordDate) return;
-
-      const hour = recordDate.getHours();
-      if (!hourMap.has(hour)) return;
-
-      const hourData = hourMap.get(hour);
-      if (!hourData[record.category]) {
-        hourData[record.category] = 0;
+      // HOURLY VIEW: Show all hours in range with zeros for missing data
+      if (filteredData.length === 0) {
+        return { labels: [], datasets: [] };
       }
-      hourData[record.category]++;
-    });
 
-    // Create labels for hour range
-    const labels = [];
-    for (let hour = startHour; hour <= endHour; hour++) {
-      const displayHour = hour % 12 || 12;
-      const ampm = hour < 12 ? "AM" : "PM";
-      labels.push(`${displayHour} ${ampm}`);
-    }
+      const hourMap = new Map();
 
-    // Create datasets
-    const datasets = categoriesToShow.map((category) => {
-      const data = [];
+      // Determine hour range
+      let startHour = 0;
+      let endHour = 23;
+
+      if (startTime || endTime) {
+        const startDateTime = parseUserInputDate(
+          startDate,
+          startTime || "00:00"
+        );
+        const endDateTime = parseUserInputDate(
+          endDate || startDate,
+          endTime || "23:59"
+        );
+
+        if (startDateTime) startHour = startDateTime.getHours();
+        if (endDateTime) endHour = endDateTime.getHours();
+      } else {
+        // Use data range if no time filters
+        const dataHours = filteredData
+          .map((r) => parseTimestamp(r.timestamp))
+          .filter((d) => d !== null)
+          .map((d) => d.getHours());
+
+        if (dataHours.length > 0) {
+          startHour = Math.min(...dataHours);
+          endHour = Math.max(...dataHours);
+        }
+      }
+
+      // Initialize all hours in range with empty objects
       for (let hour = startHour; hour <= endHour; hour++) {
-        const hourData = hourMap.get(hour);
-        data.push(hourData[category] || 0);
+        hourMap.set(hour, {});
       }
 
-      const outcome = outcomes.find((o) => o.label === category);
-      const color = outcome ? outcome.color : "#1a73e8";
+      // Fill in actual data
+      filteredData.forEach((record) => {
+        const recordDate = parseTimestamp(record.timestamp);
+        if (!recordDate) return;
 
-      const hexToRgba = (hex, alpha) => {
-        const r = parseInt(hex.slice(1, 3), 16);
-        const g = parseInt(hex.slice(3, 5), 16);
-        const b = parseInt(hex.slice(5, 7), 16);
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-      };
+        const hour = recordDate.getHours();
+        if (!hourMap.has(hour)) return;
 
-      return {
-        label: category,
-        data: data,
-        borderColor: hexToRgba(color, 0.5),
-        backgroundColor: hexToRgba(color, 0.08),
-        fill: true,
-        tension: 0.4,
-        pointRadius: 2,
-        pointHoverRadius: 4,
-        borderWidth: 1,
-      };
-    });
-
-    return { labels, datasets };
-  }
-};
-
-  // Initialize main statistics chart
-  // Initialize main statistics chart
-useEffect(() => {
-  if (
-    currentView === "statistics" &&
-    mainChartRef.current &&
-    !loading // Add this condition
-  ) {
-    if (!mainChartInstance.current) {
-      const ctx = mainChartRef.current.getContext("2d");
-
-      mainChartInstance.current = new Chart(ctx, {
-        type: "line",
-        data: {
-          labels: [],
-          datasets: [],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              mode: "index",
-              intersect: false,
-              backgroundColor: "#fff",
-              titleColor: "#333",
-              bodyColor: "#333",
-              borderColor: "#eee",
-              borderWidth: 1,
-              padding: 12,
-              caretSize: 6,
-              cornerRadius: 6,
-            },
-          },
-          interaction: {
-            mode: "nearest",
-            axis: "x",
-            intersect: false,
-          },
-          scales: {
-            x: {
-              grid: { display: false },
-              ticks: { color: "#888", font: { size: 13 } },
-              title: {
-                display: true,
-                text: "Date",
-                color: "#666",
-                font: { size: 12 },
-              },
-            },
-            y: {
-              beginAtZero: true,
-              grid: { color: "#f0f0f0" },
-              ticks: {
-                color: "#bbb",
-                font: { size: 13 },
-                stepSize: 1,
-              },
-            },
-          },
-        },
+        const hourData = hourMap.get(hour);
+        if (!hourData[record.category]) {
+          hourData[record.category] = 0;
+        }
+        hourData[record.category]++;
       });
+
+      // Create labels for hour range
+      const labels = [];
+      for (let hour = startHour; hour <= endHour; hour++) {
+        const displayHour = hour % 12 || 12;
+        const ampm = hour < 12 ? "AM" : "PM";
+        labels.push(`${displayHour} ${ampm}`);
+      }
+
+      // Create datasets with zeros for missing data
+      const datasets = categoriesToShow.map((category) => {
+        const data = [];
+        for (let hour = startHour; hour <= endHour; hour++) {
+          const hourData = hourMap.get(hour);
+          data.push(hourData[category] || 0); // Use 0 if no data
+        }
+
+        const outcome = outcomes.find((o) => o.label === category);
+        const color = outcome ? outcome.color : "#1a73e8";
+
+        const hexToRgba = (hex, alpha) => {
+          const r = parseInt(hex.slice(1, 3), 16);
+          const g = parseInt(hex.slice(3, 5), 16);
+          const b = parseInt(hex.slice(5, 7), 16);
+          return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        };
+
+        return {
+          label: category,
+          data: data,
+          borderColor: hexToRgba(color, 0.5),
+          backgroundColor: hexToRgba(color, 0.08),
+          fill: true,
+          tension: 0.4,
+          pointRadius: 2,
+          pointHoverRadius: 4,
+          borderWidth: 1,
+        };
+      });
+
+      return { labels, datasets };
     }
+  };
 
-    // Initial data load
-    const chartData = processStatisticsData();
+  // Initialize main statistics chart
+  // Initialize main statistics chart
+  useEffect(() => {
+    if (
+      currentView === "statistics" &&
+      mainChartRef.current &&
+      !loading // Add this condition
+    ) {
+      if (!mainChartInstance.current) {
+        const ctx = mainChartRef.current.getContext("2d");
 
-    // Check if we're viewing a single day
-    const isSingleDay = !endDate || startDate === endDate;
+        mainChartInstance.current = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: [],
+            datasets: [],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                mode: "index",
+                intersect: false,
+                backgroundColor: "#fff",
+                titleColor: "#333",
+                bodyColor: "#333",
+                borderColor: "#eee",
+                borderWidth: 1,
+                padding: 12,
+                caretSize: 6,
+                cornerRadius: 6,
+              },
+            },
+            interaction: {
+              mode: "nearest",
+              axis: "x",
+              intersect: false,
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { color: "#888", font: { size: 13 } },
+                title: {
+                  display: true,
+                  text: "Date",
+                  color: "#666",
+                  font: { size: 12 },
+                },
+              },
+              y: {
+                beginAtZero: true,
+                grid: { color: "#f0f0f0" },
+                ticks: {
+                  color: "#bbb",
+                  font: { size: 13 },
+                  stepSize: 1,
+                },
+              },
+            },
+          },
+        });
+      }
 
-    // Update x-axis title based on view mode
-    mainChartInstance.current.options.scales.x.title.text = isSingleDay
-      ? "Time (Hour)"
-      : "Date";
+      // Initial data load
+      const chartData = processStatisticsData();
 
-    mainChartInstance.current.data.labels = chartData.labels;
-    mainChartInstance.current.data.datasets = chartData.datasets;
-    mainChartInstance.current.update();
-  }
-}, [currentView, loading]); // Add loading as dependency
+      // Check if we're viewing a single day
+      const isSingleDay = !endDate || startDate === endDate;
+
+      // Update x-axis title based on view mode
+      mainChartInstance.current.options.scales.x.title.text = isSingleDay
+        ? "Time (Hour)"
+        : "Date";
+
+      mainChartInstance.current.data.labels = chartData.labels;
+      mainChartInstance.current.data.datasets = chartData.datasets;
+      mainChartInstance.current.update();
+    }
+  }, [currentView, loading]); // Add loading as dependency
 
   useEffect(() => {
-  if (currentView === "statistics" && mainChartInstance.current && !loading) {
-    const chartData = processStatisticsData();
+    if (currentView === "statistics" && mainChartInstance.current && !loading) {
+      const chartData = processStatisticsData();
 
-    // Determine view mode based on date selection
-    const showDateView = startDate && endDate && startDate !== endDate;
-    
-    // Determine if single day from actual filtered data
-    let isSingleDay = false;
-    if (!showDateView) {
-      const filteredTimestamps = callRecords
-        .filter((r) => {
-          if (!r.timestamp) return false;
-          const recordDate = parseTimestamp(r.timestamp);
-          if (!recordDate) return false;
+      // Determine view mode based on date selection
+      const showDateView = startDate && endDate && startDate !== endDate;
 
-          if (startDate) {
-            const startDateTime = parseUserInputDate(startDate, startTime);
-            if (startDateTime && recordDate < startDateTime) return false;
-          }
+      // Determine if single day from actual filtered data
+      let isSingleDay = false;
+      if (!showDateView) {
+        const filteredTimestamps = callRecords
+          .filter((r) => {
+            if (!r.timestamp) return false;
+            const recordDate = parseTimestamp(r.timestamp);
+            if (!recordDate) return false;
 
-          if (endDate) {
-            const endDateTime = parseUserInputDate(endDate, endTime || "23:59:59");
-            if (endDateTime && recordDate > endDateTime) return false;
-          }
+            if (startDate) {
+              const startDateTime = parseUserInputDate(startDate, startTime);
+              if (startDateTime && recordDate < startDateTime) return false;
+            }
 
-          return true;
-        })
-        .map((r) => parseTimestamp(r.timestamp))
-        .filter((d) => d !== null);
+            if (endDate) {
+              const endDateTime = parseUserInputDate(
+                endDate,
+                endTime || "23:59:59"
+              );
+              if (endDateTime && recordDate > endDateTime) return false;
+            }
 
-      if (filteredTimestamps.length > 0) {
-        filteredTimestamps.sort((a, b) => a - b);
-        const earliestDateStr = formatDateForComparison(filteredTimestamps[0]);
-        const latestDateStr = formatDateForComparison(
-          filteredTimestamps[filteredTimestamps.length - 1]
-        );
-        isSingleDay = earliestDateStr === latestDateStr;
+            return true;
+          })
+          .map((r) => parseTimestamp(r.timestamp))
+          .filter((d) => d !== null);
+
+        if (filteredTimestamps.length > 0) {
+          filteredTimestamps.sort((a, b) => a - b);
+          const earliestDateStr = formatDateForComparison(
+            filteredTimestamps[0]
+          );
+          const latestDateStr = formatDateForComparison(
+            filteredTimestamps[filteredTimestamps.length - 1]
+          );
+          isSingleDay = earliestDateStr === latestDateStr;
+        }
       }
+
+      // Update x-axis title based on view mode
+      mainChartInstance.current.options.scales.x.title.text =
+        showDateView || !isSingleDay ? "Date" : "Time (Hour)";
+
+      mainChartInstance.current.data.labels = chartData.labels;
+      mainChartInstance.current.data.datasets = chartData.datasets;
+      mainChartInstance.current.update();
     }
-
-    // Update x-axis title based on view mode
-    mainChartInstance.current.options.scales.x.title.text = 
-      (showDateView || !isSingleDay) ? "Date" : "Time (Hour)";
-
-    mainChartInstance.current.data.labels = chartData.labels;
-    mainChartInstance.current.data.datasets = chartData.datasets;
-    mainChartInstance.current.update();
-  }
-}, [selectedOutcomes, currentView, callRecords, startDate, startTime, endDate, endTime, loading]); // Add loading dependency
+  }, [
+    selectedOutcomes,
+    currentView,
+    callRecords,
+    startDate,
+    startTime,
+    endDate,
+    endTime,
+    loading,
+  ]); // Add loading dependency
 
   useEffect(() => {
     if (dashboardData) {
@@ -1431,7 +1477,8 @@ useEffect(() => {
     }
   }, [dashboardData]);
 
-  if (loading)
+  if (loading && fetchTrigger > 0)
+    // Only show loading if data fetch was triggered
     return (
       <div style={{ padding: 40, textAlign: "center" }}>
         Loading dashboard...
@@ -1608,38 +1655,9 @@ useEffect(() => {
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: "12px", marginTop: "16px", flexWrap: "wrap" }}>
-                <button
-                  onClick={handleApplyFilters}
-                  style={{
-                    ...styles.btn,
-                    ...styles.btnPrimary,
-                  }}
-                >
-                  <i className="bi bi-funnel-fill"></i>
-                  Apply Filters
-                </button>
-                <button
-                  onClick={handleReset}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    color: "#666",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    fontSize: "13px",
-                    fontWeight: 500,
-                    padding: "8px",
-                  }}
-                >
-                  <i className="bi bi-arrow-clockwise"></i>
-                  Reset Filters
-                </button>
+           
               </div>
-            </div>
-
+       
             {/* Statistics Content */}
             <div
               className="statistics-grid"
@@ -1663,76 +1681,122 @@ useEffect(() => {
                     Calls Over Time
                   </div>
                   <div style={{ fontSize: "13px", color: "#777" }}>
-  {(() => {
-    // Check if different dates are selected
-    const showDateView = startDate && endDate && startDate !== endDate;
+                    {(() => {
+                      // Check if different dates are selected
+                      const showDateView =
+                        startDate && endDate && startDate !== endDate;
 
-    if (showDateView) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-      return `Daily breakdown across ${daysDiff} days (${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
-    }
+                      if (showDateView) {
+                        const start = new Date(startDate);
+                        const end = new Date(endDate);
+                        const daysDiff =
+                          Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+                        return `Daily breakdown across ${daysDiff} days (${start.toLocaleDateString(
+                          "en-US",
+                          { month: "short", day: "numeric" }
+                        )} - ${end.toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })})`;
+                      }
 
-    // Filter records by selected date/time
-    const filteredTimestamps = callRecords
-      .filter((r) => {
-        if (!r.timestamp) return false;
-        const recordDate = parseTimestamp(r.timestamp);
-        if (!recordDate) return false;
+                      // Filter records by selected date/time
+                      const filteredTimestamps = callRecords
+                        .filter((r) => {
+                          if (!r.timestamp) return false;
+                          const recordDate = parseTimestamp(r.timestamp);
+                          if (!recordDate) return false;
 
-        if (startDate) {
-          const startDateTime = parseUserInputDate(startDate, startTime);
-          if (startDateTime && recordDate < startDateTime) return false;
-        }
+                          if (startDate) {
+                            const startDateTime = parseUserInputDate(
+                              startDate,
+                              startTime
+                            );
+                            if (startDateTime && recordDate < startDateTime)
+                              return false;
+                          }
 
-        if (endDate) {
-          const endDateTime = parseUserInputDate(endDate, endTime || "23:59:59");
-          if (endDateTime && recordDate > endDateTime) return false;
-        }
+                          if (endDate) {
+                            const endDateTime = parseUserInputDate(
+                              endDate,
+                              endTime || "23:59:59"
+                            );
+                            if (endDateTime && recordDate > endDateTime)
+                              return false;
+                          }
 
-        return true;
-      })
-      .map((r) => parseTimestamp(r.timestamp))
-      .filter((d) => d !== null);
+                          return true;
+                        })
+                        .map((r) => parseTimestamp(r.timestamp))
+                        .filter((d) => d !== null);
 
-    if (filteredTimestamps.length === 0) return "No data available for selected date range";
+                      if (filteredTimestamps.length === 0)
+                        return "No data available for selected date range";
 
-    filteredTimestamps.sort((a, b) => a - b);
-    const earliestDate = filteredTimestamps[0];
-    const latestDate = filteredTimestamps[filteredTimestamps.length - 1];
+                      filteredTimestamps.sort((a, b) => a - b);
+                      const earliestDate = filteredTimestamps[0];
+                      const latestDate =
+                        filteredTimestamps[filteredTimestamps.length - 1];
 
-    const earliestDateStr = formatDateForComparison(earliestDate);
-    const latestDateStr = formatDateForComparison(latestDate);
-    const isSingleDay = earliestDateStr === latestDateStr;
+                      const earliestDateStr =
+                        formatDateForComparison(earliestDate);
+                      const latestDateStr = formatDateForComparison(latestDate);
+                      const isSingleDay = earliestDateStr === latestDateStr;
 
-    if (isSingleDay) {
-      // Determine hour range
-      let startHour, endHour;
-      
-      if (startTime || endTime) {
-        const startDateTime = parseUserInputDate(startDate, startTime || "00:00");
-        const endDateTime = parseUserInputDate(endDate || startDate, endTime || "23:59");
-        startHour = startDateTime ? startDateTime.getHours() : earliestDate.getHours();
-        endHour = endDateTime ? endDateTime.getHours() : latestDate.getHours();
-      } else {
-        startHour = earliestDate.getHours();
-        endHour = latestDate.getHours();
-      }
+                      if (isSingleDay) {
+                        // Determine hour range
+                        let startHour, endHour;
 
-      const formatHour = (h) => {
-        const display = h % 12 || 12;
-        const ampm = h < 12 ? "AM" : "PM";
-        return `${display} ${ampm}`;
-      };
-      
-      return `Hourly breakdown from ${formatHour(startHour)} to ${formatHour(endHour)} on ${earliestDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
-    } else {
-      const daysDiff = Math.ceil((latestDate - earliestDate) / (1000 * 60 * 60 * 24)) + 1;
-      return `Daily breakdown across ${daysDiff} days (${earliestDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${latestDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
-    }
-  })()}
-</div>
+                        if (startTime || endTime) {
+                          const startDateTime = parseUserInputDate(
+                            startDate,
+                            startTime || "00:00"
+                          );
+                          const endDateTime = parseUserInputDate(
+                            endDate || startDate,
+                            endTime || "23:59"
+                          );
+                          startHour = startDateTime
+                            ? startDateTime.getHours()
+                            : earliestDate.getHours();
+                          endHour = endDateTime
+                            ? endDateTime.getHours()
+                            : latestDate.getHours();
+                        } else {
+                          startHour = earliestDate.getHours();
+                          endHour = latestDate.getHours();
+                        }
+
+                        const formatHour = (h) => {
+                          const display = h % 12 || 12;
+                          const ampm = h < 12 ? "AM" : "PM";
+                          return `${display} ${ampm}`;
+                        };
+
+                        return `Hourly breakdown from ${formatHour(
+                          startHour
+                        )} to ${formatHour(
+                          endHour
+                        )} on ${earliestDate.toLocaleDateString("en-US", {
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric",
+                        })}`;
+                      } else {
+                        const daysDiff =
+                          Math.ceil(
+                            (latestDate - earliestDate) / (1000 * 60 * 60 * 24)
+                          ) + 1;
+                        return `Daily breakdown across ${daysDiff} days (${earliestDate.toLocaleDateString(
+                          "en-US",
+                          { month: "short", day: "numeric" }
+                        )} - ${latestDate.toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })})`;
+                      }
+                    })()}
+                  </div>
                 </div>
 
                 {/* Legend */}
@@ -2034,7 +2098,14 @@ useEffect(() => {
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: "12px", marginTop: "16px", flexWrap: "wrap" }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "12px",
+                  marginTop: "16px",
+                  flexWrap: "wrap",
+                }}
+              >
                 <button
                   onClick={handleApplyFilters}
                   style={{
@@ -2366,7 +2437,10 @@ useEffect(() => {
                       boxShadow: "0 1px 2px #e5eaf2",
                     }}
                   >
-                    {timeRange ? timeFilteredQualifiedPercentage : qualifiedPercentage}.0%
+                    {timeRange
+                      ? timeFilteredQualifiedPercentage
+                      : qualifiedPercentage}
+                    .0%
                   </div>
                 </div>
               )}
@@ -2409,7 +2483,9 @@ useEffect(() => {
                             Neutral: "bi-circle",
                             "Unclear Response": "bi-info-circle",
                           };
-                          const cat = timeFilteredOutcomes.find((o) => o.label === catName);
+                          const cat = timeFilteredOutcomes.find(
+                            (o) => o.label === catName
+                          );
                           return cat ? (
                             <div
                               key={catName}
@@ -2491,7 +2567,9 @@ useEffect(() => {
                           "User Hang Up": "bi-telephone-minus-fill",
                           Inaudible: "bi-volume-mute",
                         };
-                        const cat = timeFilteredOutcomes.find((o) => o.label === catName);
+                        const cat = timeFilteredOutcomes.find(
+                          (o) => o.label === catName
+                        );
                         return cat ? (
                           <div
                             key={catName}
@@ -2581,7 +2659,9 @@ useEffect(() => {
                             color: "#1a73e8",
                           }}
                         >
-                          {timeRange ? timeFilteredQualifiedCount.toLocaleString() : qualifiedCount.toLocaleString()}
+                          {timeRange
+                            ? timeFilteredQualifiedCount.toLocaleString()
+                            : qualifiedCount.toLocaleString()}
                         </div>
                         <div style={{ fontSize: "15px", color: "#888" }}>
                           Total Qualified
@@ -2594,7 +2674,10 @@ useEffect(() => {
                           }}
                         >
                           <i className="bi bi-arrow-up"></i>{" "}
-                          {timeRange ? timeFilteredQualifiedPercentage : qualifiedPercentage}%
+                          {timeRange
+                            ? timeFilteredQualifiedPercentage
+                            : qualifiedPercentage}
+                          %
                         </div>
                       </div>
                       <button
