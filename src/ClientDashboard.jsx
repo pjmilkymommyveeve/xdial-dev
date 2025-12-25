@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import Chart from "chart.js/auto";
+import api from './api';
 import DataExport from "./DataExport";
 const MedicareDashboard = () => {
   const [currentView, setCurrentView] = useState("dashboard");
@@ -127,99 +128,68 @@ const MedicareDashboard = () => {
   // ClientDashboard.jsx - Update fetchData useEffect to fetch all pages
   // Fetch dashboard data from API
   // ClientDashboard.jsx - Update fetchData useEffect to fetch all pages
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!campaignId) return;
+ useEffect(() => {
+  const fetchData = async () => {
+    if (!campaignId) return;
 
-      setLoading(true);
-      setError(null);
-      try {
-        const token =
-          localStorage.getItem("access_token") ||
-          sessionStorage.getItem("access_token");
+    setLoading(true);
+    setError(null);
+    try {
+      // First page request - NO NEED TO MANUALLY ADD TOKEN!
+      const firstPageRes = await api.get(
+        `/campaigns/${campaignId}/dashboard?start_date=${startDate}&page=1&page_size=25`
+      );
 
-        if (!token) {
-          throw new Error("No authentication token found. Please login again.");
-        }
+      const firstPageData = firstPageRes.data;
+      const totalPages = firstPageData.pagination?.total_pages || 1;
 
-        // First, fetch the first page to get total pages info
-        const firstPageRes = await fetch(
-          `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/${campaignId}/dashboard?start_date=${startDate}&page=1&page_size=25`,
-          {
-            headers: {
-              accept: "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (firstPageRes.status === 401) {
-          throw new Error("Session expired. Please login again.");
-        }
-
-        if (!firstPageRes.ok) throw new Error("Failed to fetch dashboard data");
-
-        const firstPageData = await firstPageRes.json();
-        const totalPages = firstPageData.pagination?.total_pages || 1;
-
-        // If there's only one page, use it directly
-        if (totalPages === 1) {
-          setDashboardData(firstPageData);
-          setLoading(false);
-          return;
-        }
-
-        // Fetch all remaining pages in parallel
-        const pagePromises = [];
-        for (let page = 2; page <= totalPages; page++) {
-          pagePromises.push(
-            fetch(
-              `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/${campaignId}/dashboard?start_date=${startDate}&page=${page}&page_size=25`,
-              {
-                headers: {
-                  accept: "application/json",
-                  Authorization: `Bearer ${token}`,
-                },
-              }
-            ).then((res) => res.json())
-          );
-        }
-
-        const additionalPages = await Promise.all(pagePromises);
-
-        // Combine all calls from all pages
-        const allCalls = [
-          ...firstPageData.calls,
-          ...additionalPages.flatMap((pageData) => pageData.calls || []),
-        ];
-
-        // Create combined data object
-        const combinedData = {
-          ...firstPageData,
-          calls: allCalls,
-          pagination: {
-            ...firstPageData.pagination,
-            total_records: allCalls.length,
-            current_page: 1,
-            total_pages: 1, // We now have all data in one "page"
-          },
-        };
-
-        setDashboardData(combinedData);
+      if (totalPages === 1) {
+        setDashboardData(firstPageData);
         setLoading(false);
-      } catch (err) {
-        setError(err.message);
-        setLoading(false);
-
-        if (err.message.includes("login")) {
-          setTimeout(() => {
-            window.location.href = "/";
-          }, 2000);
-        }
+        return;
       }
-    };
-    fetchData();
-  }, [campaignId, fetchTrigger]); // Only refetch when campaign changes or Apply Filters is clicked
+
+      // Fetch remaining pages
+      const pagePromises = [];
+      for (let page = 2; page <= totalPages; page++) {
+        pagePromises.push(
+          api.get(
+            `/campaigns/${campaignId}/dashboard?start_date=${startDate}&page=${page}&page_size=25`
+          )
+        );
+      }
+
+      const additionalPages = await Promise.all(pagePromises);
+
+      // Combine all calls
+      const allCalls = [
+        ...firstPageData.calls,
+        ...additionalPages.flatMap((res) => res.data.calls || []),
+      ];
+
+      const combinedData = {
+        ...firstPageData,
+        calls: allCalls,
+        pagination: {
+          ...firstPageData.pagination,
+          total_records: allCalls.length,
+          current_page: 1,
+          total_pages: 1,
+        },
+      };
+
+      setDashboardData(combinedData);
+      setTimeout(() => setLoading(false), 100);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+      setLoading(false);
+      
+      // The interceptor will handle 401 and redirect automatically
+      // No need for manual redirect here
+    }
+  };
+  fetchData();
+}, [campaignId, fetchTrigger, startDate]); // Keep dependencies as is // Only refetch when campaign changes or Apply Filters is clicked
 
   // Reset to page 1 when filters change
 
@@ -784,7 +754,7 @@ const MedicareDashboard = () => {
 
   // Handle Apply Filters button
   const handleApplyFilters = () => {
-    setLoading(true);
+    
     setCurrentPage(1);
     setFetchTrigger(prev => prev + 1); // Increment to trigger useEffect
   };
@@ -1321,12 +1291,14 @@ const MedicareDashboard = () => {
 };
 
   // Initialize main statistics chart
-  useEffect(() => {
-    if (
-      currentView === "statistics" &&
-      mainChartRef.current &&
-      !mainChartInstance.current
-    ) {
+  // Initialize main statistics chart
+useEffect(() => {
+  if (
+    currentView === "statistics" &&
+    mainChartRef.current &&
+    !loading // Add this condition
+  ) {
+    if (!mainChartInstance.current) {
       const ctx = mainChartRef.current.getContext("2d");
 
       mainChartInstance.current = new Chart(ctx, {
@@ -1381,33 +1353,27 @@ const MedicareDashboard = () => {
           },
         },
       });
-
-      // Initial data load
-      const chartData = processStatisticsData();
-
-      // Check if we're viewing a single day
-      const isSingleDay = !endDate || startDate === endDate;
-
-      // Update x-axis title based on view mode
-      mainChartInstance.current.options.scales.x.title.text = isSingleDay
-        ? "Time (Hour)"
-        : "Date";
-
-      mainChartInstance.current.data.labels = chartData.labels;
-      mainChartInstance.current.data.datasets = chartData.datasets;
-      mainChartInstance.current.update();
     }
 
-    return () => {
-      if (mainChartInstance.current) {
-        mainChartInstance.current.destroy();
-        mainChartInstance.current = null;
-      }
-    };
-  }, [currentView]);
+    // Initial data load
+    const chartData = processStatisticsData();
+
+    // Check if we're viewing a single day
+    const isSingleDay = !endDate || startDate === endDate;
+
+    // Update x-axis title based on view mode
+    mainChartInstance.current.options.scales.x.title.text = isSingleDay
+      ? "Time (Hour)"
+      : "Date";
+
+    mainChartInstance.current.data.labels = chartData.labels;
+    mainChartInstance.current.data.datasets = chartData.datasets;
+    mainChartInstance.current.update();
+  }
+}, [currentView, loading]); // Add loading as dependency
 
   useEffect(() => {
-  if (currentView === "statistics" && mainChartInstance.current) {
+  if (currentView === "statistics" && mainChartInstance.current && !loading) {
     const chartData = processStatisticsData();
 
     // Determine view mode based on date selection
@@ -1455,7 +1421,7 @@ const MedicareDashboard = () => {
     mainChartInstance.current.data.datasets = chartData.datasets;
     mainChartInstance.current.update();
   }
-}, [selectedOutcomes, currentView, callRecords, startDate, startTime, endDate, endTime]);
+}, [selectedOutcomes, currentView, callRecords, startDate, startTime, endDate, endTime, loading]); // Add loading dependency
 
   useEffect(() => {
     if (dashboardData) {
@@ -1503,6 +1469,12 @@ const MedicareDashboard = () => {
           </span>
         </div>
         <div style={styles.headerRight}>
+          <button
+            style={styles.btn}
+            onClick={() => (window.location.href = "/client-landing")}
+          >
+            <i className="bi bi-house-fill"></i> Back to Campaigns
+          </button>
           <button
             style={{
               ...styles.btn,
