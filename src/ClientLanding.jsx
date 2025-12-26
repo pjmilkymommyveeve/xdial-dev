@@ -4,72 +4,116 @@ const ClientLanding = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [memberInfo, setMemberInfo] = useState(null);
 
   useEffect(() => {
     fetchCampaignData();
   }, []);
 
   const getAuthToken = () => {
-    return (
-      localStorage.getItem("access_token")
-    );
+    return localStorage.getItem("access_token");
   };
 
-  // ClientLanding.jsx - Update fetchCampaignData function
-const fetchCampaignData = async () => {
-  try {
-    setLoading(true);
-    const token = getAuthToken();
+  const getUserRole = () => {
+    return localStorage.getItem("role");
+  };
 
-    if (!token) {
-      throw new Error("No authentication token found. Please login again.");
-    }
+  // Updated fetchCampaignData function to handle both client and client_member roles
+  const fetchCampaignData = async () => {
+    try {
+      setLoading(true);
+      const token = getAuthToken();
 
-    const clientId = localStorage.getItem("user_id");
-
-    if (!clientId) {
-      throw new Error("User ID not found. Please login again.");
-    }
-
-    const response = await fetch(
-      `https://api.xlitecore.xdialnetworks.com/api/v1/client/campaigns/${clientId}`,
-      {
-        method: "GET",
-        headers: {
-          accept: "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+      if (!token) {
+        throw new Error("No authentication token found. Please login again.");
       }
-    );
 
-    if (response.status === 401) {
-      throw new Error("Session expired. Please login again.");
+      const userRole = getUserRole();
+      let clientId;
+
+      // Check if user is client_member
+      if (userRole === "client_member") {
+        // Step 1: Fetch employer information to get the client_id
+        const employerResponse = await fetch(
+          "https://api.xlitecore.xdialnetworks.com/api/v1/client/campaigns/employer",
+          {
+            method: "GET",
+            headers: {
+              accept: "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (employerResponse.status === 401) {
+          throw new Error("Session expired. Please login again.");
+        }
+
+        if (!employerResponse.ok) {
+          throw new Error("Failed to fetch employer information");
+        }
+
+        const employerData = await employerResponse.json();
+        console.log("Employer data:", employerData);
+        
+        // Store member info for display
+        setMemberInfo(employerData);
+        
+        // Extract client_id from employer response
+        clientId = employerData.client_id;
+
+        if (!clientId) {
+          throw new Error("Employer information does not contain client ID");
+        }
+      } else {
+        // For regular client role, get client_id from localStorage
+        clientId = localStorage.getItem("user_id");
+
+        if (!clientId) {
+          throw new Error("User ID not found. Please login again.");
+        }
+      }
+
+      // Step 2: Fetch campaigns using the client_id
+      const response = await fetch(
+        `https://api.xlitecore.xdialnetworks.com/api/v1/client/campaigns/${clientId}`,
+        {
+          method: "GET",
+          headers: {
+            accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.status === 401) {
+        throw new Error("Session expired. Please login again.");
+      }
+
+      if (response.status === 404) {
+        throw new Error("Campaign data not found.");
+      }
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch campaign data");
+      }
+
+      const result = await response.json();
+      setData(result);
+      setError("");
+    } catch (err) {
+      setError(err.message || "An error occurred while fetching data");
+      console.error("Fetch error:", err);
+
+      if (err.message.includes("login")) {
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 2000);
+      }
+    } finally {
+      setLoading(false);
     }
-
-    if (response.status === 404) {
-      throw new Error("Campaign data not found.");
-    }
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch campaign data");
-    }
-
-    const result = await response.json();
-    setData(result);
-    setError("");
-  } catch (err) {
-    setError(err.message || "An error occurred while fetching data");
-    console.error("Fetch error:", err);
-
-    if (err.message.includes("login")) {
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 2000);
-    }
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("access_token");
@@ -149,6 +193,15 @@ const fetchCampaignData = async () => {
   const totalBots =
     data?.campaigns?.reduce((sum, c) => sum + (c.bot_count || 0), 0) || 0;
 
+  // Get user role for display
+  const userRole = getUserRole();
+  const isClientMember = userRole === "client_member";
+  
+  // Determine the display name
+  const displayName = isClientMember 
+    ? (memberInfo?.full_name || memberInfo?.username || localStorage.getItem("username") || "Team Member")
+    : (data?.client_name || "Client");
+
   return (
     <>
       <style>{styles}</style>
@@ -158,13 +211,27 @@ const fetchCampaignData = async () => {
           <h1>
             Welcome,{" "}
             <span className="company-name">
-              {data?.client_name || "Client"}
+              {displayName}
             </span>
+            {isClientMember && (
+              <span className="role-badge">Team Member</span>
+            )}
           </h1>
-          <button className="logout-btn" onClick={handleLogout}>
-            <i className="bi bi-box-arrow-right"></i>
-            Logout
-          </button>
+          <div className="header-buttons">
+            {!isClientMember && (
+              <button 
+                className="manage-team-btn"
+                onClick={() => window.location.href = '/manage-team'}
+              >
+                <i className="bi bi-people-fill"></i>
+                Manage Team
+              </button>
+            )}
+            <button className="logout-btn" onClick={handleLogout}>
+              <i className="bi bi-box-arrow-right"></i>
+              Logout
+            </button>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -294,12 +361,12 @@ const fetchCampaignData = async () => {
                 </div>
 
                 <button 
-  className="view-dashboard-btn"
-  onClick={() => window.location.href = `/dashboard?campaign_id=${campaign.id}`}
->
-  View Dashboard
-  <i className="bi bi-grid-3x3-gap-fill"></i>
-</button>
+                  className="view-dashboard-btn"
+                  onClick={() => window.location.href = `/dashboard?campaign_id=${campaign.id}`}
+                >
+                  View Dashboard
+                  <i className="bi bi-grid-3x3-gap-fill"></i>
+                </button>
               </div>
             );
           })}
@@ -399,6 +466,9 @@ const styles = `
     font-weight: 400;
     color: #111827;
     line-height: 1.2;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
   }
 
   .header .company-name {
@@ -406,21 +476,59 @@ const styles = `
     font-weight: 500;
   }
 
-  /* Logout Button */
+  .role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.75rem;
+    background: #EDE9FE;
+    color: #7C3AED;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  /* Header Buttons */
+  .header-buttons {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .manage-team-btn,
   .logout-btn {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     padding: 0.625rem 1rem;
-    background-color: white;
-    border: 1px solid #E5E7EB;
     border-radius: 8px;
-    color: #6B7280;
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  .manage-team-btn {
+    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+    color: white;
+    border: none;
+  }
+
+  .manage-team-btn:hover {
+    background: linear-gradient(135deg, #3730A3 0%, #6D28D9 100%);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    transform: translateY(-2px);
+  }
+
+  .manage-team-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
+  }
+
+  .logout-btn {
+    background-color: white;
+    border: 1px solid #E5E7EB;
+    color: #6B7280;
   }
 
   .logout-btn:hover {
@@ -434,7 +542,8 @@ const styles = `
     border-color: #9CA3AF;
   }
 
-  .logout-btn i {
+  .logout-btn i,
+  .manage-team-btn i {
     font-size: 1rem;
   }
 
@@ -777,6 +886,16 @@ const styles = `
       flex-direction: column;
       align-items: flex-start;
       gap: 1rem;
+    }
+
+    .header-buttons {
+      width: 100%;
+    }
+
+    .manage-team-btn,
+    .logout-btn {
+      flex: 1;
+      justify-content: center;
     }
 
     .campaign-title-row {
