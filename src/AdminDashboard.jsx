@@ -22,114 +22,127 @@ const AdminDashboard = () => {
 
   // Get campaign ID on mount and set today's date
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const id = urlParams.get("campaign_id") || "1";
+  const urlParams = new URLSearchParams(window.location.search);
+  const id = urlParams.get("campaign_id");
+  if (id) {
     setCampaignId(id);
     setCurrentView("dashboard");
-    
     // Set default start date to today
     const today = new Date().toISOString().split('T')[0];
     setStartDate(today);
-    
-    setFetchTrigger(1);
-  }, []);
+  } else {
+    // Redirect to admin landing if no campaign_id
+    window.location.href = "/admin-landing";
+  }
+}, []);
 
   // Fetch dashboard data from API
   useEffect(() => {
-    const fetchData = async () => {
-      if (!campaignId || !startDate) return;
+  const fetchData = async () => {
+    if (!campaignId || !startDate) return; // Don't fetch without campaign ID and start date
 
-      setLoading(true);
-      setError(null);
-      try {
-        const token = localStorage.getItem("access_token");
-        
-        if (!token) {
-          setError("Not authenticated. Please login again.");
+    setLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem("access_token");
+      
+      if (!token) {
+        setError("Not authenticated. Please login again.");
+        setTimeout(() => {
           window.location.href = "/";
-          return;
-        }
-
-        let apiUrl = `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/admin/${campaignId}/dashboard?start_date=${startDate}`;
-        if (endDate && endDate !== startDate) {
-          apiUrl += `&end_date=${endDate}`;
-        }
-        apiUrl += `&page=1&page_size=50`;
-
-        const firstPageRes = await fetch(apiUrl, {
-          headers: {
-            accept: "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (firstPageRes.status === 401 || firstPageRes.status === 403) {
-          localStorage.clear();
-          window.location.href = "/";
-          return;
-        }
-
-        if (!firstPageRes.ok) {
-          throw new Error(`Failed to fetch dashboard data: ${firstPageRes.status}`);
-        }
-
-        const firstPageData = await firstPageRes.json();
-        const totalPages = firstPageData.pagination?.total_pages || 1;
-
-        if (totalPages === 1) {
-          processAndSetData(firstPageData);
-          setLoading(false);
-          return;
-        }
-
-        const pagePromises = [];
-        for (let page = 2; page <= totalPages; page++) {
-          let pageUrl = `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/admin/${campaignId}/dashboard?start_date=${startDate}`;
-          if (endDate && endDate !== startDate) {
-            pageUrl += `&end_date=${endDate}`;
-          }
-          pageUrl += `&page=${page}&page_size=50`;
-
-          pagePromises.push(
-            fetch(pageUrl, {
-              headers: {
-                accept: "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-            }).then((res) => res.json())
-          );
-        }
-
-        const additionalPages = await Promise.all(pagePromises);
-        const allCalls = [
-          ...firstPageData.calls,
-          ...additionalPages.flatMap((pageData) => pageData.calls || []),
-        ];
-
-        const combinedData = {
-          ...firstPageData,
-          calls: allCalls,
-          pagination: {
-            ...firstPageData.pagination,
-            total_records: allCalls.length,
-            current_page: 1,
-            total_pages: 1,
-          },
-        };
-
-        processAndSetData(combinedData);
-        setLoading(false);
-      } catch (err) {
-        console.error("Fetch error:", err);
-        setError(err.message);
-        setLoading(false);
+        }, 2000);
+        return;
       }
-    };
 
-    if (fetchTrigger > 0) {
-      fetchData();
+      let apiUrl = `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/admin/${campaignId}/dashboard?start_date=${startDate}`;
+      if (endDate && endDate !== startDate) {
+        apiUrl += `&end_date=${endDate}`;
+      }
+      apiUrl += `&page=1&page_size=50`;
+
+      const firstPageRes = await fetch(apiUrl, {
+        headers: {
+          accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (firstPageRes.status === 401 || firstPageRes.status === 403) {
+        localStorage.clear();
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 2000);
+        return;
+      }
+
+      if (!firstPageRes.ok) {
+        throw new Error(`Failed to fetch dashboard data: ${firstPageRes.status}`);
+      }
+
+      const firstPageData = await firstPageRes.json();
+      const totalPages = firstPageData.pagination?.total_pages || 1;
+
+      if (totalPages === 1) {
+        processAndSetData(firstPageData);
+        setLoading(false);
+        return;
+      }
+
+      const pagePromises = [];
+      for (let page = 2; page <= totalPages; page++) {
+        let pageUrl = `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/admin/${campaignId}/dashboard?start_date=${startDate}`;
+        if (endDate && endDate !== startDate) {
+          pageUrl += `&end_date=${endDate}`;
+        }
+        pageUrl += `&page=${page}&page_size=50`;
+
+        pagePromises.push(
+          fetch(pageUrl, {
+            headers: {
+              accept: "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }).then((res) => res.json())
+        );
+      }
+
+      const additionalPages = await Promise.all(pagePromises);
+      const allCalls = [
+        ...firstPageData.calls,
+        ...additionalPages.flatMap((pageData) => pageData.calls || []),
+      ];
+
+      const combinedData = {
+        ...firstPageData,
+        calls: allCalls,
+        pagination: {
+          ...firstPageData.pagination,
+          total_records: allCalls.length,
+          current_page: 1,
+          total_pages: 1,
+        },
+      };
+
+      processAndSetData(combinedData);
+      setLoading(false);
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setError(err.message);
+      setLoading(false);
+      
+      if (err.message.includes("authentication") || err.message.includes("login")) {
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 2000);
+      }
     }
-  }, [campaignId, fetchTrigger, startDate, endDate]);
+  };
+
+  // Only fetch if fetchTrigger > 0 (meaning Apply Filters was clicked)
+  if (fetchTrigger > 0) {
+    fetchData();
+  }
+}, [campaignId, fetchTrigger, startDate, endDate]);
 
   const processAndSetData = (data) => {
     const stages = new Set();
@@ -283,9 +296,9 @@ const AdminDashboard = () => {
   };
 
   const handleApplyFilters = () => {
-    setCurrentPage(1);
-    // Don't need to trigger fetch, filtering happens client-side
-  };
+  setCurrentPage(1);
+  setFetchTrigger((prev) => prev + 1); // Trigger data fetch
+};
 
   // Calculate filtered percentage
   const calculateFilteredPercentage = () => {
