@@ -410,6 +410,7 @@ const AdminDashboard = () => {
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
               />
+
             </div>
           </div>
 
@@ -451,6 +452,9 @@ const AdminDashboard = () => {
 
           <div className="filter-actions" style={{ display: "flex", gap: "12px", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", gap: "12px" }}>
+              <button onClick={handleApplyFilters} style={{ padding: "8px 20px", borderRadius: "4px", border: "none", backgroundColor: "#d32f2f", color: "white", cursor: "pointer", fontSize: "13px", fontWeight: 500, display: "flex", alignItems: "center", gap: "6px" }}>
+                <i className="bi bi-funnel-fill"></i> Apply Filters
+              </button>
               <button onClick={handleReset} style={{ padding: "8px 20px", borderRadius: "4px", border: "1px solid #ddd", backgroundColor: "white", cursor: "pointer", fontSize: "13px", display: "flex", alignItems: "center", gap: "6px" }}>
                 <i className="bi bi-arrow-clockwise"></i> Reset
               </button>
