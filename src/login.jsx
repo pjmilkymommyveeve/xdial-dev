@@ -64,7 +64,12 @@ const LoginPage = () => {
       setSuccess('Login successful! Redirecting...');
 
       setTimeout(() => {
-        window.location.href = '/client-landing';
+        // Redirect based on user role
+        if (data.role === 'admin') {
+          window.location.href = '/admin-dashboard';
+        } else {
+          window.location.href = '/client-landing';
+        }
       }, 1500);
 
     } catch (err) {
