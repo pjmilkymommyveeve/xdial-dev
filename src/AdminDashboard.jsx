@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+
 
 const AdminDashboard = () => {
   const [currentView, setCurrentView] = useState("dashboard");
@@ -15,6 +17,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
+const navigate = useNavigate();
 
   // Dynamic stage filter states
   const [stageFilters, setStageFilters] = useState({});
@@ -266,6 +269,12 @@ const AdminDashboard = () => {
       setSortDirection("asc");
     }
   };
+  const handleLogout = () => {
+  localStorage.clear();
+  sessionStorage.clear();
+  navigate("/");
+};
+
 
   const handleReset = () => {
     setSearchText("");
@@ -329,31 +338,28 @@ const AdminDashboard = () => {
   return (
     <div style={{ margin: 0, padding: 0, fontFamily: "Arial, sans-serif", backgroundColor: "#f5f5f5", minHeight: "100vh", zoom: "0.8" }}>
       {/* Header */}
-      <div className="header-container" style={{ backgroundColor: "#fff", borderBottom: "1px solid #e0e0e0", padding: "16px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div className="header-left" style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#d32f2f" }}>
-            <i className="bi bi-shield-check" style={{ fontSize: "20px" }}></i>
-            <span style={{ fontWeight: 600, fontSize: "15px" }}>Admin Dashboard</span>
-          </div>
-          <span className="admin-badge" style={{ backgroundColor: "#fff9c4", color: "#f57f17", padding: "4px 12px", borderRadius: "4px", fontSize: "13px", fontWeight: 500, display: "flex", alignItems: "center", gap: "6px" }}>
-            <i className="bi bi-gear-fill"></i> Administrator
-          </span>
-        </div>
-        <div className="header-right" style={{ display: "flex", gap: "12px" }}>
-          <button className="header-btn" style={{ padding: "8px 16px", borderRadius: "4px", border: "1px solid #e0e0e0", backgroundColor: "white", cursor: "pointer", fontSize: "13px", display: "flex", alignItems: "center", gap: "6px" }} onClick={() => window.location.href = "/admin-landing"}>
-            <i className="bi bi-house-fill"></i> Back to Home
-          </button>
-          <button className="header-btn" style={{ padding: "8px 16px", borderRadius: "4px", border: "none", backgroundColor: "#d32f2f", color: "white", cursor: "pointer", fontSize: "13px", fontWeight: 500, display: "flex", alignItems: "center", gap: "6px" }}>
-            <i className="bi bi-bar-chart-fill"></i> Dashboard
-          </button>
-          <button className="header-btn" style={{ padding: "8px 16px", borderRadius: "4px", border: "1px solid #e0e0e0", backgroundColor: "white", cursor: "pointer", fontSize: "13px", display: "flex", alignItems: "center", gap: "6px" }} onClick={() => window.location.href = `/recordings?campaign_id=${campaignId}`}>
-            <i className="bi bi-mic-fill"></i> Recordings
-          </button>
-          <button className="header-btn" style={{ padding: "8px 16px", borderRadius: "4px", border: "1px solid #e0e0e0", backgroundColor: "white", cursor: "pointer", fontSize: "13px", display: "flex", alignItems: "center", gap: "6px" }} onClick={() => { localStorage.clear(); window.location.href = "/"; }}>
-            <i className="bi bi-box-arrow-right"></i> Logout
-          </button>
-        </div>
-      </div>
+      <header className="dashboard-header">
+  <div className="header-content">
+    <div className="header-left">
+      <h1><i className="bi bi-speedometer2"></i> Onboarding</h1>
+      <p>Manage AI bot integration requests</p>
+    </div>
+    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+      <button className="logout-btn" onClick={() => navigate('/admin-data-export')}>
+        <i className="bi bi-file-earmark-arrow-up"></i>
+        Data Export
+      </button>
+      <button className="logout-btn" onClick={() => navigate('/integration-form')}>
+        <i className="bi bi-file-earmark-plus"></i>
+        Add Client
+      </button>
+      <button className="logout-btn" onClick={handleLogout}>
+        <i className="bi bi-box-arrow-right"></i>
+        Client Management
+      </button>
+    </div>
+  </div>
+</header>
 
       <div className="main-container" style={{ maxWidth: "1800px", margin: "0 auto", padding: "24px 32px" }}>
         {/* Search & Filter Section */}
