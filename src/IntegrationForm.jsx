@@ -634,7 +634,7 @@ const IntegrationForm = () => {
 
                 <div className="form-group">
                   <label htmlFor="primaryUserSeries">
-                    Primary User Series <span className="required">*</span>
+                    Verifier Campaign <span className="required">*</span>
                   </label>
                   <input
                     type="text"
@@ -642,7 +642,7 @@ const IntegrationForm = () => {
                     name="primaryUserSeries"
                     value={formData.primaryUserSeries}
                     onChange={handleChange}
-                    placeholder="Enter primary user series name"
+                    placeholder="Enter verifier campaign"
                   />
                 </div>
               </div>
