@@ -218,6 +218,15 @@ const ClientLanding = () => {
             )}
           </h1>
           <div className="header-buttons">
+            {userRole === "client" && (
+              <button 
+                className="request-campaign-btn"
+                onClick={() => window.location.href = '/request-campaign'}
+              >
+                <i className="bi bi-plus-circle-fill"></i>
+                Request Campaign
+              </button>
+            )}
             {!isClientMember && (
               <button 
                 className="manage-team-btn"
@@ -233,6 +242,8 @@ const ClientLanding = () => {
             </button>
           </div>
         </div>
+
+        
 
         {/* Stats Cards */}
         <div className="stats-grid">
@@ -493,6 +504,37 @@ const styles = `
     display: flex;
     gap: 0.75rem;
   }
+  .request-campaign-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+  }
+
+  .request-campaign-btn:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    transform: translateY(-2px);
+  }
+
+  .request-campaign-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+  }
+
+  .request-campaign-btn i {
+    font-size: 1rem;
+  }
 
   .manage-team-btn,
   .logout-btn {
@@ -507,6 +549,7 @@ const styles = `
     transition: all 0.2s ease;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
+  
 
   .manage-team-btn {
     background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);

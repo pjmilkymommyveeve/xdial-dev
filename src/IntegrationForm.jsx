@@ -53,7 +53,7 @@ const IntegrationForm = () => {
         method: 'GET',
         headers: {
           'accept': 'application/json',
-        },
+        },  
       });
 
       if (!response.ok) {

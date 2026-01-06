@@ -7,6 +7,7 @@ import ClientLanding from './ClientLanding';
 import ClientRecordings from './Clientrecordings';
 import DataExport from './DataExport';
 import IntegrationForm from './IntegrationForm';
+import RequestCampaign from './RequestCampaign';
 import ManageTeam from './ManageTeam';
 import AdminDataExport from './AdminDataExport';
 import AdminDashboard from './AdminDashboard';
@@ -25,6 +26,7 @@ function App() {
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
         <Route path="/admin-data-export" element={<AdminDataExport />} />
         <Route path="/admin-landing" element={<AdminLanding />} />
+        <Route path="/request-campaign" element={<RequestCampaign />} />
       </Routes>
     </Router>
   );
