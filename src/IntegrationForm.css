@@ -817,8 +817,9 @@ select:focus-visible {
 }
 
 .info-header strong {
-  font-size: 0.9375rem;
+  font-size: 0.9rem;
   color: #607ec0;
+  font-weight: 600;
 }
 
 .badge {

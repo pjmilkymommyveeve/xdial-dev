@@ -442,10 +442,10 @@ const IntegrationForm = () => {
         return (
           <div className="transfer-info-box">
             <div className="info-header">
-              <strong>{singleSetting.name}</strong>
-              {singleSetting.is_recommended && (
-                <span className="badge recommended">Recommended</span>
-              )}
+              <strong>
+                {singleSetting.name}
+                {singleSetting.is_recommended && ' (Recommended)'}
+              </strong>
             </div>
             
             <p>{singleSetting.description}</p>
@@ -524,10 +524,10 @@ const IntegrationForm = () => {
           return (
             <div className="transfer-info-box">
               <div className="info-header">
-                <strong>{selectedSetting.name}</strong>
-                {selectedSetting.is_recommended && (
-                  <span className="badge recommended">Recommended</span>
-                )}
+                <strong>
+                  {selectedSetting.name}
+                  {selectedSetting.is_recommended && ' (Recommended)'}
+                </strong>
               </div>
               
               <p>{selectedSetting.description}</p>
