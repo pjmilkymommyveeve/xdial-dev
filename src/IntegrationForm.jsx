@@ -421,79 +421,154 @@ const IntegrationForm = () => {
             )}
 
             {formData.model && availableTransferSettings.length > 0 && (
-              <div className="form-group">
-                <label>
-                  Transfer Quality Settings <span className="required">*</span>
-                </label>
-                
-                <div className="transfer-settings-grid">
-                  {availableTransferSettings.map(setting => {
-                    const fullSetting = getTransferSettingDetails(setting.id);
-                    if (!fullSetting) return null;
+  <div className="form-group">
+    <label>
+      Transfer Quality Settings <span className="required">*</span>
+    </label>
+    
+    {availableTransferSettings.length === 1 ? (
+      // Show only the single option without slider
+      (() => {
+        const singleSetting = getTransferSettingDetails(availableTransferSettings[0].id);
+        if (!singleSetting) return null;
 
-                    return (
-                      <div
-                        key={setting.id}
-                        className={`transfer-setting-card ${formData.transferSettingsId === setting.id ? 'selected' : ''}`}
-                        onClick={() => setFormData(prev => ({ ...prev, transferSettingsId: setting.id }))}
-                      >
-                        <div className="transfer-setting-header">
-                          <input
-                            type="radio"
-                            name="transferSettingsId"
-                            value={setting.id}
-                            checked={formData.transferSettingsId === setting.id}
-                            onChange={() => {}}
-                            required
-                          />
-                          <span className="transfer-setting-name">
-                            {fullSetting.name}
-                            {fullSetting.is_recommended && (
-                              <span className="recommended-badge">Recommended</span>
-                            )}
-                          </span>
-                        </div>
-                        
-                        <p className="transfer-setting-description">
-                          {fullSetting.description}
-                        </p>
+        // Auto-select if not already selected
+        if (formData.transferSettingsId !== availableTransferSettings[0].id) {
+          setTimeout(() => {
+            setFormData(prev => ({ ...prev, transferSettingsId: availableTransferSettings[0].id }));
+          }, 0);
+        }
 
-                        <div className="metrics-grid">
-                          <div className="metric-card">
-                            <div className="metric-circle">
-                              <svg viewBox="0 0 36 36" className="circular-chart">
-                                <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                                <path 
-                                  className="circle quality" 
-                                  strokeDasharray={`${fullSetting.quality_score}, 100`} 
-                                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
-                                />
-                              </svg>
-                              <div className="metric-number">{fullSetting.quality_score}</div>
-                            </div>
-                            <span className="metric-label">Quality</span>
-                          </div>
-                          <div className="metric-card">
-                            <div className="metric-circle">
-                              <svg viewBox="0 0 36 36" className="circular-chart">
-                                <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                                <path 
-                                  className="circle volume" 
-                                  strokeDasharray={`${fullSetting.volume_score}, 100`} 
-                                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
-                                />
-                              </svg>
-                              <div className="metric-number">{fullSetting.volume_score}</div>
-                            </div>
-                            <span className="metric-label">Volume</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+        return (
+          <div className="transfer-info-box">
+            <div className="info-header">
+              <strong>{singleSetting.name}</strong>
+              {singleSetting.is_recommended && (
+                <span className="badge recommended">Recommended</span>
+              )}
+            </div>
+            
+            <p>{singleSetting.description}</p>
+
+            <div className="metrics-grid">
+              <div className="metric-card">
+                <div className="metric-circle">
+                  <svg viewBox="0 0 36 36" className="circular-chart">
+                    <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path 
+                      className="circle quality" 
+                      strokeDasharray={`${singleSetting.quality_score}, 100`} 
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
+                    />
+                  </svg>
+                  <div className="metric-number">{singleSetting.quality_score}</div>
+                </div>
+                <span className="metric-label">Quality</span>
+              </div>
+              <div className="metric-card">
+                <div className="metric-circle">
+                  <svg viewBox="0 0 36 36" className="circular-chart">
+                    <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path 
+                      className="circle volume" 
+                      strokeDasharray={`${singleSetting.volume_score}, 100`} 
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
+                    />
+                  </svg>
+                  <div className="metric-number">{singleSetting.volume_score}</div>
+                </div>
+                <span className="metric-label">Volume</span>
+              </div>
+            </div>
+          </div>
+        );
+      })()
+    ) : (
+      // Show slider for multiple options
+      <>
+        <div className="slider-container">
+          <input
+            type="range"
+            className="quality-slider"
+            min="0"
+            max={availableTransferSettings.length - 1}
+            value={availableTransferSettings.findIndex(s => s.id === formData.transferSettingsId)}
+            onChange={(e) => {
+              const index = parseInt(e.target.value);
+              setFormData(prev => ({ ...prev, transferSettingsId: availableTransferSettings[index].id }));
+            }}
+            step="1"
+            required
+          />
+          <div className="slider-labels">
+            {availableTransferSettings.map(setting => {
+              const fullSetting = getTransferSettingDetails(setting.id);
+              if (!fullSetting) return null;
+              
+              return (
+                <span 
+                  key={setting.id}
+                  className={formData.transferSettingsId === setting.id ? 'active' : ''}
+                >
+                  {fullSetting.name}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+
+        {formData.transferSettingsId && (() => {
+          const selectedSetting = getTransferSettingDetails(formData.transferSettingsId);
+          if (!selectedSetting) return null;
+
+          return (
+            <div className="transfer-info-box">
+              <div className="info-header">
+                <strong>{selectedSetting.name}</strong>
+                {selectedSetting.is_recommended && (
+                  <span className="badge recommended">Recommended</span>
+                )}
+              </div>
+              
+              <p>{selectedSetting.description}</p>
+
+              <div className="metrics-grid">
+                <div className="metric-card">
+                  <div className="metric-circle">
+                    <svg viewBox="0 0 36 36" className="circular-chart">
+                      <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                      <path 
+                        className="circle quality" 
+                        strokeDasharray={`${selectedSetting.quality_score}, 100`} 
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
+                      />
+                    </svg>
+                    <div className="metric-number">{selectedSetting.quality_score}</div>
+                  </div>
+                  <span className="metric-label">Quality</span>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-circle">
+                    <svg viewBox="0 0 36 36" className="circular-chart">
+                      <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                      <path 
+                        className="circle volume" 
+                        strokeDasharray={`${selectedSetting.volume_score}, 100`} 
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
+                      />
+                    </svg>
+                    <div className="metric-number">{selectedSetting.volume_score}</div>
+                  </div>
+                  <span className="metric-label">Volume</span>
                 </div>
               </div>
-            )}
+            </div>
+          );
+        })()}
+      </>
+    )}
+  </div>
+)}
 
             <div className="form-group">
               <label htmlFor="numberOfBots">

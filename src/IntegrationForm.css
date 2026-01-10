@@ -778,7 +778,7 @@ select:focus-visible {
   transition: all 0.2s ease;
   text-align: center;
   flex: 1;
-  padding: 0 60px; /* spacing for middle labels */
+  padding: 0 108px; /* spacing for middle labels */
 }
 
 /* Remove left padding for the first label */
@@ -818,7 +818,7 @@ select:focus-visible {
 
 .info-header strong {
   font-size: 0.9375rem;
-  color: #111827;
+  color: #607ec0;
 }
 
 .badge {
