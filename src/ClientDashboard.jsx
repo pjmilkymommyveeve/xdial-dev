@@ -6,7 +6,7 @@
     return localStorage.getItem("role") || sessionStorage.getItem("role");
   };
   const MedicareDashboard = () => {
-    const [currentView, setCurrentView] = useState("dashboard");
+    const [currentView, setCurrentView] = useState("statistics");
     const [showSummaryGraph, setShowSummaryGraph] = useState(false);
     const [dashboardData, setDashboardData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -36,9 +36,11 @@
     useEffect(() => {
       const urlParams = new URLSearchParams(window.location.search);
       const id = urlParams.get("campaign_id");
+      const view = urlParams.get("view"); // Check for view parameter
       if (id) {
         setCampaignId(id);
-        setCurrentView("dashboard");
+        // Set view to statistics by default, or use view parameter if provided
+        setCurrentView(view || "statistics");
         // Set today's date as default
         setStartDate(new Date().toISOString().split("T")[0]);
       } else {
@@ -423,91 +425,66 @@
       },
     };
 
-    // Category mapping and allowed categories
-    const CATEGORY_MAP = {
-      Unknown: "Unclear Response",
-      Rebuttal: "Not Interested",
-      Busy: "Not Interested",
-      "Already Customer": "Not Interested",
-      "Spanish Answer Machine": "Answering Machine",
-      "Repeat Pitch": "Not Interested",
-      DNQ: "Do Not Qualify",
-      "Do not qualify": "Do Not Qualify",
-      "Do Not Qualify": "Do Not Qualify",
-    };
-
-    const ALLOWED_CATEGORIES = [
-      "Qualified",
-      "Neutral",
-      "Unclear Response",
-      "Inaudible",
-      "Answering Machine",
-      "DAIR",
-      "Honeypot",
-      "DNC",
-      "Do Not Qualify",
-      "Not Interested",
-      "User Silent",
-      "User Hang Up",
-    ];
+    // Get all categories from API response
+    const allCategories = dashboardData?.all_categories || [];
 
     // Helper: get color for a category from all_categories
     const getCategoryColor = (category) => {
-      const mapped = CATEGORY_MAP[category] || category;
-      const cat = dashboardData?.all_categories?.find(
-        (c) => c.name === mapped || c.original_name === mapped
+      const cat = allCategories.find(
+        (c) => c.name === category || c.original_name === category
       );
       return cat ? cat.color : "#818589";
     };
 
-    // Use API data for call records, map categories, and filter allowed
+    // Helper: get icon for a category (default icon map, can be extended)
+    const getCategoryIcon = (category) => {
+      const iconMap = {
+        Qualified: "bi-star-fill",
+        Neutral: "bi-circle-fill",
+        "Unclear Response": "bi-question-circle-fill",
+        Inaudible: "bi-volume-mute-fill",
+        "Answering Machine": "bi-phone-fill",
+        DAIR: "bi-info-circle-fill",
+        Honeypot: "bi-shield-fill",
+        DNC: "bi-telephone-x-fill",
+        "Do Not Qualify": "bi-exclamation-circle-fill",
+        "Not Interested": "bi-x-circle-fill",
+        "User Silent": "bi-mic-mute-fill",
+        "User Hangup": "bi-telephone-minus-fill",
+        "User Hang Up": "bi-telephone-minus-fill",
+        Already: "bi-check-circle-fill",
+        Busy: "bi-telephone-x-fill",
+      };
+      return iconMap[category] || "bi-circle-fill";
+    };
+
+    // Use API data for call records - use category directly from API
+    // Normalize category name to match all_categories
     const callRecords = Array.isArray(dashboardData?.calls)
       ? dashboardData.calls.map((call) => {
-          let mappedCategory = CATEGORY_MAP[call.category] || call.category;
-          if (!ALLOWED_CATEGORIES.includes(mappedCategory)) {
-            mappedCategory = "User Hang Up";
-          }
+          // Find matching category in all_categories to get the normalized name
+          const matchedCategory = allCategories.find(
+            (cat) =>
+              cat.name === call.category || cat.original_name === call.category
+          );
+          const normalizedCategory = matchedCategory
+            ? matchedCategory.name
+            : call.category;
+
           return {
             id: call.id,
             phone: call.number,
             listId: call.list_id,
-            category: mappedCategory,
-            categoryColor: getCategoryColor(mappedCategory),
+            category: normalizedCategory, // Use normalized category name
+            categoryColor:
+              call.category_color ||
+              matchedCategory?.color ||
+              getCategoryColor(normalizedCategory),
             timestamp: call.timestamp,
             transcript: call.transcription,
           };
         })
       : [];
-
-    const OUTCOME_ICON_MAP = {
-      Qualified: "bi-star-fill",
-      Neutral: "bi-circle-fill",
-      "Unclear Response": "bi-question-circle-fill",
-      Inaudible: "bi-volume-mute-fill",
-      "Answering Machine": "bi-phone-fill",
-      DAIR: "bi-info-circle-fill",
-      Honeypot: "bi-shield-fill",
-      DNC: "bi-telephone-x-fill",
-      "Do Not Qualify": "bi-exclamation-circle-fill",
-      "Not Interested": "bi-x-circle-fill",
-      "User Silent": "bi-mic-mute-fill",
-      "User Hang Up": "bi-telephone-minus-fill",
-    };
-
-    const VIBRANT_COLORS = {
-      Qualified: "#66bb6a",
-      Neutral: "#9e9e9e",
-      "Unclear Response": "#f06292",
-      Inaudible: "#ef5350",
-      "Answering Machine": "#26c6da",
-      DAIR: "#42a5f5",
-      Honeypot: "#ffa726",
-      DNC: "#ffca28",
-      "Do Not Qualify": "#ffca28",
-      "Not Interested": "#ef5350",
-      "User Silent": "#ab47bc",
-      "User Hang Up": "#ef5350",
-    };
 
     // Filtered call records based on all filters
     const filteredCallRecords = callRecords
@@ -618,11 +595,10 @@
         return sortDirection === "asc" ? comparison : -comparison;
       });
 
-    // Calculate outcomes based on TOTAL records (not filtered) - percentages stay constant
-    const outcomes = ALLOWED_CATEGORIES.map((catName) => {
-      const cat = dashboardData?.all_categories?.find(
-        (c) => c.name === catName || c.original_name === catName
-      );
+    // Calculate outcomes based on all_categories from API
+    const outcomes = allCategories.map((cat) => {
+      const catName = cat.name;
+      // Since we normalized categories in callRecords, just match by name
       const countInTotal = callRecords.filter(
         (r) => r.category === catName
       ).length;
@@ -632,19 +608,12 @@
       return {
         id: catName.toLowerCase().replace(/\s/g, "-"),
         label: catName,
-        icon: OUTCOME_ICON_MAP[catName] || "bi-circle-fill",
+        icon: getCategoryIcon(catName),
         count: countInTotal, // Show total count (not filtered)
         percentage: callRecords.length
           ? Math.round((countInTotal / callRecords.length) * 100)
           : 0, // Calculate percentage from total records
-        color:
-          cat &&
-          cat.color &&
-          cat.color !== "#818589" &&
-          cat.color !== "#bbb" &&
-          cat.color !== "#eceff4"
-            ? cat.color
-            : VIBRANT_COLORS[catName] || "#1a73e8",
+        color: cat.color || "#818589",
         bgColor: "#fff",
       };
     });
@@ -715,29 +684,21 @@
 
     const timeFilteredRecords = getTimeFilteredRecords();
 
-    const timeFilteredOutcomes = ALLOWED_CATEGORIES.map((catName) => {
-      const cat = dashboardData?.all_categories?.find(
-        (c) => c.name === catName || c.original_name === catName
-      );
+    const timeFilteredOutcomes = allCategories.map((cat) => {
+      const catName = cat.name;
+      // Since we normalized categories in callRecords, just match by name
       const countInTimeFiltered = timeFilteredRecords.filter(
         (r) => r.category === catName
       ).length;
       return {
         id: catName.toLowerCase().replace(/\s/g, "-"),
         label: catName,
-        icon: OUTCOME_ICON_MAP[catName] || "bi-circle-fill",
+        icon: getCategoryIcon(catName),
         count: countInTimeFiltered,
         percentage: timeFilteredRecords.length
           ? Math.round((countInTimeFiltered / timeFilteredRecords.length) * 100)
           : 0,
-        color:
-          cat &&
-          cat.color &&
-          cat.color !== "#818589" &&
-          cat.color !== "#bbb" &&
-          cat.color !== "#eceff4"
-            ? cat.color
-            : VIBRANT_COLORS[catName] || "#1a73e8",
+        color: cat.color || "#818589",
         bgColor: "#fff",
       };
     });
@@ -844,23 +805,10 @@
 
     const allSelected = false;
 
-    // Define outcome groups
-    const ENGAGED_OUTCOMES = [
-      "Qualified",
-      "Neutral",
-      "Unclear Response",
-      "Inaudible",
-    ];
-    const DROPOFF_OUTCOMES = [
-      "Answering Machine",
-      "DAIR",
-      "Honeypot",
-      "DNC",
-      "Do Not Qualify",
-      "Not Interested",
-      "User Silent",
-      "User Hang Up",
-    ];
+    // Helper: Check if category is "transferred" (Qualified) or "hangup" (everything else)
+    const isTransferredCategory = (category) => {
+      return category === "Qualified";
+    };
 
     // Function to parse timestamp
     // Replace the parseTimestamp function (around line 483)
@@ -982,9 +930,9 @@
 
           // Count all calls up to and including this minute
           if (recordDate <= nextMinute) {
-            if (ENGAGED_OUTCOMES.includes(record.category)) {
+            if (isTransferredCategory(record.category)) {
               transferredCount++;
-            } else if (DROPOFF_OUTCOMES.includes(record.category)) {
+            } else {
               hangupCount++;
             }
           }
@@ -1158,9 +1106,11 @@
         );
       }
 
-      // Categories to show
+      // Categories to show - use all categories from API or selected ones
       const categoriesToShow =
-        selectedOutcomes.length === 0 ? ALLOWED_CATEGORIES : selectedOutcomes;
+        selectedOutcomes.length === 0
+          ? allCategories.map((cat) => cat.name)
+          : selectedOutcomes;
 
       // KEY CHANGE: Determine view mode based on start/end date selection
       const showDateView = startDate && endDate && startDate !== endDate;
@@ -1667,6 +1617,45 @@
                       onChange={(e) => setEndTime(e.target.value)}
                     />
                   </div>
+                </div>
+
+                {/* Apply Filters Button */}
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "12px",
+                    marginTop: "16px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <button
+                    onClick={handleApplyFilters}
+                    style={{
+                      ...styles.btn,
+                      ...styles.btnPrimary,
+                    }}
+                  >
+                    <i className="bi bi-funnel-fill"></i>
+                    Apply Filters
+                  </button>
+                  <button
+                    onClick={handleReset}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      color: "#666",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: "13px",
+                      fontWeight: 500,
+                      padding: "8px",
+                    }}
+                  >
+                    <i className="bi bi-arrow-clockwise"></i>
+                    Reset
+                  </button>
                 </div>
               </div>
 
@@ -2500,51 +2489,65 @@
                           border: "1px solid #eceff4",
                         }}
                       >
-                        {["Qualified", "Neutral", "Unclear Response"].map(
-                          (catName, idx, arr) => {
-                            const iconMap = {
-                              Qualified: "bi-star-fill",
-                              Neutral: "bi-circle",
-                              "Unclear Response": "bi-info-circle",
-                            };
-                            const cat = timeFilteredOutcomes.find(
-                              (o) => o.label === catName
-                            );
-                            return cat ? (
-                              <div
-                                key={catName}
+                        {timeFilteredOutcomes
+                          .filter(
+                            (cat) =>
+                              cat.count > 0 &&
+                              (cat.label === "Qualified" ||
+                                cat.label === "Neutral" ||
+                                cat.label === "Unclear Response")
+                          )
+                          .map((cat, idx, arr) => (
+                            <div
+                              key={cat.id}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                padding: "10px 18px",
+                                borderBottom:
+                                  idx < arr.length - 1
+                                    ? "1px solid #e0e4ea"
+                                    : "none",
+                                fontSize: "16px",
+                                color: "#111",
+                                fontWeight: 400,
+                                gap: "10px",
+                                marginBottom: "3px",
+                              }}
+                            >
+                              <i
+                                className={cat.icon}
+                                style={{ color: cat.color, fontSize: "18px" }}
+                              ></i>
+                              {cat.label}
+                              <span
                                 style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  padding: "10px 18px",
-                                  borderBottom:
-                                    idx < arr.length - 1
-                                      ? "1px solid #e0e4ea"
-                                      : "none",
-                                  fontSize: "16px",
+                                  marginLeft: "auto",
                                   color: "#111",
                                   fontWeight: 400,
-                                  gap: "10px",
-                                  marginBottom: "3px",
                                 }}
                               >
-                                <i
-                                  className={iconMap[catName] || "bi-circle"}
-                                  style={{ color: cat.color, fontSize: "18px" }}
-                                ></i>
-                                {cat.label}
-                                <span
-                                  style={{
-                                    marginLeft: "auto",
-                                    color: "#111",
-                                    fontWeight: 400,
-                                  }}
-                                >
-                                  {cat.percentage}%
-                                </span>
-                              </div>
-                            ) : null;
-                          }
+                                {cat.percentage}%
+                              </span>
+                            </div>
+                          ))}
+                        {timeFilteredOutcomes.filter(
+                          (cat) =>
+                            cat.count > 0 &&
+                            (cat.label === "Qualified" ||
+                              cat.label === "Neutral" ||
+                              cat.label === "Unclear Response")
+                        ).length === 0 && (
+                          <div
+                            style={{
+                              padding: "10px 18px",
+                              fontSize: "14px",
+                              color: "#888",
+                              textAlign: "center",
+                            }}
+                          >
+                            No engaged outcomes
+                          </div>
                         )}
                       </div>
                     </div>
@@ -2569,34 +2572,17 @@
                           border: "1.5px solid #e0e4ea",
                         }}
                       >
-                        {[
-                          "Answering Machine",
-                          "DAIR",
-                          "Honeypot",
-                          "DNC",
-                          "Do Not Qualify",
-                          "Not Interested",
-                          "User Silent",
-                          "User Hang Up",
-                          "Inaudible",
-                        ].map((catName, idx, arr) => {
-                          const iconMap = {
-                            "Answering Machine": "bi-telephone-fill",
-                            DAIR: "bi-dash",
-                            Honeypot: "bi-shield-fill",
-                            DNC: "bi-telephone-x-fill",
-                            "Do Not Qualify": "bi-exclamation-triangle-fill",
-                            "Not Interested": "bi-x-circle-fill",
-                            "User Silent": "bi-mic-mute",
-                            "User Hang Up": "bi-telephone-minus-fill",
-                            Inaudible: "bi-volume-mute",
-                          };
-                          const cat = timeFilteredOutcomes.find(
-                            (o) => o.label === catName
-                          );
-                          return cat ? (
+                        {timeFilteredOutcomes
+                          .filter(
+                            (cat) =>
+                              cat.count > 0 &&
+                              cat.label !== "Qualified" &&
+                              cat.label !== "Neutral" &&
+                              cat.label !== "Unclear Response"
+                          )
+                          .map((cat, idx, arr) => (
                             <div
-                              key={catName}
+                              key={cat.id}
                               style={{
                                 display: "flex",
                                 alignItems: "center",
@@ -2613,7 +2599,7 @@
                               }}
                             >
                               <i
-                                className={iconMap[catName] || "bi-circle"}
+                                className={cat.icon}
                                 style={{ color: cat.color, fontSize: "18px" }}
                               ></i>
                               {cat.label}
@@ -2627,8 +2613,25 @@
                                 {cat.percentage}%
                               </span>
                             </div>
-                          ) : null;
-                        })}
+                          ))}
+                        {timeFilteredOutcomes.filter(
+                          (cat) =>
+                            cat.count > 0 &&
+                            cat.label !== "Qualified" &&
+                            cat.label !== "Neutral" &&
+                            cat.label !== "Unclear Response"
+                        ).length === 0 && (
+                          <div
+                            style={{
+                              padding: "10px 18px",
+                              fontSize: "14px",
+                              color: "#888",
+                              textAlign: "center",
+                            }}
+                          >
+                            No drop-off outcomes
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

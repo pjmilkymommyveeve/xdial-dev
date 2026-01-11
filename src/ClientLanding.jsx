@@ -373,7 +373,7 @@ const ClientLanding = () => {
 
                 <button 
                   className="view-dashboard-btn"
-                  onClick={() => window.location.href = `/dashboard?campaign_id=${item.id}`}
+                  onClick={() => window.location.href = `/dashboard?campaign_id=${item.id}&view=statistics`}
                 >
                   View Dashboard
                   <i className="bi bi-grid-3x3-gap-fill"></i>

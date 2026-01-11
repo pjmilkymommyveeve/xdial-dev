@@ -307,7 +307,7 @@ useEffect(() => {
           <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
             <button 
               className="btn btn-outline"
-              onClick={() => window.location.href = `/dashboard?campaign_id=${campaignId}`}
+              onClick={() => window.location.href = `/dashboard?campaign_id=${campaignId}&view=statistics`}
             >
               <i className="bi bi-bar-chart-fill"></i> Reports
             </button>
