@@ -826,9 +826,10 @@ const MedicareDashboard = () => {
   // Replace the parseTimestamp function (around line 483)
 
   // Function to process summary data for time-based graph
+  // Function to process summary data for time-based graph
   const processSummaryData = () => {
     if (!callRecords || callRecords.length === 0) {
-      return { labels: [], transferredData: [], hangupData: [] };
+      return { labels: [], aGradeData: [], bGradeData: [], hangupData: [] };
     }
 
     // Get the current time
@@ -863,7 +864,7 @@ const MedicareDashboard = () => {
         });
         break;
       default:
-        return { labels: [], transferredData: [], hangupData: [] };
+        return { labels: [], aGradeData: [], bGradeData: [], hangupData: [] };
     }
 
     // For time-based filters (not "Today")
@@ -875,7 +876,7 @@ const MedicareDashboard = () => {
         .sort((a, b) => b - a); // Sort descending (newest first)
 
       if (allTimestamps.length === 0) {
-        return { labels: [], transferredData: [], hangupData: [] };
+        return { labels: [], aGradeData: [], bGradeData: [], hangupData: [] };
       }
 
       const mostRecentCallTime = allTimestamps[0];
@@ -894,7 +895,7 @@ const MedicareDashboard = () => {
     }
 
     if (filteredRecords.length === 0) {
-      return { labels: [], transferredData: [], hangupData: [] };
+      return { labels: [], aGradeData: [], bGradeData: [], hangupData: [] };
     }
 
     // Get the time range for the graph
@@ -908,7 +909,8 @@ const MedicareDashboard = () => {
 
     // Create minute-by-minute labels and data
     const labels = [];
-    const transferredData = [];
+    const aGradeData = [];
+    const bGradeData = [];
     const hangupData = [];
 
     // Round down to the nearest minute
@@ -933,7 +935,8 @@ const MedicareDashboard = () => {
       );
 
       // Count calls in this minute (cumulative)
-      let transferredCount = 0;
+      let aGradeCount = 0;
+      let bGradeCount = 0;
       let hangupCount = 0;
 
       filteredRecords.forEach((record) => {
@@ -942,21 +945,26 @@ const MedicareDashboard = () => {
 
         // Count all calls up to and including this minute
         if (recordDate <= nextMinute) {
-          if (isTransferredCategory(record.category)) {
-            transferredCount++;
+          if (record.transferred) {
+            if (record.category === "Qualified") {
+              aGradeCount++;
+            } else {
+              bGradeCount++;
+            }
           } else {
             hangupCount++;
           }
         }
       });
 
-      transferredData.push(transferredCount);
+      aGradeData.push(aGradeCount);
+      bGradeData.push(bGradeCount);
       hangupData.push(hangupCount);
 
       currentMinute = nextMinute;
     }
 
-    return { labels, transferredData, hangupData };
+    return { labels, aGradeData, bGradeData, hangupData };
   };
   // KEY FIX: Cleanup charts on unmount and view change
   useEffect(() => {
@@ -984,6 +992,8 @@ const MedicareDashboard = () => {
     }
   }, [currentView, showSummaryGraph]);
   // Initialize summary chart
+
+  // Initialize summary chart
   useEffect(() => {
     if (showSummaryGraph && summaryChartRef.current) {
       if (summaryChartInstance.current) {
@@ -992,14 +1002,18 @@ const MedicareDashboard = () => {
 
       const ctx = summaryChartRef.current.getContext("2d");
 
-      // Very light pastel colors for fill
-      const gradientBlue = ctx.createLinearGradient(0, 0, 0, 400);
-      gradientBlue.addColorStop(0, "rgba(255, 182, 193, 0.15)"); // Light pink
-      gradientBlue.addColorStop(1, "rgba(255, 182, 193, 0.02)");
+      // Create gradients
+      const gradientGreen = ctx.createLinearGradient(0, 0, 0, 400);
+      gradientGreen.addColorStop(0, "rgba(75, 192, 192, 0.2)");
+      gradientGreen.addColorStop(1, "rgba(75, 192, 192, 0.05)");
 
-      const gradientPurple = ctx.createLinearGradient(0, 0, 0, 400);
-      gradientPurple.addColorStop(0, "rgba(200, 162, 200, 0.15)"); // Light purple
-      gradientPurple.addColorStop(1, "rgba(200, 162, 200, 0.02)");
+      const gradientBlue = ctx.createLinearGradient(0, 0, 0, 400);
+      gradientBlue.addColorStop(0, "rgba(54, 162, 235, 0.2)");
+      gradientBlue.addColorStop(1, "rgba(54, 162, 235, 0.05)");
+
+      const gradientRed = ctx.createLinearGradient(0, 0, 0, 400);
+      gradientRed.addColorStop(0, "rgba(255, 99, 132, 0.2)");
+      gradientRed.addColorStop(1, "rgba(255, 99, 132, 0.05)");
 
       // Get dynamic data
       const summaryData = processSummaryData();
@@ -1010,24 +1024,34 @@ const MedicareDashboard = () => {
           labels: summaryData.labels,
           datasets: [
             {
-              label: "Calls Transferred",
-              data: summaryData.transferredData,
-              borderColor: "rgba(255, 182, 193, 0.6)", // Light pink border
-              backgroundColor: gradientBlue,
+              label: "A Grade Transfers",
+              data: summaryData.aGradeData,
+              borderColor: "rgba(75, 192, 192, 1)",
+              backgroundColor: gradientGreen,
               fill: true,
-              tension: 0.5,
+              tension: 0.4,
               pointRadius: 0,
-              borderWidth: 1,
+              borderWidth: 1.5,
             },
             {
-              label: "Calls Hangup",
-              data: summaryData.hangupData,
-              borderColor: "rgba(200, 162, 200, 0.6)", // Light purple border
-              backgroundColor: gradientPurple,
+              label: "B Grade Transfers",
+              data: summaryData.bGradeData,
+              borderColor: "rgba(54, 162, 235, 1)",
+              backgroundColor: gradientBlue,
               fill: true,
-              tension: 0.5,
+              tension: 0.4,
               pointRadius: 0,
-              borderWidth: 1,
+              borderWidth: 1.5,
+            },
+            {
+              label: "Hangups",
+              data: summaryData.hangupData,
+              borderColor: "rgba(255, 99, 132, 1)",
+              backgroundColor: gradientRed,
+              fill: true,
+              tension: 0.4,
+              pointRadius: 0,
+              borderWidth: 1.5,
             },
           ],
         },
@@ -1035,7 +1059,7 @@ const MedicareDashboard = () => {
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { display: false },
+            legend: { display: true }, // Changed to true to identify the 3 lines
             tooltip: {
               mode: "index",
               intersect: false,
