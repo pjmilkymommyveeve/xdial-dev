@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from "react";
-import ClientHeader from "./ClientHeader";
+import React, { useState, useEffect, useRef } from "react";
+import api from "./api";
 
 export default function DataExport() {
   const [campaignId, setCampaignId] = useState(null);
   const [exportOptions, setExportOptions] = useState(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [error, setError] = useState("");
   const [clientName, setClientName] = useState("");
-  const [showClientHeader, setShowClientHeader] = useState(false);
 
   const [exportType, setExportType] = useState("all");
   const [selectedLists, setSelectedLists] = useState([]);
@@ -16,89 +16,100 @@ export default function DataExport() {
   const [startTime, setStartTime] = useState("");
   const [endDate, setEndDate] = useState("");
   const [endTime, setEndTime] = useState("");
+  const isInitialLoad = useRef(true);
 
+  // Get campaign ID from URL params
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const id = params.get("campaign_id");
     if (id) {
-      setCampaignId(id);
-      setExportOptions(null);
-      setLoading(true);
-      setSelectedLists([]);
-      setSelectedDispositions([]);
+      setCampaignId(parseInt(id, 10));
+      isInitialLoad.current = true; // Reset for new campaign
     } else {
-      window.location.href = "/client-landing";
+      setError("Campaign ID is required");
+      setLoading(false);
     }
   }, []);
 
+  // Fetch export options when campaign ID or filters change
   useEffect(() => {
-    const fromRecordings = sessionStorage.getItem("from_recordings");
-    if (fromRecordings === "true") {
-      setShowClientHeader(true);
-      sessionStorage.removeItem("from_recordings");
-    }
-  }, []);
+    const fetchExportOptions = async () => {
+      if (!campaignId) return;
+      
+      try {
+        setLoading(true);
+        setError("");
+        
+        // Build query parameters for pre-filtering
+        const params = new URLSearchParams();
+        
+        // Use current state values
+        const currentLists = selectedLists;
+        const currentExportOptions = exportOptions;
+        
+        if (currentLists.length > 0 && currentLists.length < (currentExportOptions?.list_ids?.length || Infinity)) {
+          params.append("list_ids", currentLists.join(","));
+        }
+        
+        if (startDate) {
+          params.append("start_date", startDate);
+          if (startTime) {
+            params.append("start_time", startTime);
+          }
+        }
+        
+        if (endDate) {
+          params.append("end_date", endDate);
+          if (endTime) {
+            params.append("end_time", endTime);
+          }
+        }
+        
+        const queryString = params.toString();
+        const url = `/export/${campaignId}/options${queryString ? `?${queryString}` : ""}`;
+        
+        const response = await api.get(url);
+        const data = response.data;
+        
+        setExportOptions(data);
+        setClientName(data.client_name);
+        
+        // Only reset selections on initial load
+        if (isInitialLoad.current) {
+          setSelectedLists([]);
+          setSelectedDispositions([]);
+          isInitialLoad.current = false;
+        }
+      } catch (err) {
+        console.error("Error fetching export options:", err);
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          setError("Access denied. Please check your permissions.");
+        } else if (err.response?.status === 404) {
+          setError("Campaign not found.");
+        } else {
+          setError(err.response?.data?.detail || "Failed to load export options. Please try again.");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  useEffect(() => {
     if (campaignId) {
       fetchExportOptions();
     }
-  }, [campaignId]);
-
-  const fetchExportOptions = async () => {
-    try {
-      if (!campaignId) return;
-      setLoading(true);
-      const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token");
-      if (!token) throw new Error("No authentication token found");
-
-      const url = `https://api.xlitecore.xdialnetworks.com/api/v1/export/${campaignId}/options`;
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      });
-
-      if (response.status === 401) throw new Error("Session expired. Please login again.");
-      if (!response.ok) throw new Error("Failed to fetch export options");
-
-      const data = await response.json();
-      setExportOptions(data);
-      setSelectedLists([]);
-      setSelectedDispositions([]);
-      setStartDate("");
-      setStartTime("");
-      setEndDate("");
-      setEndTime("");
-    } catch (err) {
-      console.error("Error fetching export options:", err.message);
-      setTimeout(() => { window.location.href = "/"; }, 2000);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchClientName = async () => {
-    const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token");
-    if (!token || !campaignId) return;
-    const today = new Date().toISOString().split("T")[0];
-    const res = await fetch(
-      `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/${campaignId}/dashboard?start_date=${today}&page=1&page_size=1`,
-      { headers: { accept: "application/json", Authorization: `Bearer ${token}` } }
-    );
-    if (res.ok) {
-      const data = await res.json();
-      setClientName(data.client_name || "Client");
-    }
-  };
-
-  useEffect(() => {
-    if (campaignId) fetchClientName();
-  }, [campaignId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaignId, startDate, startTime, endDate, endTime, selectedLists]);
 
   const handleExport = async () => {
+    if (!campaignId) {
+      setError("Campaign ID is required");
+      return;
+    }
+    
     try {
       setExporting(true);
-      const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token");
-
+      setError("");
+      
       const payload = {
         list_ids: selectedLists.length === 0 || selectedLists.length === exportOptions.list_ids.length ? [] : selectedLists.map(String),
         categories: selectedDispositions.length === 0 || selectedDispositions.length === exportOptions.all_categories.length ? [] : selectedDispositions,
@@ -108,42 +119,45 @@ export default function DataExport() {
         end_time: endTime || null,
       };
 
-      const response = await fetch(
-        `https://api.xlitecore.xdialnetworks.com/api/v1/export/${campaignId}/download`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-            Accept: "text/csv",
-          },
-          body: JSON.stringify(payload),
+      // Call the download endpoint
+      const response = await api.post(`/export/${campaignId}/download`, payload, {
+        responseType: 'blob', // Important for downloading files
+      });
+      
+      // Get filename from Content-Disposition header or use default
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = `call_data_${exportOptions?.campaign_name || campaignId}_${Date.now()}.csv`;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1].replace(/['"]/g, '');
         }
-      );
-
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error("Backend error:", errText);
-        throw new Error(`Export failed with status ${response.status}`);
       }
-
-      const csvText = await response.text();
-      if (csvText.trim().split("\n").length <= 1) {
-        alert("No records found matching your filters.");
-        return;
-      }
-
-      const blob = new Blob([csvText], { type: "text/csv;charset=utf-8;" });
+      
+      // Create blob and download
+      const blob = new Blob([response.data], { type: "text/csv;charset=utf-8;" });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `export_${campaignId}_${Date.now()}.csv`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
+      
+      // Show success message
+      setError("");
+      alert("Export completed successfully!");
     } catch (err) {
       console.error("Export error:", err);
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        setError("Access denied. Please check your permissions.");
+      } else if (err.response?.status === 404) {
+        setError("Campaign not found.");
+      } else {
+        setError(err.response?.data?.detail || "Export failed. Please try again.");
+      }
       alert("Export failed. Please try again.");
     } finally {
       setExporting(false);
@@ -151,7 +165,9 @@ export default function DataExport() {
   };
 
   const toggleList = (listId) => {
-    setSelectedLists((prev) => prev.includes(listId) ? prev.filter((id) => id !== listId) : [...prev, listId]);
+    setSelectedLists((prev) => {
+      return prev.includes(listId) ? prev.filter((id) => id !== listId) : [...prev, listId];
+    });
   };
 
   const toggleDisposition = (disposition) => {
@@ -186,10 +202,11 @@ export default function DataExport() {
       qualified: { color: "text-green-500", path: "M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" },
       "not interested": { color: "text-red-500", path: "M6 18L18 6M6 6l12 12" },
       dnc: { color: "text-pink-500", path: "M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" },
-      dnq: { color: "text-yellow-500", path: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" },
-      unknown: { color: "text-gray-500", path: "M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
+      "do not qualify": { color: "text-yellow-500", path: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" },
+      "unclear response": { color: "text-gray-500", path: "M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
       honeypot: { color: "text-purple-500", path: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
       neutral: { color: "text-gray-400", element: "circle" },
+      busy: { color: "text-orange-500", path: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" }
     };
     const lowerName = name.toLowerCase();
     for (const [key, value] of Object.entries(icons)) {
@@ -199,26 +216,49 @@ export default function DataExport() {
   };
 
   const calculateEstimatedSize = () => {
-    const recordCount = selectedDispositions.reduce((sum, disp) => {
-      const category = exportOptions?.all_categories?.find((c) => c.name === disp);
-      return sum + (category?.count || 0);
-    }, 0);
+    const recordCount = getTotalRecords();
     const sizeInKB = recordCount * 0.5;
     return sizeInKB > 1024 ? `${(sizeInKB / 1024).toFixed(1)} MB` : `${sizeInKB.toFixed(0)} KB`;
   };
 
   const getTotalRecords = () => {
-    if (selectedDispositions.length === 0) return exportOptions?.total_records || 0;
-    return selectedDispositions.reduce((sum, disp) => {
-      const category = exportOptions?.all_categories?.find((c) => c.name === disp);
-      return sum + (category?.count || 0);
-    }, 0);
+    // Use the total_records from API response directly
+    // The API already calculates this correctly based on filters
+    if (!exportOptions) return 0;
+    
+    // If dispositions are selected, sum their counts
+    if (selectedDispositions.length > 0 && selectedDispositions.length < exportOptions.all_categories.length) {
+      return selectedDispositions.reduce((sum, disp) => {
+        const category = exportOptions.all_categories.find((c) => c.name === disp);
+        return sum + (category?.count || 0);
+      }, 0);
+    }
+    
+    // Otherwise use the total from API (which is already filtered by date/list if applicable)
+    return exportOptions.total_records || 0;
+  };
+
+  const hasDateFilter = () => {
+    return !!(startDate || endDate);
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="spinner" style={{ width: "2rem", height: "2rem", borderWidth: "3px" }}></div>
+      </div>
+    );
+  }
+
+  if (error && !exportOptions) {
+    return (
+      <div style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", backgroundColor: "#f9fafb", color: "#111827", lineHeight: "1.5", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ textAlign: "center", padding: "2rem" }}>
+          <div style={{ color: "#ef4444", marginBottom: "1rem", fontSize: "1.125rem" }}>{error}</div>
+          <button className="btn btn-primary" onClick={() => window.location.href = "/client-landing"}>
+            Go Back
+          </button>
+        </div>
       </div>
     );
   }
@@ -261,6 +301,7 @@ export default function DataExport() {
         .checkbox-label { font-size: 0.875rem; font-weight: 500; color: #374151; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; flex: 1; }
         .badge { display: inline-flex; align-items: center; padding: 0.125rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 500; }
         .badge-outline { border: 1px solid #d1d5db; background-color: white; color: #374151; }
+        .badge-warning { background-color: #fef3c7; color: #92400e; border: 1px solid #fbbf24; }
         .summary-row { display: flex; justify-content: space-between; padding: 0.5rem 0; }
         .summary-label { font-size: 0.875rem; color: #6b7280; }
         .summary-value { font-weight: 500; color: #111827; }
@@ -274,11 +315,14 @@ export default function DataExport() {
         .text-gray-500 { color: #6b7280; }
         .text-purple-500 { color: #a855f7; }
         .text-gray-400 { color: #9ca3af; }
+        .text-orange-500 { color: #f97316; }
         .spinner { width: 1rem; height: 1rem; border: 2px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.6s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .info-card { background-color: #f9fafb; padding: 1rem; border-radius: 0.5rem; font-size: 0.875rem; color: #6b7280; }
         .info-card p { margin-bottom: 0.5rem; }
         .info-card p:last-child { margin-bottom: 0; }
+        .warning-box { background-color: #fef3c7; border: 1px solid #fbbf24; border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 1rem; font-size: 0.875rem; color: #92400e; display: flex; align-items: start; gap: 0.5rem; }
+        .warning-box svg { flex-shrink: 0; margin-top: 0.125rem; }
         .grid-cols-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
         .flex-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
         .space-y-4 > * + * { margin-top: 1rem; }
@@ -295,8 +339,6 @@ export default function DataExport() {
         }
       `}</style>
 
-      {showClientHeader && <ClientHeader clientName={clientName} campaignId={campaignId} activePage="data-export" />}
-
       <main className="main-content">
         <div className="page-header">
           <h1 className="page-title">
@@ -306,6 +348,11 @@ export default function DataExport() {
             Data Export
           </h1>
           <p className="page-subtitle">Export call data in CSV format with advanced filtering options</p>
+          {error && (
+            <div style={{ marginTop: "1rem", padding: "0.75rem", backgroundColor: "#fee2e2", border: "1px solid #ef4444", borderRadius: "0.5rem", color: "#991b1b", fontSize: "0.875rem" }}>
+              {error}
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-3">
@@ -369,19 +416,43 @@ export default function DataExport() {
                 <div className="grid-cols-4">
                   <div className="form-group">
                     <label className="form-label" htmlFor="start-date">Start Date</label>
-                    <input type="date" className="form-input" id="start-date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                    <input 
+                      type="date" 
+                      className="form-input" 
+                      id="start-date" 
+                      value={startDate} 
+                      onChange={(e) => setStartDate(e.target.value)} 
+                    />
                   </div>
                   <div className="form-group">
                     <label className="form-label" htmlFor="start-time">Start Time</label>
-                    <input type="time" className="form-input" id="start-time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+                    <input 
+                      type="time" 
+                      className="form-input" 
+                      id="start-time" 
+                      value={startTime} 
+                      onChange={(e) => setStartTime(e.target.value)} 
+                    />
                   </div>
                   <div className="form-group">
                     <label className="form-label" htmlFor="end-date">End Date</label>
-                    <input type="date" className="form-input" id="end-date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                    <input 
+                      type="date" 
+                      className="form-input" 
+                      id="end-date" 
+                      value={endDate} 
+                      onChange={(e) => setEndDate(e.target.value)} 
+                    />
                   </div>
                   <div className="form-group">
                     <label className="form-label" htmlFor="end-time">End Time</label>
-                    <input type="time" className="form-input" id="end-time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+                    <input 
+                      type="time" 
+                      className="form-input" 
+                      id="end-time" 
+                      value={endTime} 
+                      onChange={(e) => setEndTime(e.target.value)} 
+                    />
                   </div>
                 </div>
               </div>
@@ -414,6 +485,7 @@ export default function DataExport() {
                             {icon.element === "circle" ? <circle cx="12" cy="12" r="10" strokeWidth="2" /> : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={icon.path} />}
                           </svg>
                           {category.name}
+                          <span className="badge badge-outline" style={{ marginLeft: "auto" }}>{category.count.toLocaleString()}</span>
                         </label>
                       </div>
                     );
@@ -434,21 +506,38 @@ export default function DataExport() {
                 </h2>
               </div>
               <div className="card-content space-y-4">
+                {hasDateFilter() && (
+                  <div className="warning-box">
+                    <svg className="icon-sm text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div>
+                      <strong>Date filter active</strong>
+                      <div style={{ marginTop: "0.25rem" }}>Record counts shown are estimates. Actual count will be determined during export.</div>
+                    </div>
+                  </div>
+                )}
+                
                 <div>
                   <div className="summary-row">
                     <span className="summary-label">Total Records:</span>
-                    <span className="summary-value">{getTotalRecords().toLocaleString()}</span>
+                    <span className="summary-value">
+                      {hasDateFilter() ? "~" : ""}{getTotalRecords().toLocaleString()}
+                    </span>
                   </div>
                   <div className="summary-row">
                     <span className="summary-label">Estimated Size:</span>
                     <span className="summary-value">{calculateEstimatedSize()}</span>
                   </div>
                 </div>
+                
                 <div>
                   <span className="summary-label">Selected List IDs:</span>
                   <div className="badge-group">
                     {selectedLists.length === 0 ? (
-                      <span className="badge badge-outline">None selected</span>
+                      <span className="badge badge-outline">All lists</span>
+                    ) : selectedLists.length === exportOptions?.list_ids?.length ? (
+                      <span className="badge badge-outline">All lists ({selectedLists.length})</span>
                     ) : (
                       <>
                         {selectedLists.slice(0, 3).map((listId) => (
@@ -459,11 +548,14 @@ export default function DataExport() {
                     )}
                   </div>
                 </div>
+                
                 <div>
                   <span className="summary-label">Selected Dispositions:</span>
                   <div className="badge-group">
                     {selectedDispositions.length === 0 ? (
-                      <span className="badge badge-outline">None selected</span>
+                      <span className="badge badge-outline">All dispositions</span>
+                    ) : selectedDispositions.length === exportOptions?.all_categories?.length ? (
+                      <span className="badge badge-outline">All dispositions ({selectedDispositions.length})</span>
                     ) : (
                       <>
                         {selectedDispositions.slice(0, 2).map((disp) => (
@@ -474,10 +566,21 @@ export default function DataExport() {
                     )}
                   </div>
                 </div>
+                
                 <div>
                   <span className="summary-label">Date Range:</span>
                   <div style={{ fontSize: "0.875rem", marginTop: "0.25rem", color: "#374151" }}>
-                    {startDate && endDate ? `${startDate} to ${endDate}` : "No date filter"}
+                    {startDate && endDate ? (
+                      <>
+                        {startDate} {startTime && `${startTime}`} to {endDate} {endTime && `${endTime}`}
+                      </>
+                    ) : startDate ? (
+                      `From ${startDate}${startTime ? ` ${startTime}` : ""}`
+                    ) : endDate ? (
+                      `Until ${endDate}${endTime ? ` ${endTime}` : ""}`
+                    ) : (
+                      "No date filter"
+                    )}
                   </div>
                 </div>
               </div>
@@ -485,7 +588,12 @@ export default function DataExport() {
 
             <div className="card">
               <div className="card-content space-y-4" style={{ paddingTop: "1.5rem" }}>
-                <button className="btn btn-primary btn-lg" style={{ width: "100%" }} onClick={handleExport} disabled={exporting || selectedDispositions.length === 0}>
+                <button 
+                  className="btn btn-primary btn-lg" 
+                  style={{ width: "100%" }} 
+                  onClick={handleExport} 
+                  disabled={exporting}
+                >
                   {exporting ? (
                     <>
                       <div className="spinner"></div>
@@ -515,9 +623,10 @@ export default function DataExport() {
               </div>
               <div className="card-content info-card">
                 <p>• CSV files include all call details: ID, phone number, List ID, disposition, timestamp, and stage</p>
+                <p>• Date filters apply to call timestamps and will affect the final export</p>
                 <p>• Large exports may take a few moments to generate</p>
-                <p>• Files are automatically named with the current date</p>
-                <p>• Select at least one disposition to enable export</p>
+                <p>• Files are automatically named with campaign name and timestamp</p>
+                <p>• Leaving filters empty exports all available data</p>
               </div>
             </div>
           </div>
