@@ -606,7 +606,19 @@ const MedicareDashboard = () => {
   ).length;
 
   const droppedCount = filteredCallRecords.filter((r) => !r.transferred).length;
-
+  const totalTransferCalls = filteredCallRecords.length; // or aGradeCount + bGradeCount + droppedCount
+  const aGradePercentageVal =
+    totalTransferCalls > 0
+      ? Math.round((aGradeCount / totalTransferCalls) * 100)
+      : 0;
+  const bGradePercentageVal =
+    totalTransferCalls > 0
+      ? Math.round((bGradeCount / totalTransferCalls) * 100)
+      : 0;
+  const droppedPercentageVal =
+    totalTransferCalls > 0
+      ? Math.round((droppedCount / totalTransferCalls) * 100)
+      : 0;
   // Calculate outcomes based on all_categories from API
   const outcomes = allCategories.map((cat) => {
     const catName = cat.name;
@@ -2412,128 +2424,137 @@ const MedicareDashboard = () => {
                   })}
                 </div>
               </div>
-            </div>
 
-            {/* NEW METRICS SECTION */}
-            {dashboardData && (
-              <div style={styles.section}>
-                <h3 style={styles.sectionTitle}>
-                  <i className="bi bi-speedometer2"></i> Transfer Metrics
-                </h3>
-                <div
+              {/* Transfer Metrics */}
+              <div style={{ marginTop: "24px" }}>
+                <h3
                   style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                    gap: "20px",
+                    fontSize: "15px",
+                    fontWeight: 600,
+                    marginBottom: "16px",
+                    color: "#333",
                   }}
                 >
-                  {/* A Grade Transfers */}
+                  Transfer Metrics
+                </h3>
+                <div>
+                  {/* Top Row: Transfer Metrics with Percentages */}
                   <div
                     style={{
-                      padding: "20px",
-                      borderRadius: "8px",
-                      backgroundColor: "#e8f5e9", // Light Green
-                      border: "1px solid #c8e6c9",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "8px",
+                      display: "grid",
+                      gridTemplateColumns:
+                        "repeat(auto-fit, minmax(200px, 1fr))",
+                      gap: "20px",
+                      marginBottom: "30px",
+                      paddingBottom: "20px",
+                      borderBottom: "1px solid #eee",
                     }}
                   >
+                    {/* A Grade Metric */}
                     <div
                       style={{
-                        fontSize: "14px",
-                        color: "#2e7d32",
-                        fontWeight: 600,
+                        padding: "16px",
+                        backgroundColor: "#e8f5e9",
+                        borderRadius: "8px",
+                        border: "1px solid #c8e6c9",
+                        textAlign: "center",
                       }}
                     >
-                      A Grade Transfers
+                      <div
+                        style={{
+                          fontSize: "14px",
+                          color: "#2e7d32",
+                          marginBottom: "4px",
+                          fontWeight: "600",
+                        }}
+                      >
+                        A Grade Transfers
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "24px",
+                          fontWeight: "bold",
+                          color: "#1b5e20",
+                        }}
+                      >
+                        {aGradeCount}{" "}
+                        <span style={{ fontSize: "16px", opacity: 0.8 }}>
+                          ({aGradePercentageVal}%)
+                        </span>
+                      </div>
                     </div>
-                    <div
-                      style={{
-                        fontSize: "28px",
-                        fontWeight: 700,
-                        color: "#1b5e20",
-                      }}
-                    >
-                      {aGradeCount}
-                    </div>
-                    <div style={{ fontSize: "12px", color: "#2e7d32" }}>
-                      Qualified & Transferred
-                    </div>
-                  </div>
 
-                  {/* B Grade Transfers */}
-                  <div
-                    style={{
-                      padding: "20px",
-                      borderRadius: "8px",
-                      backgroundColor: "#e3f2fd", // Light Blue
-                      border: "1px solid #bbdefb",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "8px",
-                    }}
-                  >
+                    {/* B Grade Metric */}
                     <div
                       style={{
-                        fontSize: "14px",
-                        color: "#1565c0",
-                        fontWeight: 600,
+                        padding: "16px",
+                        backgroundColor: "#e3f2fd",
+                        borderRadius: "8px",
+                        border: "1px solid #bbdefb",
+                        textAlign: "center",
                       }}
                     >
-                      B Grade Transfers
+                      <div
+                        style={{
+                          fontSize: "14px",
+                          color: "#1565c0",
+                          marginBottom: "4px",
+                          fontWeight: "600",
+                        }}
+                      >
+                        B Grade Transfers
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "24px",
+                          fontWeight: "bold",
+                          color: "#0d47a1",
+                        }}
+                      >
+                        {bGradeCount}{" "}
+                        <span style={{ fontSize: "16px", opacity: 0.8 }}>
+                          ({bGradePercentageVal}%)
+                        </span>
+                      </div>
                     </div>
-                    <div
-                      style={{
-                        fontSize: "28px",
-                        fontWeight: 700,
-                        color: "#0d47a1",
-                      }}
-                    >
-                      {bGradeCount}
-                    </div>
-                    <div style={{ fontSize: "12px", color: "#1565c0" }}>
-                      Transferred (Non-Qualified)
-                    </div>
-                  </div>
 
-                  {/* Calls Dropped */}
-                  <div
-                    style={{
-                      padding: "20px",
-                      borderRadius: "8px",
-                      backgroundColor: "#ffebee", // Light Red
-                      border: "1px solid #ffcdd2",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "8px",
-                    }}
-                  >
+                    {/* Dropped Metric */}
                     <div
                       style={{
-                        fontSize: "14px",
-                        color: "#c62828",
-                        fontWeight: 600,
+                        padding: "16px",
+                        backgroundColor: "#ffebee",
+                        borderRadius: "8px",
+                        border: "1px solid #ffcdd2",
+                        textAlign: "center",
                       }}
                     >
-                      Calls Dropped
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "28px",
-                        fontWeight: 700,
-                        color: "#b71c1c",
-                      }}
-                    >
-                      {droppedCount}
-                    </div>
-                    <div style={{ fontSize: "12px", color: "#c62828" }}>
-                      Not Transferred
+                      <div
+                        style={{
+                          fontSize: "14px",
+                          color: "#c62828",
+                          marginBottom: "4px",
+                          fontWeight: "600",
+                        }}
+                      >
+                        Dropped Calls
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "24px",
+                          fontWeight: "bold",
+                          color: "#b71c1c",
+                        }}
+                      >
+                        {droppedCount}{" "}
+                        <span style={{ fontSize: "16px", opacity: 0.8 }}>
+                          ({droppedPercentageVal}%)
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            )}
+            </div>
 
             {/* Outcomes Summary Box */}
             <div style={styles.section}>
