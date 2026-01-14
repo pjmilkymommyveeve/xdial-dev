@@ -84,7 +84,7 @@ const AdminLanding = () => {
         const metrics = JSON.parse(event.data);
         setAgents(prev => ({
           ...prev,
-          [metrics.hostname]: {
+          [metrics.ip]: {
             ...metrics,
             lastUpdate: Date.now()
           }
@@ -135,9 +135,9 @@ const AdminLanding = () => {
     navigate("/");
   };
 
-  const openThresholdModal = (hostname) => {
-    setSelectedAgent(hostname);
-    const existing = thresholds[hostname] || { cpu: 80, memory: 85, disk: 90 };
+  const openThresholdModal = (ip) => {
+    setSelectedAgent(ip);
+    const existing = thresholds[ip] || { cpu: 80, memory: 85, disk: 90 };
     setTempThreshold(existing);
     setShowThresholdModal(true);
   };
@@ -173,7 +173,7 @@ const AdminLanding = () => {
   };
 
   const getServerStatus = (agent) => {
-    const threshold = thresholds[agent.hostname] || { cpu: 80, memory: 85, disk: 90 };
+    const threshold = thresholds[agent.ip] || { cpu: 80, memory: 85, disk: 90 };
     
     if (agent.cpu.total_percent > threshold.cpu) return 'critical';
     if (agent.memory.used_percent > threshold.memory) return 'critical';
@@ -245,7 +245,7 @@ const AdminLanding = () => {
       {servers.map(agent => {
         const status = getServerStatus(agent);
         const statusColor = getStatusColor(status);
-        const threshold = thresholds[agent.hostname] || { cpu: 80, memory: 85, disk: 90 };
+        const threshold = thresholds[agent.ip] || { cpu: 80, memory: 85, disk: 90 };
         const primaryDisk = agent.disk[0] || { mount: '/', used_percent: 0, used: 0, total: 0 };
 
         return (
@@ -402,7 +402,7 @@ const AdminLanding = () => {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  openThresholdModal(agent.hostname);
+                  openThresholdModal(agent.ip);
                 }}
                 style={{
                   padding: showProgressBars ? "6px 12px" : "4px 10px",
