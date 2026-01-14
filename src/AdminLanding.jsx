@@ -20,11 +20,12 @@ const AdminLanding = () => {
   const [thresholds, setThresholds] = useState({});
   const [tempThreshold, setTempThreshold] = useState({
     cpu: 80,
-    memory: 85,
-    disk: 90
+    disk: 90,
+    load: 5
   });
   const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
   const [showProgressBars, setShowProgressBars] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
   
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
@@ -48,12 +49,11 @@ const AdminLanding = () => {
   useEffect(() => {
     const handleResize = () => {
       setViewportHeight(window.innerHeight);
-      // Hide progress bars if viewport is less than 800px tall
       setShowProgressBars(window.innerHeight >= 800);
     };
 
     window.addEventListener('resize', handleResize);
-    handleResize(); // Initial check
+    handleResize();
 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -137,7 +137,7 @@ const AdminLanding = () => {
 
   const openThresholdModal = (ip) => {
     setSelectedAgent(ip);
-    const existing = thresholds[ip] || { cpu: 80, memory: 85, disk: 90 };
+    const existing = thresholds[ip] || { cpu: 80, disk: 90, load: 5 };
     setTempThreshold(existing);
     setShowThresholdModal(true);
   };
@@ -173,10 +173,10 @@ const AdminLanding = () => {
   };
 
   const getServerStatus = (agent) => {
-    const threshold = thresholds[agent.ip] || { cpu: 80, memory: 85, disk: 90 };
+    const threshold = thresholds[agent.ip] || { cpu: 80, disk: 90, load: 5 };
     
     if (agent.cpu.total_percent > threshold.cpu) return 'critical';
-    if (agent.memory.used_percent > threshold.memory) return 'critical';
+    if (agent.load && agent.load.load1 > threshold.load) return 'critical';
     
     const diskOverThreshold = agent.disk.some(d => d.used_percent > threshold.disk);
     if (diskOverThreshold) return 'critical';
@@ -188,19 +188,17 @@ const AdminLanding = () => {
     return status === 'critical' ? '#ef4444' : '#10b981';
   };
 
-  const agentList = Object.values(agents).sort((a, b) => 
-    a.hostname.localeCompare(b.hostname)
-  );
+  const agentList = Object.values(agents)
+    .filter(agent => agent.ip.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a, b) => a.hostname.localeCompare(b.hostname));
 
-  // Calculate how many servers can fit in viewport
-  const headerHeight = 140; // Approximate header height
-  const rowHeight = showProgressBars ? 70 : 50; // Height per server row
+  const headerHeight = 140;
+  const rowHeight = showProgressBars ? 70 : 50;
   const tableHeaderHeight = 50;
-  const padding = 48; // Top and bottom padding
+  const padding = 48;
   const availableHeight = viewportHeight - headerHeight - padding;
   const maxServersPerColumn = Math.floor((availableHeight - tableHeaderHeight) / rowHeight);
   
-  // Split servers into columns based on available height
   const columns = [];
   if (maxServersPerColumn > 0) {
     for (let i = 0; i < agentList.length; i += maxServersPerColumn) {
@@ -220,8 +218,8 @@ const AdminLanding = () => {
       <div style={{
         display: "grid",
         gridTemplateColumns: showProgressBars 
-          ? "8px 1fr 140px 100px 100px 120px 80px"
-          : "8px 1fr 140px 80px 80px 100px 80px",
+          ? "1fr 120px 100px 100px 120px 80px"
+          : "1fr 120px 80px 80px 100px 80px",
         gap: "12px",
         padding: "16px 20px",
         backgroundColor: "#f9fafb",
@@ -232,20 +230,20 @@ const AdminLanding = () => {
         textTransform: "uppercase",
         letterSpacing: "0.5px"
       }}>
-        <div></div>
-        <div>Server</div>
-        <div>IP Address</div>
+        <div>Server IP</div>
+        <div>Load Avg</div>
         <div>CPU</div>
-        <div>Memory</div>
         <div>Disk</div>
+        <div>Hostname</div>
         <div style={{ textAlign: "right" }}>Actions</div>
       </div>
 
       {/* Table Rows */}
       {servers.map(agent => {
         const status = getServerStatus(agent);
+        const isCritical = status === 'critical';
         const statusColor = getStatusColor(status);
-        const threshold = thresholds[agent.ip] || { cpu: 80, memory: 85, disk: 90 };
+        const threshold = thresholds[agent.ip] || { cpu: 80, disk: 90, load: 5 };
         const primaryDisk = agent.disk[0] || { mount: '/', used_percent: 0, used: 0, total: 0 };
 
         return (
@@ -254,57 +252,57 @@ const AdminLanding = () => {
             style={{
               display: "grid",
               gridTemplateColumns: showProgressBars 
-                ? "8px 1fr 140px 100px 100px 120px 80px"
-                : "8px 1fr 140px 80px 80px 100px 80px",
+                ? "1fr 120px 100px 100px 120px 80px"
+                : "1fr 120px 80px 80px 100px 80px",
               gap: "12px",
               padding: showProgressBars ? "16px 20px" : "12px 20px",
               borderBottom: "1px solid #f3f4f6",
               alignItems: "center",
-              transition: "background-color 0.2s ease"
+              transition: "background-color 0.2s ease",
+              backgroundColor: isCritical ? "#ef4444" : "transparent"
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#f9fafb";
+              if (!isCritical) {
+                e.currentTarget.style.backgroundColor = "#f9fafb";
+              }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "transparent";
+              if (!isCritical) {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }
             }}
           >
-            {/* Status Bar */}
-            <div style={{
-              width: "8px",
-              height: showProgressBars ? "48px" : "32px",
-              backgroundColor: statusColor,
-              borderRadius: "4px",
-              boxShadow: `0 0 8px ${statusColor}40`
-            }}></div>
-
-            {/* Server Name */}
+            {/* Server IP */}
             <div>
               <div style={{
                 fontSize: "15px",
                 fontWeight: "600",
-                color: "#111827",
+                color: isCritical ? "#ffffff" : "#111827",
                 marginBottom: showProgressBars ? "4px" : "0"
               }}>
-                {agent.hostname}
+                {agent.ip}
               </div>
               {showProgressBars && (
                 <div style={{
                   fontSize: "11px",
-                  color: "#9ca3af"
+                  color: isCritical ? "#fee2e2" : "#9ca3af"
                 }}>
                   Updated: {new Date(agent.timestamp * 1000).toLocaleTimeString()}
                 </div>
               )}
             </div>
 
-            {/* IP Address */}
-            <div style={{
-              fontSize: "13px",
-              color: "#6b7280",
-              fontFamily: "monospace"
-            }}>
-              {agent.ip}
+            {/* Load Average */}
+            <div>
+              <div style={{
+                fontSize: showProgressBars ? "18px" : "16px",
+                fontWeight: "700",
+                color: isCritical 
+                  ? "#ffffff" 
+                  : (agent.load && agent.load.load1 > threshold.load ? "#ef4444" : "#10b981")
+              }}>
+                {agent.load && agent.load.load1 !== undefined ? agent.load.load1.toFixed(2) : 'N/A'}
+              </div>
             </div>
 
             {/* CPU */}
@@ -312,7 +310,9 @@ const AdminLanding = () => {
               <div style={{
                 fontSize: showProgressBars ? "18px" : "16px",
                 fontWeight: "700",
-                color: agent.cpu.total_percent > threshold.cpu ? "#ef4444" : "#10b981",
+                color: isCritical 
+                  ? "#ffffff" 
+                  : (agent.cpu.total_percent > threshold.cpu ? "#ef4444" : "#10b981"),
                 marginBottom: showProgressBars ? "4px" : "0"
               }}>
                 {agent.cpu.total_percent.toFixed(1)}%
@@ -321,46 +321,16 @@ const AdminLanding = () => {
                 <div style={{
                   width: "100%",
                   height: "6px",
-                  backgroundColor: "#f3f4f6",
+                  backgroundColor: isCritical ? "#dc2626" : "#f3f4f6",
                   borderRadius: "3px",
                   overflow: "hidden"
                 }}>
                   <div style={{
                     height: "100%",
                     width: `${Math.min(agent.cpu.total_percent, 100)}%`,
-                    backgroundColor: agent.cpu.total_percent > threshold.cpu 
-                      ? "#ef4444" 
-                      : "#10b981",
-                    transition: "width 0.3s ease"
-                  }}></div>
-                </div>
-              )}
-            </div>
-
-            {/* Memory */}
-            <div>
-              <div style={{
-                fontSize: showProgressBars ? "18px" : "16px",
-                fontWeight: "700",
-                color: agent.memory.used_percent > threshold.memory ? "#ef4444" : "#10b981",
-                marginBottom: showProgressBars ? "4px" : "0"
-              }}>
-                {agent.memory.used_percent.toFixed(1)}%
-              </div>
-              {showProgressBars && (
-                <div style={{
-                  width: "100%",
-                  height: "6px",
-                  backgroundColor: "#f3f4f6",
-                  borderRadius: "3px",
-                  overflow: "hidden"
-                }}>
-                  <div style={{
-                    height: "100%",
-                    width: `${agent.memory.used_percent}%`,
-                    backgroundColor: agent.memory.used_percent > threshold.memory 
-                      ? "#ef4444" 
-                      : "#10b981",
+                    backgroundColor: isCritical 
+                      ? "#ffffff" 
+                      : (agent.cpu.total_percent > threshold.cpu ? "#ef4444" : "#10b981"),
                     transition: "width 0.3s ease"
                   }}></div>
                 </div>
@@ -372,7 +342,9 @@ const AdminLanding = () => {
               <div style={{
                 fontSize: showProgressBars ? "14px" : "16px",
                 fontWeight: "600",
-                color: primaryDisk.used_percent > threshold.disk ? "#ef4444" : "#10b981",
+                color: isCritical 
+                  ? "#ffffff" 
+                  : (primaryDisk.used_percent > threshold.disk ? "#ef4444" : "#10b981"),
                 marginBottom: showProgressBars ? "4px" : "0"
               }}>
                 {showProgressBars && `${primaryDisk.mount} `}{primaryDisk.used_percent.toFixed(1)}%
@@ -381,20 +353,29 @@ const AdminLanding = () => {
                 <div style={{
                   width: "100%",
                   height: "6px",
-                  backgroundColor: "#f3f4f6",
+                  backgroundColor: isCritical ? "#dc2626" : "#f3f4f6",
                   borderRadius: "3px",
                   overflow: "hidden"
                 }}>
                   <div style={{
                     height: "100%",
                     width: `${primaryDisk.used_percent}%`,
-                    backgroundColor: primaryDisk.used_percent > threshold.disk 
-                      ? "#ef4444" 
-                      : "#10b981",
+                    backgroundColor: isCritical 
+                      ? "#ffffff" 
+                      : (primaryDisk.used_percent > threshold.disk ? "#ef4444" : "#10b981"),
                     transition: "width 0.3s ease"
                   }}></div>
                 </div>
               )}
+            </div>
+
+            {/* Hostname */}
+            <div style={{
+              fontSize: "13px",
+              color: isCritical ? "#fee2e2" : "#6b7280",
+              fontFamily: "monospace"
+            }}>
+              {agent.hostname}
             </div>
 
             {/* Actions */}
@@ -406,9 +387,9 @@ const AdminLanding = () => {
                 }}
                 style={{
                   padding: showProgressBars ? "6px 12px" : "4px 10px",
-                  backgroundColor: "#f3f4f6",
-                  color: "#6b7280",
-                  border: "1px solid #e5e7eb",
+                  backgroundColor: isCritical ? "#ffffff" : "#f3f4f6",
+                  color: isCritical ? "#ef4444" : "#6b7280",
+                  border: isCritical ? "1px solid #ffffff" : "1px solid #e5e7eb",
                   borderRadius: "6px",
                   fontSize: "11px",
                   fontWeight: "600",
@@ -416,14 +397,18 @@ const AdminLanding = () => {
                   transition: "all 0.2s ease"
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "#4f46e5";
-                  e.currentTarget.style.color = "white";
-                  e.currentTarget.style.borderColor = "#4f46e5";
+                  if (!isCritical) {
+                    e.currentTarget.style.backgroundColor = "#4f46e5";
+                    e.currentTarget.style.color = "white";
+                    e.currentTarget.style.borderColor = "#4f46e5";
+                  }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "#f3f4f6";
-                  e.currentTarget.style.color = "#6b7280";
-                  e.currentTarget.style.borderColor = "#e5e7eb";
+                  if (!isCritical) {
+                    e.currentTarget.style.backgroundColor = "#f3f4f6";
+                    e.currentTarget.style.color = "#6b7280";
+                    e.currentTarget.style.borderColor = "#e5e7eb";
+                  }
                 }}
               >
                 Limits
@@ -553,6 +538,26 @@ const AdminLanding = () => {
       </header>
 
       <div style={{ maxWidth: "1600px", margin: "0 auto", padding: "24px" }}>
+        {/* Search Bar */}
+        <div style={{ marginBottom: "24px" }}>
+          <input
+            type="text"
+            placeholder="Search servers by IP address..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "12px 16px",
+              fontSize: "14px",
+              border: "1px solid #e5e7eb",
+              borderRadius: "8px",
+              backgroundColor: "white",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+              boxSizing: "border-box"
+            }}
+          />
+        </div>
+
         {agentList.length === 0 ? (
           <div style={{
             backgroundColor: "white",
@@ -574,14 +579,14 @@ const AdminLanding = () => {
               fontWeight: "600",
               color: "#111827"
             }}>
-              No servers connected
+              {searchQuery ? "No servers match your search" : "No servers connected"}
             </h3>
             <p style={{
               margin: 0,
               fontSize: "14px",
               color: "#6b7280"
             }}>
-              Waiting for monitoring agents to connect...
+              {searchQuery ? "Try a different search term" : "Waiting for monitoring agents to connect..."}
             </p>
           </div>
         ) : (
@@ -670,14 +675,14 @@ const AdminLanding = () => {
                 color: "#374151",
                 marginBottom: "8px"
               }}>
-                CPU Threshold (%)
+                Load Average Threshold
               </label>
               <input
                 type="number"
                 min="0"
-                max="100"
-                value={tempThreshold.cpu}
-                onChange={(e) => setTempThreshold({...tempThreshold, cpu: Number(e.target.value)})}
+                step="0.1"
+                value={tempThreshold.load}
+                onChange={(e) => setTempThreshold({...tempThreshold, load: Number(e.target.value)})}
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -697,14 +702,14 @@ const AdminLanding = () => {
                 color: "#374151",
                 marginBottom: "8px"
               }}>
-                Memory Threshold (%)
+                CPU Threshold (%)
               </label>
               <input
                 type="number"
                 min="0"
                 max="100"
-                value={tempThreshold.memory}
-                onChange={(e) => setTempThreshold({...tempThreshold, memory: Number(e.target.value)})}
+                value={tempThreshold.cpu}
+                onChange={(e) => setTempThreshold({...tempThreshold, cpu: Number(e.target.value)})}
                 style={{
                   width: "100%",
                   padding: "10px 12px",
