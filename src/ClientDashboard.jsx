@@ -137,7 +137,7 @@ const MedicareDashboard = () => {
   // ClientDashboard.jsx - Update fetchData useEffect to fetch all pages
   useEffect(() => {
     const fetchData = async () => {
-      if (!campaignId || !startDate) return; // Don't fetch without campaign ID and start date
+      if (!campaignId || !startDate) return;
 
       setLoading(true);
       setError(null);
@@ -148,76 +148,43 @@ const MedicareDashboard = () => {
           throw new Error("No authentication token found. Please login again.");
         }
 
-        // First, fetch the first page to get total pages info
-        let apiUrl = `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/${campaignId}/dashboard?start_date=${startDate}`;
+        // Construct API URL with all filters
+        const params = new URLSearchParams();
+        params.append("start_date", startDate);
         if (endDate && endDate !== startDate) {
-          apiUrl += `&end_date=${endDate}`;
+          params.append("end_date", endDate);
         }
-        apiUrl += `&page=1&page_size=25`;
+        params.append("page", currentPage);
+        params.append("page_size", RECORDS_PER_PAGE);
 
-        const firstPageRes = await fetch(apiUrl, {
+        // Add search and list_id filters
+        if (searchText) params.append("search", searchText);
+        if (listId) params.append("list_id", listId);
+
+        // Add outcome filters
+        if (selectedOutcomes.length > 0) {
+          selectedOutcomes.forEach(outcome => {
+            params.append("selected_categories", outcome);
+          });
+        }
+
+        const apiUrl = `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/${campaignId}/dashboard?${params.toString()}`;
+
+        const response = await fetch(apiUrl, {
           headers: {
             accept: "application/json",
             Authorization: `Bearer ${token}`,
           },
         });
 
-        if (firstPageRes.status === 401) {
+        if (response.status === 401) {
           throw new Error("Session expired. Please login again.");
         }
 
-        if (!firstPageRes.ok) throw new Error("Failed to fetch dashboard data");
+        if (!response.ok) throw new Error("Failed to fetch dashboard data");
 
-        const firstPageData = await firstPageRes.json();
-        const totalPages = firstPageData.pagination?.total_pages || 1;
-
-        // If there's only one page, use it directly
-        if (totalPages === 1) {
-          setDashboardData(firstPageData);
-          setLoading(false);
-          return;
-        }
-
-        // Fetch all remaining pages in parallel
-        const pagePromises = [];
-        for (let page = 2; page <= totalPages; page++) {
-          let pageUrl = `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/${campaignId}/dashboard?start_date=${startDate}`;
-          if (endDate && endDate !== startDate) {
-            pageUrl += `&end_date=${endDate}`;
-          }
-          pageUrl += `&page=${page}&page_size=25`;
-
-          pagePromises.push(
-            fetch(pageUrl, {
-              headers: {
-                accept: "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-            }).then((res) => res.json()),
-          );
-        }
-
-        const additionalPages = await Promise.all(pagePromises);
-
-        // Combine all calls from all pages
-        const allCalls = [
-          ...firstPageData.calls,
-          ...additionalPages.flatMap((pageData) => pageData.calls || []),
-        ];
-
-        // Create combined data object
-        const combinedData = {
-          ...firstPageData,
-          calls: allCalls,
-          pagination: {
-            ...firstPageData.pagination,
-            total_records: allCalls.length,
-            current_page: 1,
-            total_pages: 1,
-          },
-        };
-
-        setDashboardData(combinedData);
+        const data = await response.json();
+        setDashboardData(data);
         setLoading(false);
       } catch (err) {
         setError(err.message);
@@ -231,11 +198,11 @@ const MedicareDashboard = () => {
       }
     };
 
-    // Only fetch if fetchTrigger > 0 (meaning Apply Filters was clicked)
-    if (fetchTrigger > 0) {
+    // Only fetch if fetchTrigger > 0 (meaning Apply Filters was clicked) or on initial load/page change
+    if (fetchTrigger > 0 || currentPage > 0) {
       fetchData();
     }
-  }, [campaignId, fetchTrigger, endDate]);
+  }, [campaignId, fetchTrigger, currentPage]); // Added currentPage dependency
   // Reset to page 1 when filters change
 
   const summaryChartRef = useRef(null);
@@ -462,181 +429,84 @@ const MedicareDashboard = () => {
   // Normalize category name to match all_categories
   const callRecords = Array.isArray(dashboardData?.calls)
     ? dashboardData.calls.map((call) => {
-        // Find matching category in all_categories to get the normalized name
-        const matchedCategory = allCategories.find(
-          (cat) =>
-            cat.name === call.category || cat.original_name === call.category,
-        );
-        const normalizedCategory = matchedCategory
-          ? matchedCategory.name
-          : call.category;
+      // Find matching category in all_categories to get the normalized name
+      const matchedCategory = allCategories.find(
+        (cat) =>
+          cat.name === call.category || cat.original_name === call.category,
+      );
+      const normalizedCategory = matchedCategory
+        ? matchedCategory.name
+        : call.category;
 
-        return {
-          id: call.id,
-          phone: call.number,
-          listId: call.list_id,
-          category: normalizedCategory, // Use normalized category name
-          categoryColor:
-            call.category_color ||
-            matchedCategory?.color ||
-            getCategoryColor(normalizedCategory),
-          timestamp: call.timestamp,
-          transcript: call.transcription,
-          transferred: call.transferred,
-        };
-      })
+      return {
+        id: call.id,
+        phone: call.number,
+        listId: call.list_id,
+        category: normalizedCategory, // Use normalized category name
+        categoryColor:
+          call.category_color ||
+          matchedCategory?.color ||
+          getCategoryColor(normalizedCategory),
+        timestamp: call.timestamp,
+        transcript: call.transcription,
+        transferred: call.transferred,
+      };
+    })
     : [];
 
   // Filtered call records based on all filters
-  const filteredCallRecords = callRecords
-    .filter((record) => {
-      // Filter by selected outcomes
-      if (
-        selectedOutcomes.length > 0 &&
-        !selectedOutcomes.includes(record.category)
-      ) {
-        return false;
-      }
-
-      // Filter by search text (phone number or category)
-      if (searchText) {
-        const searchLower = searchText.toLowerCase();
-        const phoneMatch = record.phone.toLowerCase().includes(searchLower);
-        const categoryMatch = record.category
-          .toLowerCase()
-          .includes(searchLower);
-        if (!phoneMatch && !categoryMatch) {
-          return false;
-        }
-      }
-
-      // Filter by list ID
-      if (
-        listId &&
-        !record.listId.toString().toLowerCase().includes(listId.toLowerCase())
-      ) {
-        return false;
-      }
-
-      // Filter by date/time range
-      if (record.timestamp) {
-        const recordDate = parseTimestamp(record.timestamp);
-        if (!recordDate) return false;
-
-        // Start date/time filter
-        if (startDate) {
-          const startDateTime = parseUserInputDate(startDate, startTime);
-          if (!startDateTime) return false;
-
-          // If no end date is specified, filter for the same day as start date
-          if (!endDate) {
-            const endOfStartDay = parseUserInputDate(startDate, "23:59:59");
-            if (recordDate < startDateTime || recordDate > endOfStartDay) {
-              return false;
-            }
-          } else {
-            // If end date is specified, use normal range
-            if (recordDate < startDateTime) {
-              return false;
-            }
-          }
-        }
-
-        // End date/time filter (only apply if explicitly set)
-        if (endDate && startDate && endDate !== startDate) {
-          const endDateTime = parseUserInputDate(
-            endDate,
-            endTime || "23:59:59",
-          );
-          if (!endDateTime) return false;
-          if (recordDate > endDateTime) {
-            return false;
-          }
-        }
-      }
-
-      return true;
-    })
-    .sort((a, b) => {
-      let aValue, bValue;
-
-      // Get values based on sort column
-      switch (sortColumn) {
-        case "id":
-          aValue = a.id;
-          bValue = b.id;
-          break;
-        case "phone":
-          aValue = a.phone.toLowerCase();
-          bValue = b.phone.toLowerCase();
-          break;
-        case "listId":
-          aValue = a.listId.toString().toLowerCase();
-          bValue = b.listId.toString().toLowerCase();
-          break;
-        case "category":
-          aValue = a.category.toLowerCase();
-          bValue = b.category.toLowerCase();
-          break;
-        case "timestamp":
-          aValue = parseTimestamp(a.timestamp)?.getTime() || 0;
-          bValue = parseTimestamp(b.timestamp)?.getTime() || 0;
-          break;
-        default:
-          aValue = a.id;
-          bValue = b.id;
-      }
-
-      // Compare values
-      let comparison = 0;
-      if (aValue < bValue) comparison = -1;
-      if (aValue > bValue) comparison = 1;
-
-      // Apply sort direction
-      return sortDirection === "asc" ? comparison : -comparison;
-    });
+  // Server-side filtered call records (no client-side filtering needed)
+  const filteredCallRecords = callRecords;
 
   // Calculate Metrics for Transfer Section
-  const aGradeCount = filteredCallRecords.filter(
-    (r) => r.transferred && r.category === "Qualified",
-  ).length;
+  // Calculate Metrics using Aggegrated Data from API
+  const totalCalls = dashboardData?.total_calls || 0;
 
-  const bGradeCount = filteredCallRecords.filter(
-    (r) => r.transferred && r.category !== "Qualified",
-  ).length;
+  // A Grade: Transferred & Qualified
+  const aGradeCount = (dashboardData?.all_categories || [])
+    .filter(c => c.name === "Qualified" || c.original_name === "Qualified")
+    .reduce((sum, c) => sum + (c.transferred_count || 0), 0);
 
-  const droppedCount = filteredCallRecords.filter((r) => !r.transferred).length;
-  const totalTransferCalls = filteredCallRecords.length; // or aGradeCount + bGradeCount + droppedCount
+  // B Grade: Transferred & NOT Qualified
+  const bGradeCount = (dashboardData?.all_categories || [])
+    .filter(c => c.name !== "Qualified" && c.original_name !== "Qualified")
+    .reduce((sum, c) => sum + (c.transferred_count || 0), 0);
+
+  // Dropped: Not transferred
+  // Calculated as Total - Transferred
+  const totalTransferred = aGradeCount + bGradeCount;
+  const droppedCount = totalCalls - totalTransferred;
+
+  const totalTransferCalls = totalCalls; // Using Total Calls as denominator as per original intent? Or transfers?
+  // Actually original code used `filteredCallRecords.length` as total.
+  // We'll use totalCalls from API.
+
   const aGradePercentageVal =
-    totalTransferCalls > 0
-      ? Math.round((aGradeCount / totalTransferCalls) * 100)
+    totalCalls > 0
+      ? Math.round((aGradeCount / totalCalls) * 100)
       : 0;
   const bGradePercentageVal =
-    totalTransferCalls > 0
-      ? Math.round((bGradeCount / totalTransferCalls) * 100)
+    totalCalls > 0
+      ? Math.round((bGradeCount / totalCalls) * 100)
       : 0;
   const droppedPercentageVal =
-    totalTransferCalls > 0
-      ? Math.round((droppedCount / totalTransferCalls) * 100)
+    totalCalls > 0
+      ? Math.round((droppedCount / totalCalls) * 100)
       : 0;
-  // Calculate outcomes based on all_categories from API
+
+  // Outcomes from API Aggegrates
   const outcomes = allCategories.map((cat) => {
     const catName = cat.name;
-    // Since we normalized categories in callRecords, just match by name
-    const countInTotal = callRecords.filter(
-      (r) => r.category === catName,
-    ).length;
-    const countInFiltered = filteredCallRecords.filter(
-      (r) => r.category === catName,
-    ).length;
+    const count = cat.count || 0;
+
     return {
       id: catName.toLowerCase().replace(/\s/g, "-"),
       label: catName,
       icon: getCategoryIcon(catName),
-      count: countInTotal, // Show total count (not filtered)
-      percentage: callRecords.length
-        ? Math.round((countInTotal / callRecords.length) * 100)
-        : 0, // Calculate percentage from total records
+      count: count,
+      percentage: totalCalls > 0
+        ? Math.round((count / totalCalls) * 100)
+        : 0,
       color: cat.color || "#818589",
       bgColor: "#fff",
     };
@@ -731,7 +601,6 @@ const MedicareDashboard = () => {
   const qualifiedCount = filteredCallRecords.filter(
     (r) => r.category === "Qualified",
   ).length;
-  const totalCalls = filteredCallRecords.length;
   const qualifiedPercentage =
     totalCalls > 0 ? Math.round((qualifiedCount / totalCalls) * 100) : 0;
 
@@ -742,8 +611,8 @@ const MedicareDashboard = () => {
   const timeFilteredQualifiedPercentage =
     timeFilteredRecords.length > 0
       ? Math.round(
-          (timeFilteredQualifiedCount / timeFilteredRecords.length) * 100,
-        )
+        (timeFilteredQualifiedCount / timeFilteredRecords.length) * 100,
+      )
       : 0;
 
   // Handle outcome filter click (multi-select by default)
@@ -755,28 +624,22 @@ const MedicareDashboard = () => {
     );
   };
   // Add this after the filteredCallRecords logic (around line 620)
-  // Client-side pagination
+  // Server-side pagination
   const RECORDS_PER_PAGE = 25;
-  const totalFilteredRecords = filteredCallRecords.length;
-  const totalPages = Math.ceil(totalFilteredRecords / RECORDS_PER_PAGE);
+  const totalFilteredRecords = dashboardData?.pagination?.total_records || 0;
+  const totalPages = dashboardData?.pagination?.total_pages || 1;
+  const paginatedRecords = filteredCallRecords; // Data is already paginated from server
+
+  // For display purposes in the footer
   const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
   const endIndex = startIndex + RECORDS_PER_PAGE;
-  const paginatedRecords = filteredCallRecords.slice(startIndex, endIndex);
-  console.log("Debug Info:", {
-    totalCallRecords: callRecords.length,
-    totalFiltered: filteredCallRecords.length,
-    currentPage,
-    totalPages,
-    startIndex,
-    endIndex,
-    paginatedCount: paginatedRecords.length,
-  });
+
   useEffect(() => {
+    // Check if current page is valid
     if (currentPage > totalPages && totalPages > 0) {
       setCurrentPage(1);
-      setFetchTrigger((prev) => prev + 1); // Trigger data fetch with reset dates
     }
-  }, [totalFilteredRecords, totalPages]);
+  }, [totalPages]);
 
   // Select All functionality - does nothing
   const handleSelectAll = () => {
@@ -2034,7 +1897,7 @@ const MedicareDashboard = () => {
                           <input
                             type="checkbox"
                             checked={isSelected}
-                            onChange={() => {}}
+                            onChange={() => { }}
                             style={{
                               cursor: "pointer",
                               width: "16px",
@@ -2716,17 +2579,17 @@ const MedicareDashboard = () => {
                             cat.label === "Neutral" ||
                             cat.label === "Unclear Response"),
                       ).length === 0 && (
-                        <div
-                          style={{
-                            padding: "10px 18px",
-                            fontSize: "14px",
-                            color: "#888",
-                            textAlign: "center",
-                          }}
-                        >
-                          No engaged outcomes
-                        </div>
-                      )}
+                          <div
+                            style={{
+                              padding: "10px 18px",
+                              fontSize: "14px",
+                              color: "#888",
+                              textAlign: "center",
+                            }}
+                          >
+                            No engaged outcomes
+                          </div>
+                        )}
                     </div>
                   </div>
 
@@ -2799,17 +2662,17 @@ const MedicareDashboard = () => {
                           cat.label !== "Neutral" &&
                           cat.label !== "Unclear Response",
                       ).length === 0 && (
-                        <div
-                          style={{
-                            padding: "10px 18px",
-                            fontSize: "14px",
-                            color: "#888",
-                            textAlign: "center",
-                          }}
-                        >
-                          No drop-off outcomes
-                        </div>
-                      )}
+                          <div
+                            style={{
+                              padding: "10px 18px",
+                              fontSize: "14px",
+                              color: "#888",
+                              textAlign: "center",
+                            }}
+                          >
+                            No drop-off outcomes
+                          </div>
+                        )}
                     </div>
                   </div>
                 </div>
@@ -2968,9 +2831,8 @@ const MedicareDashboard = () => {
                           #
                           {sortColumn === "id" && (
                             <i
-                              className={`bi bi-chevron-${
-                                sortDirection === "asc" ? "up" : "down"
-                              }`}
+                              className={`bi bi-chevron-${sortDirection === "asc" ? "up" : "down"
+                                }`}
                               style={{ fontSize: "12px" }}
                             ></i>
                           )}
@@ -2998,9 +2860,8 @@ const MedicareDashboard = () => {
                           Phone No
                           {sortColumn === "phone" && (
                             <i
-                              className={`bi bi-chevron-${
-                                sortDirection === "asc" ? "up" : "down"
-                              }`}
+                              className={`bi bi-chevron-${sortDirection === "asc" ? "up" : "down"
+                                }`}
                               style={{ fontSize: "12px" }}
                             ></i>
                           )}
@@ -3028,9 +2889,8 @@ const MedicareDashboard = () => {
                           List ID
                           {sortColumn === "listId" && (
                             <i
-                              className={`bi bi-chevron-${
-                                sortDirection === "asc" ? "up" : "down"
-                              }`}
+                              className={`bi bi-chevron-${sortDirection === "asc" ? "up" : "down"
+                                }`}
                               style={{ fontSize: "12px" }}
                             ></i>
                           )}
@@ -3058,9 +2918,8 @@ const MedicareDashboard = () => {
                           Response Category
                           {sortColumn === "category" && (
                             <i
-                              className={`bi bi-chevron-${
-                                sortDirection === "asc" ? "up" : "down"
-                              }`}
+                              className={`bi bi-chevron-${sortDirection === "asc" ? "up" : "down"
+                                }`}
                               style={{ fontSize: "12px" }}
                             ></i>
                           )}
@@ -3088,9 +2947,8 @@ const MedicareDashboard = () => {
                           Timestamp (US EST/EDT)
                           {sortColumn === "timestamp" && (
                             <i
-                              className={`bi bi-chevron-${
-                                sortDirection === "asc" ? "up" : "down"
-                              }`}
+                              className={`bi bi-chevron-${sortDirection === "asc" ? "up" : "down"
+                                }`}
                               style={{ fontSize: "12px" }}
                             ></i>
                           )}
@@ -3139,12 +2997,12 @@ const MedicareDashboard = () => {
                               transition: "background-color 0.2s",
                             }}
                             onMouseOver={(e) =>
-                              (e.currentTarget.style.backgroundColor =
-                                "#f9fafb")
+                            (e.currentTarget.style.backgroundColor =
+                              "#f9fafb")
                             }
                             onMouseOut={(e) =>
-                              (e.currentTarget.style.backgroundColor =
-                                "transparent")
+                            (e.currentTarget.style.backgroundColor =
+                              "transparent")
                             }
                           >
                             <td
