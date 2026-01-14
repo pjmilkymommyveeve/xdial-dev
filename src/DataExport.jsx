@@ -12,7 +12,7 @@ export default function DataExport() {
   const [exportType, setExportType] = useState("all");
   const [selectedLists, setSelectedLists] = useState([]);
   const [selectedDispositions, setSelectedDispositions] = useState([]);
-  const [startDate, setStartDate] = useState("");
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [startTime, setStartTime] = useState("");
   const [endDate, setEndDate] = useState("");
   const [endTime, setEndTime] = useState("");
@@ -187,14 +187,14 @@ export default function DataExport() {
   };
 
   const resetFilters = () => {
-    setExportType("all");
-    setSelectedLists([]);
-    setSelectedDispositions([]);
-    setStartDate("");
-    setStartTime("");
-    setEndDate("");
-    setEndTime("");
-  };
+  setExportType("all");
+  setSelectedLists([]);
+  setSelectedDispositions([]);
+  setStartDate(new Date().toISOString().split('T')[0]);
+  setStartTime("");
+  setEndDate("");
+  setEndTime("");
+};
 
   const getDispositionIcon = (name) => {
     const icons = {
