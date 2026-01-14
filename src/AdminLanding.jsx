@@ -1,87 +1,133 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+
+const formatBytes = (bytes) => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+};
+
+const LOAD_METRICS_API_BASE = 'https://loadmetrics.xdialnetworks.com';
 
 const AdminLanding = () => {
   const navigate = useNavigate();
-  const [campaigns, setCampaigns] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [agents, setAgents] = useState({});
+  const [connected, setConnected] = useState(false);
+  const [showThresholdModal, setShowThresholdModal] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState(null);
+  const [thresholds, setThresholds] = useState({});
+  const [tempThreshold, setTempThreshold] = useState({
+    cpu: 80,
+    memory: 85,
+    disk: 90
+  });
+  const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
+  const [showProgressBars, setShowProgressBars] = useState(true);
+  
+  const wsRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
 
   useEffect(() => {
-    fetchCampaigns();
+    fetchThresholds();
   }, []);
 
-  const fetchCampaigns = async () => {
+  const fetchThresholds = async () => {
     try {
-      const token = localStorage.getItem("access_token");
-      
-      if (!token) {
-        setError("Not authenticated. Please login again.");
-        setTimeout(() => {
-          navigate("/");
-        }, 2000);
-        return;
+      const response = await fetch(`${LOAD_METRICS_API_BASE}/api/thresholds`);
+      if (response.ok) {
+        const data = await response.json();
+        setThresholds(data || {});
       }
-
-      const response = await fetch(
-        "https://api.xlitecore.xdialnetworks.com/api/v1/client/campaigns/with-campaigns",
-        {
-          headers: {
-            accept: "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.status === 401 || response.status === 403) {
-        localStorage.clear();
-        setTimeout(() => {
-          navigate("/");
-        }, 2000);
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch campaigns: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      // Handle the nested structure: clients -> campaigns
-      let campaignsArray = [];
-      if (data.clients && Array.isArray(data.clients)) {
-        // Flatten all campaigns from all clients into a single array
-        data.clients.forEach(client => {
-          if (client.campaigns && Array.isArray(client.campaigns)) {
-            // Add client info to each campaign for display
-            client.campaigns.forEach(campaign => {
-              campaignsArray.push({
-                ...campaign,
-                client_id: client.client_id,
-                client_name: client.client_name
-              });
-            });
-          }
-        });
-      } else if (Array.isArray(data)) {
-        campaignsArray = data;
-      } else if (data.campaigns && Array.isArray(data.campaigns)) {
-        campaignsArray = data.campaigns;
-      } else if (data.data && Array.isArray(data.data)) {
-        campaignsArray = data.data;
-      } else {
-        console.warn("Unexpected API response structure:", data);
-      }
-      
-      setCampaigns(campaignsArray);
-      setLoading(false);
     } catch (err) {
-      console.error("Fetch error:", err);
-      setError(err.message);
-      setLoading(false);
+      console.error('Failed to fetch thresholds:', err);
     }
   };
+
+  useEffect(() => {
+    const handleResize = () => {
+      setViewportHeight(window.innerHeight);
+      // Hide progress bars if viewport is less than 800px tall
+      setShowProgressBars(window.innerHeight >= 800);
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Initial check
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    connectWebSocket();
+
+    return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, []);
+
+  const connectWebSocket = () => {
+    const ws = new WebSocket('wss://loadmetrics.xdialnetworks.com/ws/dashboard');
+    
+    ws.onopen = () => {
+      console.log('Connected to monitoring server');
+      setConnected(true);
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const metrics = JSON.parse(event.data);
+        setAgents(prev => ({
+          ...prev,
+          [metrics.hostname]: {
+            ...metrics,
+            lastUpdate: Date.now()
+          }
+        }));
+      } catch (err) {
+        console.error('Failed to parse metrics:', err);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    ws.onclose = () => {
+      console.log('Disconnected from monitoring server');
+      setConnected(false);
+      wsRef.current = null;
+      
+      reconnectTimeoutRef.current = setTimeout(() => {
+        console.log('Attempting to reconnect...');
+        connectWebSocket();
+      }, 5000);
+    };
+
+    wsRef.current = ws;
+  };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setAgents(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(key => {
+          if (now - updated[key].lastUpdate > 30000) {
+            delete updated[key];
+          }
+        });
+        return updated;
+      });
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -89,61 +135,305 @@ const AdminLanding = () => {
     navigate("/");
   };
 
-  const handleCampaignClick = (campaignId) => {
-    navigate(`/admin-dashboard?campaign_id=${campaignId}`);
+  const openThresholdModal = (hostname) => {
+    setSelectedAgent(hostname);
+    const existing = thresholds[hostname] || { cpu: 80, memory: 85, disk: 90 };
+    setTempThreshold(existing);
+    setShowThresholdModal(true);
   };
 
-  const filteredCampaigns = Array.isArray(campaigns) ? campaigns.filter((campaign) => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      campaign.campaign_name?.toLowerCase().includes(searchLower) ||
-      campaign.client_name?.toLowerCase().includes(searchLower) ||
-      campaign.id?.toString().includes(searchLower)
-    );
-  }) : [];
+  const saveThreshold = async () => {
+    try {
+      const response = await fetch(`${LOAD_METRICS_API_BASE}/api/thresholds`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          hostname: selectedAgent,
+          threshold: tempThreshold
+        })
+      });
 
-  if (loading) {
-    return (
-      <div style={{ 
-        minHeight: "100vh", 
-        display: "flex", 
-        alignItems: "center", 
-        justifyContent: "center",
-        fontFamily: "Arial, sans-serif" 
-      }}>
-        <div style={{ textAlign: "center" }}>
-          <div style={{
-            width: "48px",
-            height: "48px",
-            border: "4px solid #f3f4f6",
-            borderTop: "4px solid #4f46e5",
-            borderRadius: "50%",
-            animation: "spin 1s linear infinite",
-            margin: "0 auto 16px"
-          }}></div>
-          <p style={{ color: "#6b7280" }}>Loading campaigns...</p>
-        </div>
-      </div>
-    );
+      if (response.ok) {
+        setThresholds(prev => ({
+          ...prev,
+          [selectedAgent]: tempThreshold
+        }));
+        setShowThresholdModal(false);
+        console.log('Threshold saved successfully');
+      } else {
+        console.error('Failed to save threshold');
+        alert('Failed to save threshold. Please try again.');
+      }
+    } catch (err) {
+      console.error('Error saving threshold:', err);
+      alert('Error saving threshold. Please check server connection.');
+    }
+  };
+
+  const getServerStatus = (agent) => {
+    const threshold = thresholds[agent.hostname] || { cpu: 80, memory: 85, disk: 90 };
+    
+    if (agent.cpu.total_percent > threshold.cpu) return 'critical';
+    if (agent.memory.used_percent > threshold.memory) return 'critical';
+    
+    const diskOverThreshold = agent.disk.some(d => d.used_percent > threshold.disk);
+    if (diskOverThreshold) return 'critical';
+    
+    return 'healthy';
+  };
+
+  const getStatusColor = (status) => {
+    return status === 'critical' ? '#ef4444' : '#10b981';
+  };
+
+  const agentList = Object.values(agents).sort((a, b) => 
+    a.hostname.localeCompare(b.hostname)
+  );
+
+  // Calculate how many servers can fit in viewport
+  const headerHeight = 140; // Approximate header height
+  const rowHeight = showProgressBars ? 70 : 50; // Height per server row
+  const tableHeaderHeight = 50;
+  const padding = 48; // Top and bottom padding
+  const availableHeight = viewportHeight - headerHeight - padding;
+  const maxServersPerColumn = Math.floor((availableHeight - tableHeaderHeight) / rowHeight);
+  
+  // Split servers into columns based on available height
+  const columns = [];
+  if (maxServersPerColumn > 0) {
+    for (let i = 0; i < agentList.length; i += maxServersPerColumn) {
+      columns.push(agentList.slice(i, i + maxServersPerColumn));
+    }
   }
 
-  if (error) {
-    return (
-      <div style={{ 
-        minHeight: "100vh", 
-        display: "flex", 
-        alignItems: "center", 
-        justifyContent: "center",
-        fontFamily: "Arial, sans-serif",
-        padding: "24px"
+  const ServerTable = ({ servers }) => (
+    <div style={{
+      backgroundColor: "white",
+      borderRadius: "12px",
+      overflow: "hidden",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+      height: "fit-content"
+    }}>
+      {/* Table Header */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: showProgressBars 
+          ? "8px 1fr 140px 100px 100px 120px 80px"
+          : "8px 1fr 140px 80px 80px 100px 80px",
+        gap: "12px",
+        padding: "16px 20px",
+        backgroundColor: "#f9fafb",
+        borderBottom: "2px solid #e5e7eb",
+        fontWeight: "700",
+        fontSize: "12px",
+        color: "#6b7280",
+        textTransform: "uppercase",
+        letterSpacing: "0.5px"
       }}>
-        <div style={{ textAlign: "center", color: "#dc2626" }}>
-          <i className="bi bi-exclamation-circle" style={{ fontSize: "48px", marginBottom: "16px" }}></i>
-          <p style={{ fontSize: "18px", fontWeight: "600" }}>Error: {error}</p>
-        </div>
+        <div></div>
+        <div>Server</div>
+        <div>IP Address</div>
+        <div>CPU</div>
+        <div>Memory</div>
+        <div>Disk</div>
+        <div style={{ textAlign: "right" }}>Actions</div>
       </div>
-    );
-  }
+
+      {/* Table Rows */}
+      {servers.map(agent => {
+        const status = getServerStatus(agent);
+        const statusColor = getStatusColor(status);
+        const threshold = thresholds[agent.hostname] || { cpu: 80, memory: 85, disk: 90 };
+        const primaryDisk = agent.disk[0] || { mount: '/', used_percent: 0, used: 0, total: 0 };
+
+        return (
+          <div 
+            key={agent.hostname}
+            style={{
+              display: "grid",
+              gridTemplateColumns: showProgressBars 
+                ? "8px 1fr 140px 100px 100px 120px 80px"
+                : "8px 1fr 140px 80px 80px 100px 80px",
+              gap: "12px",
+              padding: showProgressBars ? "16px 20px" : "12px 20px",
+              borderBottom: "1px solid #f3f4f6",
+              alignItems: "center",
+              transition: "background-color 0.2s ease"
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#f9fafb";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
+          >
+            {/* Status Bar */}
+            <div style={{
+              width: "8px",
+              height: showProgressBars ? "48px" : "32px",
+              backgroundColor: statusColor,
+              borderRadius: "4px",
+              boxShadow: `0 0 8px ${statusColor}40`
+            }}></div>
+
+            {/* Server Name */}
+            <div>
+              <div style={{
+                fontSize: "15px",
+                fontWeight: "600",
+                color: "#111827",
+                marginBottom: showProgressBars ? "4px" : "0"
+              }}>
+                {agent.hostname}
+              </div>
+              {showProgressBars && (
+                <div style={{
+                  fontSize: "11px",
+                  color: "#9ca3af"
+                }}>
+                  Updated: {new Date(agent.timestamp * 1000).toLocaleTimeString()}
+                </div>
+              )}
+            </div>
+
+            {/* IP Address */}
+            <div style={{
+              fontSize: "13px",
+              color: "#6b7280",
+              fontFamily: "monospace"
+            }}>
+              {agent.ip}
+            </div>
+
+            {/* CPU */}
+            <div>
+              <div style={{
+                fontSize: showProgressBars ? "18px" : "16px",
+                fontWeight: "700",
+                color: agent.cpu.total_percent > threshold.cpu ? "#ef4444" : "#10b981",
+                marginBottom: showProgressBars ? "4px" : "0"
+              }}>
+                {agent.cpu.total_percent.toFixed(1)}%
+              </div>
+              {showProgressBars && (
+                <div style={{
+                  width: "100%",
+                  height: "6px",
+                  backgroundColor: "#f3f4f6",
+                  borderRadius: "3px",
+                  overflow: "hidden"
+                }}>
+                  <div style={{
+                    height: "100%",
+                    width: `${Math.min(agent.cpu.total_percent, 100)}%`,
+                    backgroundColor: agent.cpu.total_percent > threshold.cpu 
+                      ? "#ef4444" 
+                      : "#10b981",
+                    transition: "width 0.3s ease"
+                  }}></div>
+                </div>
+              )}
+            </div>
+
+            {/* Memory */}
+            <div>
+              <div style={{
+                fontSize: showProgressBars ? "18px" : "16px",
+                fontWeight: "700",
+                color: agent.memory.used_percent > threshold.memory ? "#ef4444" : "#10b981",
+                marginBottom: showProgressBars ? "4px" : "0"
+              }}>
+                {agent.memory.used_percent.toFixed(1)}%
+              </div>
+              {showProgressBars && (
+                <div style={{
+                  width: "100%",
+                  height: "6px",
+                  backgroundColor: "#f3f4f6",
+                  borderRadius: "3px",
+                  overflow: "hidden"
+                }}>
+                  <div style={{
+                    height: "100%",
+                    width: `${agent.memory.used_percent}%`,
+                    backgroundColor: agent.memory.used_percent > threshold.memory 
+                      ? "#ef4444" 
+                      : "#10b981",
+                    transition: "width 0.3s ease"
+                  }}></div>
+                </div>
+              )}
+            </div>
+
+            {/* Disk */}
+            <div>
+              <div style={{
+                fontSize: showProgressBars ? "14px" : "16px",
+                fontWeight: "600",
+                color: primaryDisk.used_percent > threshold.disk ? "#ef4444" : "#10b981",
+                marginBottom: showProgressBars ? "4px" : "0"
+              }}>
+                {showProgressBars && `${primaryDisk.mount} `}{primaryDisk.used_percent.toFixed(1)}%
+              </div>
+              {showProgressBars && (
+                <div style={{
+                  width: "100%",
+                  height: "6px",
+                  backgroundColor: "#f3f4f6",
+                  borderRadius: "3px",
+                  overflow: "hidden"
+                }}>
+                  <div style={{
+                    height: "100%",
+                    width: `${primaryDisk.used_percent}%`,
+                    backgroundColor: primaryDisk.used_percent > threshold.disk 
+                      ? "#ef4444" 
+                      : "#10b981",
+                    transition: "width 0.3s ease"
+                  }}></div>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div style={{ textAlign: "right" }}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openThresholdModal(agent.hostname);
+                }}
+                style={{
+                  padding: showProgressBars ? "6px 12px" : "4px 10px",
+                  backgroundColor: "#f3f4f6",
+                  color: "#6b7280",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "6px",
+                  fontSize: "11px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#4f46e5";
+                  e.currentTarget.style.color = "white";
+                  e.currentTarget.style.borderColor = "#4f46e5";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "#f3f4f6";
+                  e.currentTarget.style.color = "#6b7280";
+                  e.currentTarget.style.borderColor = "#e5e7eb";
+                }}
+              >
+                Limits
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 
   return (
     <div style={{ 
@@ -154,11 +444,11 @@ const AdminLanding = () => {
       <header style={{
         backgroundColor: "white",
         borderBottom: "1px solid #e5e7eb",
-        padding: "24px 0",
+        padding: "20px 0",
         boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
       }}>
         <div style={{
-          maxWidth: "1400px",
+          maxWidth: "1600px",
           margin: "0 auto",
           padding: "0 24px",
           display: "flex",
@@ -177,14 +467,42 @@ const AdminLanding = () => {
               alignItems: "center",
               gap: "12px"
             }}>
-              <i className="bi bi-speedometer2"></i>
-              Admin Dashboard
+              Xdial Networks Admin Panel
             </h1>
-            <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>
-              Select a campaign to view data export
-            </p>
           </div>
           <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "10px 16px",
+              backgroundColor: "white",
+              border: "1px solid #e5e7eb",
+              borderRadius: "8px"
+            }}>
+              <span style={{
+                width: "10px",
+                height: "10px",
+                borderRadius: "50%",
+                background: connected ? "#10b981" : "#ef4444",
+                boxShadow: connected ? "0 0 8px rgba(16, 185, 129, 0.5)" : "none",
+                animation: connected ? "pulse 2s infinite" : "none"
+              }}></span>
+              <span style={{ fontSize: "14px", color: "#6b7280", fontWeight: "500" }}>
+                {connected ? 'Connected' : 'Disconnected'}
+              </span>
+              <span style={{
+                padding: "2px 8px",
+                background: "#4f46e5",
+                color: "white",
+                borderRadius: "10px",
+                fontSize: "12px",
+                fontWeight: "600",
+                marginLeft: "8px"
+              }}>
+                {agentList.length} Servers
+              </span>
+            </div>
             <button
               onClick={() => navigate("/admin-data-export")}
               style={{
@@ -195,14 +513,10 @@ const AdminLanding = () => {
                 borderRadius: "8px",
                 fontSize: "14px",
                 fontWeight: "600",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px"
+                cursor: "pointer"
               }}
             >
-              <i className="bi bi-file-earmark-arrow-up"></i>
-              Bulk Data Export
+              Data Export
             </button>
             <button
               onClick={() => navigate("/integration-form")}
@@ -214,13 +528,9 @@ const AdminLanding = () => {
                 borderRadius: "8px",
                 fontSize: "14px",
                 fontWeight: "600",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px"
+                cursor: "pointer"
               }}
             >
-              <i className="bi bi-file-earmark-plus"></i>
               Add Client
             </button>
             <button
@@ -233,210 +543,248 @@ const AdminLanding = () => {
                 borderRadius: "8px",
                 fontSize: "14px",
                 fontWeight: "600",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px"
+                cursor: "pointer"
               }}
             >
-              <i className="bi bi-box-arrow-right"></i>
               Logout
             </button>
           </div>
         </div>
       </header>
 
-      <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "24px" }}>
-        {/* Search Section */}
-        <div style={{
-          backgroundColor: "white",
-          borderRadius: "12px",
-          padding: "20px",
-          marginBottom: "24px",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
-        }}>
-          <div style={{ position: "relative" }}>
-            <i className="bi bi-search" style={{
-              position: "absolute",
-              left: "12px",
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: "#9ca3af",
-              fontSize: "16px"
-            }}></i>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by campaign name, client name, or ID..."
-              style={{
-                width: "100%",
-                padding: "12px 12px 12px 40px",
-                border: "1px solid #d1d5db",
-                borderRadius: "8px",
-                fontSize: "14px",
-                boxSizing: "border-box"
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Campaigns Grid */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-          gap: "20px"
-        }}>
-          {filteredCampaigns.length === 0 ? (
+      <div style={{ maxWidth: "1600px", margin: "0 auto", padding: "24px" }}>
+        {agentList.length === 0 ? (
+          <div style={{
+            backgroundColor: "white",
+            borderRadius: "12px",
+            padding: "80px 24px",
+            textAlign: "center",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
+          }}>
             <div style={{
-              gridColumn: "1 / -1",
-              backgroundColor: "white",
-              borderRadius: "12px",
-              padding: "48px 24px",
-              textAlign: "center",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
+              fontSize: "64px",
+              color: "#d1d5db",
+              marginBottom: "16px"
             }}>
-              <i className="bi bi-inbox" style={{
-                fontSize: "48px",
-                color: "#d1d5db",
-                marginBottom: "16px",
-                display: "block"
-              }}></i>
-              <h3 style={{
-                margin: "0 0 8px 0",
-                fontSize: "18px",
-                fontWeight: "600",
-                color: "#111827"
-              }}>
-                No campaigns found
-              </h3>
-              <p style={{
-                margin: 0,
-                fontSize: "14px",
-                color: "#6b7280"
-              }}>
-                Try adjusting your search term
-              </p>
+              🖥️
             </div>
-          ) : (
-            filteredCampaigns.map((campaign) => (
-              <div
-                key={campaign.id}
-                onClick={() => handleCampaignClick(campaign.id)}
-                style={{
-                  backgroundColor: "white",
-                  borderRadius: "12px",
-                  padding: "24px",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                  border: "2px solid transparent"
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = "#4f46e5";
-                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(79, 70, 229, 0.2)";
-                  e.currentTarget.style.transform = "translateY(-4px)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = "transparent";
-                  e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.1)";
-                  e.currentTarget.style.transform = "translateY(0)";
-                }}
-              >
-                <div style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  justifyContent: "space-between",
-                  marginBottom: "16px"
-                }}>
-                  <div style={{
-                    width: "48px",
-                    height: "48px",
-                    borderRadius: "10px",
-                    background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "white",
-                    fontSize: "20px"
-                  }}>
-                    <i className="bi bi-telephone-fill"></i>
-                  </div>
-                  <span style={{
-                    padding: "4px 12px",
-                    backgroundColor: "#eff6ff",
-                    color: "#1e40af",
-                    borderRadius: "6px",
-                    fontSize: "12px",
-                    fontWeight: "600"
-                  }}>
-                    ID: {campaign.id}
-                  </span>
-                </div>
-
-                <h3 style={{
-                  margin: "0 0 8px 0",
-                  fontSize: "18px",
-                  fontWeight: "600",
-                  color: "#111827"
-                }}>
-                  {campaign.campaign_name || "Unnamed Campaign"}
-                </h3>
-
-                <p style={{
-                  margin: "0 0 16px 0",
-                  fontSize: "14px",
-                  color: "#6b7280",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px"
-                }}>
-                  <i className="bi bi-building"></i>
-                  {campaign.client_name || "No client"}
-                </p>
-
-                <div style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  paddingTop: "16px",
-                  borderTop: "1px solid #f3f4f6"
-                }}>
-                  <span style={{
-                    fontSize: "13px",
-                    color: "#9ca3af",
-                    fontWeight: "500"
-                  }}>
-                    Click to view data
-                  </span>
-                  <i className="bi bi-arrow-right" style={{
-                    fontSize: "16px",
-                    color: "#4f46e5"
-                  }}></i>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+            <h3 style={{
+              margin: "0 0 8px 0",
+              fontSize: "20px",
+              fontWeight: "600",
+              color: "#111827"
+            }}>
+              No servers connected
+            </h3>
+            <p style={{
+              margin: 0,
+              fontSize: "14px",
+              color: "#6b7280"
+            }}>
+              Waiting for monitoring agents to connect...
+            </p>
+          </div>
+        ) : (
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${columns.length}, 1fr)`,
+            gap: "24px"
+          }}>
+            {columns.map((columnServers, idx) => (
+              <ServerTable key={idx} servers={columnServers} />
+            ))}
+          </div>
+        )}
       </div>
 
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
+      {/* Threshold Modal */}
+      {showThresholdModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0, 0, 0, 0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000
+        }}
+        onClick={() => setShowThresholdModal(false)}
+        >
+          <div style={{
+            backgroundColor: "white",
+            borderRadius: "12px",
+            padding: "32px",
+            maxWidth: "500px",
+            width: "90%",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)"
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "24px"
+            }}>
+              <h2 style={{
+                margin: 0,
+                fontSize: "24px",
+                fontWeight: "700",
+                color: "#111827"
+              }}>
+                Set Thresholds
+              </h2>
+              <button
+                onClick={() => setShowThresholdModal(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontSize: "24px",
+                  color: "#6b7280",
+                  cursor: "pointer",
+                  padding: "0",
+                  width: "32px",
+                  height: "32px"
+                }}
+              >
+                ×
+              </button>
+            </div>
 
-        @media (max-width: 768px) {
-          header h1 {
-            font-size: 24px !important;
-          }
+            <p style={{
+              margin: "0 0 24px 0",
+              color: "#6b7280",
+              fontSize: "14px"
+            }}>
+              Server: <strong>{selectedAgent}</strong>
+            </p>
+
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{
+                display: "block",
+                fontSize: "14px",
+                fontWeight: "600",
+                color: "#374151",
+                marginBottom: "8px"
+              }}>
+                CPU Threshold (%)
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={tempThreshold.cpu}
+                onChange={(e) => setTempThreshold({...tempThreshold, cpu: Number(e.target.value)})}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  boxSizing: "border-box"
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{
+                display: "block",
+                fontSize: "14px",
+                fontWeight: "600",
+                color: "#374151",
+                marginBottom: "8px"
+              }}>
+                Memory Threshold (%)
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={tempThreshold.memory}
+                onChange={(e) => setTempThreshold({...tempThreshold, memory: Number(e.target.value)})}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  boxSizing: "border-box"
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: "24px" }}>
+              <label style={{
+                display: "block",
+                fontSize: "14px",
+                fontWeight: "600",
+                color: "#374151",
+                marginBottom: "8px"
+              }}>
+                Disk Threshold (%)
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={tempThreshold.disk}
+                onChange={(e) => setTempThreshold({...tempThreshold, disk: Number(e.target.value)})}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  boxSizing: "border-box"
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setShowThresholdModal(false)}
+                style={{
+                  padding: "10px 20px",
+                  backgroundColor: "#f3f4f6",
+                  color: "#374151",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  cursor: "pointer"
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveThreshold}
+                style={{
+                  padding: "10px 20px",
+                  backgroundColor: "#4f46e5",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  cursor: "pointer"
+                }}
+              >
+                Save Thresholds
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
         }
       `}</style>
-
-      <link
-        rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
-      />
     </div>
   );
 };
