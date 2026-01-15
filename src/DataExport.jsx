@@ -484,8 +484,7 @@ export default function DataExport() {
                           <svg className={`icon-sm ${icon.color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             {icon.element === "circle" ? <circle cx="12" cy="12" r="10" strokeWidth="2" /> : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={icon.path} />}
                           </svg>
-                          {category.name}
-                          <span className="badge badge-outline" style={{ marginLeft: "auto" }}>{category.count.toLocaleString()}</span>
+                          {category.name} ({category.count.toLocaleString()})
                         </label>
                       </div>
                     );
