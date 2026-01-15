@@ -218,8 +218,8 @@ const AdminLanding = () => {
       <div style={{
         display: "grid",
         gridTemplateColumns: showProgressBars 
-          ? "1fr 120px 100px 100px 120px 80px"
-          : "1fr 120px 80px 80px 100px 80px",
+          ? "200px 120px 100px 100px 120px 80px"
+          : "200px 120px 80px 80px 100px 80px",
         gap: "12px",
         padding: "16px 20px",
         backgroundColor: "#f9fafb",
@@ -252,8 +252,8 @@ const AdminLanding = () => {
             style={{
               display: "grid",
               gridTemplateColumns: showProgressBars 
-                ? "1fr 120px 100px 100px 120px 80px"
-                : "1fr 120px 80px 80px 100px 80px",
+                ? "200px 120px 100px 100px 120px 80px"
+                : "200px 120px 80px 80px 100px 80px",
               gap: "12px",
               padding: showProgressBars ? "16px 20px" : "12px 20px",
               borderBottom: "1px solid #f3f4f6",
