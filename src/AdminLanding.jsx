@@ -210,7 +210,7 @@ const AdminLanding = () => {
     <div style={{
       backgroundColor: "white",
       borderRadius: "12px",
-      overflow: "hidden",
+      overflow: "auto",
       boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
       height: "fit-content"
     }}>
@@ -228,7 +228,8 @@ const AdminLanding = () => {
         fontSize: "12px",
         color: "#6b7280",
         textTransform: "uppercase",
-        letterSpacing: "0.5px"
+        letterSpacing: "0.5px",
+        minWidth: "720px"
       }}>
         <div>Server IP</div>
         <div>Load Avg</div>
@@ -259,7 +260,8 @@ const AdminLanding = () => {
               borderBottom: "1px solid #f3f4f6",
               alignItems: "center",
               transition: "background-color 0.2s ease",
-              backgroundColor: isCritical ? "#ef4444" : "transparent"
+              backgroundColor: isCritical ? "#ef4444" : "transparent",
+              minWidth: "720px"
             }}
             onMouseEnter={(e) => {
               if (!isCritical) {
