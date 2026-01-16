@@ -345,10 +345,6 @@ const navigate = useNavigate();
       <p>Manage AI bot integration requests</p>
     </div>
     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-      <button className="logout-btn" onClick={() => navigate('/admin-data-export')}>
-        <i className="bi bi-file-earmark-arrow-up"></i>
-        Data Export
-      </button>
       <button className="logout-btn" onClick={() => navigate('/integration-form')}>
         <i className="bi bi-file-earmark-plus"></i>
         Add Client
@@ -356,6 +352,13 @@ const navigate = useNavigate();
       <button className="logout-btn" onClick={handleLogout}>
         <i className="bi bi-box-arrow-right"></i>
         Client Management
+      </button>
+       <button 
+        className="logout-btn" 
+        onClick={() => navigate(`/recordings?campaign_id=${campaignId}`)}
+      >
+        <i className="bi bi-mic-fill"></i>
+        Recordings
       </button>
     </div>
   </div>

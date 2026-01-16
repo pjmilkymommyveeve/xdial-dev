@@ -31,6 +31,13 @@ const MedicareDashboard = () => {
   const [showTranscriptModal, setShowTranscriptModal] = useState(false);
   const [selectedCallRecord, setSelectedCallRecord] = useState(null);
 
+  // Timeseries data for the graph
+  const [timeseriesData, setTimeseriesData] = useState(null);
+  const [timeseriesLoading, setTimeseriesLoading] = useState(false);
+
+  // Transfer metrics data
+  const [transferMetrics, setTransferMetrics] = useState(null);
+
   // KEY FIX: Get campaign ID and force reload on mount
   // Get campaign ID on mount - don't auto-load data
   useEffect(() => {
@@ -161,10 +168,10 @@ const MedicareDashboard = () => {
         if (searchText) params.append("search", searchText);
         if (listId) params.append("list_id", listId);
 
-        // Add outcome filters
+        // Add outcome filters - API uses "categories" parameter
         if (selectedOutcomes.length > 0) {
           selectedOutcomes.forEach(outcome => {
-            params.append("selected_categories", outcome);
+            params.append("categories", outcome);
           });
         }
 
@@ -203,6 +210,93 @@ const MedicareDashboard = () => {
       fetchData();
     }
   }, [campaignId, fetchTrigger, currentPage]); // Added currentPage dependency
+
+  // Fetch timeseries data for the graph
+  useEffect(() => {
+    const fetchTimeseriesData = async () => {
+      if (!campaignId || !startDate) return;
+
+      setTimeseriesLoading(true);
+      try {
+        const token = localStorage.getItem("access_token");
+        if (!token) return;
+
+        // Build query parameters
+        const params = new URLSearchParams();
+        params.append("start_date", startDate);
+        if (startTime) params.append("start_time", startTime);
+        if (endDate && endDate !== startDate) {
+          params.append("end_date", endDate);
+        }
+        if (endTime) params.append("end_time", endTime);
+        params.append("interval", "60"); // 60 minute intervals
+
+        const apiUrl = `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/${campaignId}/category-timeseries?${params.toString()}`;
+
+        const response = await fetch(apiUrl, {
+          headers: {
+            accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setTimeseriesData(data);
+        }
+      } catch (err) {
+        console.error("Error fetching timeseries data:", err);
+      } finally {
+        setTimeseriesLoading(false);
+      }
+    };
+
+    if (fetchTrigger > 0 || currentPage > 0) {
+      fetchTimeseriesData();
+    }
+  }, [campaignId, startDate, startTime, endDate, endTime, fetchTrigger]);
+
+  // Fetch transfer metrics from API
+  useEffect(() => {
+    const fetchTransferMetrics = async () => {
+      if (!campaignId || !startDate) return;
+
+      try {
+        const token = localStorage.getItem("access_token");
+        if (!token) return;
+
+        // Build query parameters
+        const params = new URLSearchParams();
+        params.append("start_date", startDate);
+        if (startTime) params.append("start_time", startTime);
+        if (endDate && endDate !== startDate) {
+          params.append("end_date", endDate);
+        }
+        if (endTime) params.append("end_time", endTime);
+
+        const apiUrl = `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/${campaignId}/transfer-metrics?${params.toString()}`;
+
+        const response = await fetch(apiUrl, {
+          headers: {
+            accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setTransferMetrics(data);
+        }
+      } catch (err) {
+        console.error("Error fetching transfer metrics:", err);
+      }
+    };
+
+    if (fetchTrigger > 0 || currentPage > 0) {
+      fetchTransferMetrics();
+    }
+  }, [campaignId, startDate, startTime, endDate, endTime, fetchTrigger]);
+
   // Reset to page 1 when filters change
 
   const summaryChartRef = useRef(null);
@@ -459,27 +553,19 @@ const MedicareDashboard = () => {
   const filteredCallRecords = callRecords;
 
   // Calculate Metrics for Transfer Section
-  // Calculate Metrics using Aggegrated Data from API
-  const totalCalls = dashboardData?.total_calls || 0;
+  // Use transfer metrics from API
+  const totalCalls = transferMetrics?.total_calls || dashboardData?.total_calls || 0;
 
-  // A Grade: Transferred & Qualified
-  const aGradeCount = (dashboardData?.all_categories || [])
-    .filter(c => c.name === "Qualified" || c.original_name === "Qualified")
-    .reduce((sum, c) => sum + (c.transferred_count || 0), 0);
+  // A Grade: From transfer-metrics API
+  const aGradeCount = transferMetrics?.a_grade_transfers || 0;
 
-  // B Grade: Transferred & NOT Qualified
-  const bGradeCount = (dashboardData?.all_categories || [])
-    .filter(c => c.name !== "Qualified" && c.original_name !== "Qualified")
-    .reduce((sum, c) => sum + (c.transferred_count || 0), 0);
+  // B Grade: From transfer-metrics API
+  const bGradeCount = transferMetrics?.b_grade_transfers || 0;
 
-  // Dropped: Not transferred
-  // Calculated as Total - Transferred
+  // Dropped: From transfer-metrics API
+  const droppedCount = transferMetrics?.drop_offs || 0;
+
   const totalTransferred = aGradeCount + bGradeCount;
-  const droppedCount = totalCalls - totalTransferred;
-
-  const totalTransferCalls = totalCalls; // Using Total Calls as denominator as per original intent? Or transfers?
-  // Actually original code used `filteredCallRecords.length` as total.
-  // We'll use totalCalls from API.
 
   const aGradePercentageVal =
     totalCalls > 0
@@ -980,218 +1066,81 @@ const MedicareDashboard = () => {
   }, [showSummaryGraph, callRecords, timeRange]);
 
   const processStatisticsData = () => {
-    if (!callRecords || callRecords.length === 0) {
+    // Use timeseries API data if available
+    if (!timeseriesData || !timeseriesData.intervals || timeseriesData.intervals.length === 0) {
       return { labels: [], datasets: [] };
     }
 
-    // Filter records based on date/time selection
-    let filteredData = callRecords.filter((record) => {
-      if (!record.timestamp) return false;
-
-      const recordDate = parseTimestamp(record.timestamp);
-      if (!recordDate) return false;
-
-      // Apply start date/time filter
-      if (startDate) {
-        const startDateTime = parseUserInputDate(startDate, startTime);
-        if (startDateTime && recordDate < startDateTime) {
-          return false;
-        }
-      }
-
-      // Apply end date/time filter
-      if (endDate && endDate !== startDate) {
-        const endDateTime = parseUserInputDate(endDate, endTime || "23:59:59");
-        if (endDateTime && recordDate > endDateTime) {
-          return false;
-        }
-      }
-
-      return true;
+    const intervals = timeseriesData.intervals;
+    
+    // Get all unique categories from the timeseries data
+    const allCategoriesFromTimeseries = new Set();
+    intervals.forEach(interval => {
+      interval.categories.forEach(cat => {
+        allCategoriesFromTimeseries.add(cat.name);
+      });
     });
 
-    // Filter by selected categories
-    if (selectedOutcomes.length > 0) {
-      filteredData = filteredData.filter((record) =>
-        selectedOutcomes.includes(record.category),
-      );
-    }
-
-    // Categories to show - use all categories from API or selected ones
+    // Categories to show - use selected ones or all from timeseries
     const categoriesToShow =
       selectedOutcomes.length === 0
-        ? allCategories.map((cat) => cat.name)
+        ? Array.from(allCategoriesFromTimeseries)
         : selectedOutcomes;
 
-    // KEY CHANGE: Determine view mode based on start/end date selection
-    const showDateView = startDate && endDate && startDate !== endDate;
+    // Create labels from interval timestamps
+    const labels = intervals.map((interval) => {
+      const date = new Date(interval.interval_start);
+      const displayHour = date.getHours() % 12 || 12;
+      const ampm = date.getHours() < 12 ? "AM" : "PM";
+      return `${displayHour} ${ampm}`;
+    });
 
-    if (showDateView) {
-      // DATE VIEW: Show all dates in range, with zeros for missing data
-      const dateMap = new Map();
+    // Helper function to convert hex to rgba
+    const hexToRgba = (hex, alpha) => {
+      // Handle invalid hex colors
+      if (!hex || hex.length < 7) return `rgba(128, 128, 128, ${alpha})`;
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
 
-      // Create all dates in the range
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      const allDates = [];
-
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        const dateStr = formatDateForComparison(d);
-        allDates.push(dateStr);
-        dateMap.set(dateStr, {}); // Initialize with empty object
-      }
-
-      // Fill in actual data
-      filteredData.forEach((record) => {
-        const recordDate = parseTimestamp(record.timestamp);
-        if (!recordDate) return;
-
-        const dateStr = formatDateForComparison(recordDate);
-        if (!dateStr || !dateMap.has(dateStr)) return;
-
-        const dateData = dateMap.get(dateStr);
-        if (!dateData[record.category]) {
-          dateData[record.category] = 0;
-        }
-        dateData[record.category]++;
-      });
-
-      const labels = allDates.map((dateStr) => {
-        const date = new Date(dateStr);
-        return date.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-        });
-      });
-
-      const datasets = categoriesToShow.map((category) => {
-        const data = allDates.map((dateStr) => {
-          const dateData = dateMap.get(dateStr);
-          return dateData && dateData[category] ? dateData[category] : 0;
-        });
-
-        const outcome = outcomes.find((o) => o.label === category);
-        const color = outcome ? outcome.color : "#1a73e8";
-
-        const hexToRgba = (hex, alpha) => {
-          const r = parseInt(hex.slice(1, 3), 16);
-          const g = parseInt(hex.slice(3, 5), 16);
-          const b = parseInt(hex.slice(5, 7), 16);
-          return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-        };
-
-        return {
-          label: category,
-          data: data,
-          borderColor: hexToRgba(color, 0.5),
-          backgroundColor: hexToRgba(color, 0.08),
-          fill: true,
-          tension: 0.4,
-          pointRadius: 2,
-          pointHoverRadius: 4,
-          borderWidth: 1,
-        };
-      });
-
-      return { labels, datasets };
-    } else {
-      // HOURLY VIEW: Show all hours in range with zeros for missing data
-      if (filteredData.length === 0) {
-        return { labels: [], datasets: [] };
-      }
-
-      const hourMap = new Map();
-
-      // Determine hour range
-      let startHour = 0;
-      let endHour = 23;
-
-      if (startTime || endTime) {
-        const startDateTime = parseUserInputDate(
-          startDate,
-          startTime || "00:00",
+    // Create datasets for each category
+    const datasets = categoriesToShow.map((categoryName) => {
+      // Get the data for this category across all intervals
+      const data = intervals.map((interval) => {
+        const categoryData = interval.categories.find(
+          (cat) => cat.name === categoryName || cat.original_name === categoryName
         );
-        const endDateTime = parseUserInputDate(
-          endDate || startDate,
-          endTime || "23:59",
+        return categoryData ? categoryData.count : 0;
+      });
+
+      // Get color from the first interval that has this category
+      let color = "#818589"; // default gray
+      for (const interval of intervals) {
+        const categoryData = interval.categories.find(
+          (cat) => cat.name === categoryName || cat.original_name === categoryName
         );
-
-        if (startDateTime) startHour = startDateTime.getHours();
-        if (endDateTime) endHour = endDateTime.getHours();
-      } else {
-        // Use data range if no time filters
-        const dataHours = filteredData
-          .map((r) => parseTimestamp(r.timestamp))
-          .filter((d) => d !== null)
-          .map((d) => d.getHours());
-
-        if (dataHours.length > 0) {
-          startHour = Math.min(...dataHours);
-          endHour = Math.max(...dataHours);
+        if (categoryData && categoryData.color) {
+          color = categoryData.color;
+          break;
         }
       }
 
-      // Initialize all hours in range with empty objects
-      for (let hour = startHour; hour <= endHour; hour++) {
-        hourMap.set(hour, {});
-      }
+      return {
+        label: categoryName,
+        data: data,
+        borderColor: hexToRgba(color, 0.8),
+        backgroundColor: hexToRgba(color, 0.15),
+        fill: true,
+        tension: 0.4,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        borderWidth: 2,
+      };
+    });
 
-      // Fill in actual data
-      filteredData.forEach((record) => {
-        const recordDate = parseTimestamp(record.timestamp);
-        if (!recordDate) return;
-
-        const hour = recordDate.getHours();
-        if (!hourMap.has(hour)) return;
-
-        const hourData = hourMap.get(hour);
-        if (!hourData[record.category]) {
-          hourData[record.category] = 0;
-        }
-        hourData[record.category]++;
-      });
-
-      // Create labels for hour range
-      const labels = [];
-      for (let hour = startHour; hour <= endHour; hour++) {
-        const displayHour = hour % 12 || 12;
-        const ampm = hour < 12 ? "AM" : "PM";
-        labels.push(`${displayHour} ${ampm}`);
-      }
-
-      // Create datasets with zeros for missing data
-      const datasets = categoriesToShow.map((category) => {
-        const data = [];
-        for (let hour = startHour; hour <= endHour; hour++) {
-          const hourData = hourMap.get(hour);
-          data.push(hourData[category] || 0); // Use 0 if no data
-        }
-
-        const outcome = outcomes.find((o) => o.label === category);
-        const color = outcome ? outcome.color : "#1a73e8";
-
-        const hexToRgba = (hex, alpha) => {
-          const r = parseInt(hex.slice(1, 3), 16);
-          const g = parseInt(hex.slice(3, 5), 16);
-          const b = parseInt(hex.slice(5, 7), 16);
-          return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-        };
-
-        return {
-          label: category,
-          data: data,
-          borderColor: hexToRgba(color, 0.5),
-          backgroundColor: hexToRgba(color, 0.08),
-          fill: true,
-          tension: 0.4,
-          pointRadius: 2,
-          pointHoverRadius: 4,
-          borderWidth: 1,
-        };
-      });
-
-      return { labels, datasets };
-    }
+    return { labels, datasets };
   };
 
   // Initialize main statistics chart
@@ -1200,7 +1149,8 @@ const MedicareDashboard = () => {
     if (
       currentView === "statistics" &&
       mainChartRef.current &&
-      !loading // Add this condition
+      !loading &&
+      !timeseriesLoading // Add this condition
     ) {
       if (!mainChartInstance.current) {
         const ctx = mainChartRef.current.getContext("2d");
@@ -1240,7 +1190,7 @@ const MedicareDashboard = () => {
                 ticks: { color: "#888", font: { size: 13 } },
                 title: {
                   display: true,
-                  text: "Date",
+                  text: "Time (Hour)",
                   color: "#666",
                   font: { size: 12 },
                 },
@@ -1274,57 +1224,18 @@ const MedicareDashboard = () => {
       mainChartInstance.current.data.datasets = chartData.datasets;
       mainChartInstance.current.update();
     }
-  }, [currentView, loading]); // Add loading as dependency
+  }, [currentView, loading, timeseriesLoading]); // Add timeseriesLoading as dependency
 
   useEffect(() => {
-    if (currentView === "statistics" && mainChartInstance.current && !loading) {
+    if (currentView === "statistics" && mainChartInstance.current && !loading && !timeseriesLoading) {
       const chartData = processStatisticsData();
 
       // Determine view mode based on date selection
       const showDateView = startDate && endDate && startDate !== endDate;
 
-      // Determine if single day from actual filtered data
-      let isSingleDay = false;
-      if (!showDateView) {
-        const filteredTimestamps = callRecords
-          .filter((r) => {
-            if (!r.timestamp) return false;
-            const recordDate = parseTimestamp(r.timestamp);
-            if (!recordDate) return false;
-
-            if (startDate) {
-              const startDateTime = parseUserInputDate(startDate, startTime);
-              if (startDateTime && recordDate < startDateTime) return false;
-            }
-
-            if (endDate) {
-              const endDateTime = parseUserInputDate(
-                endDate,
-                endTime || "23:59:59",
-              );
-              if (endDateTime && recordDate > endDateTime) return false;
-            }
-
-            return true;
-          })
-          .map((r) => parseTimestamp(r.timestamp))
-          .filter((d) => d !== null);
-
-        if (filteredTimestamps.length > 0) {
-          filteredTimestamps.sort((a, b) => a - b);
-          const earliestDateStr = formatDateForComparison(
-            filteredTimestamps[0],
-          );
-          const latestDateStr = formatDateForComparison(
-            filteredTimestamps[filteredTimestamps.length - 1],
-          );
-          isSingleDay = earliestDateStr === latestDateStr;
-        }
-      }
-
       // Update x-axis title based on view mode
       mainChartInstance.current.options.scales.x.title.text =
-        showDateView || !isSingleDay ? "Date" : "Time (Hour)";
+        showDateView ? "Date" : "Time (Hour)";
 
       mainChartInstance.current.data.labels = chartData.labels;
       mainChartInstance.current.data.datasets = chartData.datasets;
@@ -1333,13 +1244,14 @@ const MedicareDashboard = () => {
   }, [
     selectedOutcomes,
     currentView,
-    callRecords,
+    timeseriesData,
+    timeseriesLoading,
     startDate,
     startTime,
     endDate,
     endTime,
     loading,
-  ]); // Add loading dependency
+  ]); // Use timeseriesData instead of callRecords
 
   useEffect(() => {
     if (dashboardData) {
@@ -1852,7 +1764,7 @@ const MedicareDashboard = () => {
                           color: "#666",
                         }}
                       >
-                        {callRecords.length.toLocaleString()}
+                        {totalCalls.toLocaleString()}
                       </span>
                       <span
                         style={{
