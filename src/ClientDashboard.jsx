@@ -1072,7 +1072,7 @@ const MedicareDashboard = () => {
     }
 
     const intervals = timeseriesData.intervals;
-    
+
     // Get all unique categories from the timeseries data
     const allCategoriesFromTimeseries = new Set();
     intervals.forEach(interval => {
@@ -1224,7 +1224,7 @@ const MedicareDashboard = () => {
       mainChartInstance.current.data.datasets = chartData.datasets;
       mainChartInstance.current.update();
     }
-  }, [currentView, loading, timeseriesLoading]); // Add timeseriesLoading as dependency
+  }, [currentView, loading, timeseriesLoading, timeseriesData]); // Add timeseriesData to recreate chart when new data arrives
 
   useEffect(() => {
     if (currentView === "statistics" && mainChartInstance.current && !loading && !timeseriesLoading) {
@@ -1261,8 +1261,9 @@ const MedicareDashboard = () => {
     }
   }, [dashboardData]);
 
-  if (loading && fetchTrigger > 0)
-    // Only show loading if data fetch was triggered
+  // Only show loading on initial page load, not on filter refresh
+  // This prevents the chart canvas from being unmounted during filter updates
+  if (loading && !dashboardData)
     return (
       <div style={{ padding: 40, textAlign: "center" }}>
         Loading dashboard...
@@ -2039,7 +2040,7 @@ const MedicareDashboard = () => {
                         ></i>
                         <span>All Calls</span>
                       </div>
-                      {callRecords.length > 0 && (
+                      {totalCalls > 0 && (
                         <span
                           style={{
                             fontSize: "12px",
@@ -2047,7 +2048,7 @@ const MedicareDashboard = () => {
                             fontWeight: 600,
                           }}
                         >
-                          ({callRecords.length})
+                          ({totalCalls})
                         </span>
                       )}
                     </div>
