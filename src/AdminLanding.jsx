@@ -26,7 +26,7 @@ const AdminLanding = () => {
   const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
   const [showProgressBars, setShowProgressBars] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  
+
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
 
@@ -73,7 +73,7 @@ const AdminLanding = () => {
 
   const connectWebSocket = () => {
     const ws = new WebSocket('wss://loadmetrics.xdialnetworks.com/ws/dashboard');
-    
+
     ws.onopen = () => {
       console.log('Connected to monitoring server');
       setConnected(true);
@@ -102,7 +102,7 @@ const AdminLanding = () => {
       console.log('Disconnected from monitoring server');
       setConnected(false);
       wsRef.current = null;
-      
+
       reconnectTimeoutRef.current = setTimeout(() => {
         console.log('Attempting to reconnect...');
         connectWebSocket();
@@ -174,13 +174,13 @@ const AdminLanding = () => {
 
   const getServerStatus = (agent) => {
     const threshold = thresholds[agent.ip] || { cpu: 80, disk: 90, load: 5 };
-    
+
     if (agent.cpu.total_percent > threshold.cpu) return 'critical';
     if (agent.load && agent.load.load1 > threshold.load) return 'critical';
-    
+
     const diskOverThreshold = agent.disk.some(d => d.used_percent > threshold.disk);
     if (diskOverThreshold) return 'critical';
-    
+
     return 'healthy';
   };
 
@@ -198,7 +198,7 @@ const AdminLanding = () => {
   const padding = 48;
   const availableHeight = viewportHeight - headerHeight - padding;
   const maxServersPerColumn = Math.floor((availableHeight - tableHeaderHeight) / rowHeight);
-  
+
   const columns = [];
   if (maxServersPerColumn > 0) {
     for (let i = 0; i < agentList.length; i += maxServersPerColumn) {
@@ -217,7 +217,7 @@ const AdminLanding = () => {
       {/* Table Header */}
       <div style={{
         display: "grid",
-        gridTemplateColumns: showProgressBars 
+        gridTemplateColumns: showProgressBars
           ? "200px 120px 100px 100px 120px 80px"
           : "200px 120px 80px 80px 100px 80px",
         gap: "12px",
@@ -247,11 +247,11 @@ const AdminLanding = () => {
         const primaryDisk = agent.disk[0] || { mount: '/', used_percent: 0, used: 0, total: 0 };
 
         return (
-          <div 
+          <div
             key={agent.hostname}
             style={{
               display: "grid",
-              gridTemplateColumns: showProgressBars 
+              gridTemplateColumns: showProgressBars
                 ? "200px 120px 100px 100px 120px 80px"
                 : "200px 120px 80px 80px 100px 80px",
               gap: "12px",
@@ -297,8 +297,8 @@ const AdminLanding = () => {
               <div style={{
                 fontSize: showProgressBars ? "18px" : "16px",
                 fontWeight: "700",
-                color: isCritical 
-                  ? "#ffffff" 
+                color: isCritical
+                  ? "#ffffff"
                   : (agent.load && agent.load.load1 > threshold.load ? "#ef4444" : "#10b981")
               }}>
                 {agent.load && agent.load.load1 !== undefined ? agent.load.load1.toFixed(2) : 'N/A'}
@@ -310,8 +310,8 @@ const AdminLanding = () => {
               <div style={{
                 fontSize: showProgressBars ? "18px" : "16px",
                 fontWeight: "700",
-                color: isCritical 
-                  ? "#ffffff" 
+                color: isCritical
+                  ? "#ffffff"
                   : (agent.cpu.total_percent > threshold.cpu ? "#ef4444" : "#10b981"),
                 marginBottom: showProgressBars ? "4px" : "0"
               }}>
@@ -328,8 +328,8 @@ const AdminLanding = () => {
                   <div style={{
                     height: "100%",
                     width: `${Math.min(agent.cpu.total_percent, 100)}%`,
-                    backgroundColor: isCritical 
-                      ? "#ffffff" 
+                    backgroundColor: isCritical
+                      ? "#ffffff"
                       : (agent.cpu.total_percent > threshold.cpu ? "#ef4444" : "#10b981"),
                     transition: "width 0.3s ease"
                   }}></div>
@@ -342,8 +342,8 @@ const AdminLanding = () => {
               <div style={{
                 fontSize: showProgressBars ? "14px" : "16px",
                 fontWeight: "600",
-                color: isCritical 
-                  ? "#ffffff" 
+                color: isCritical
+                  ? "#ffffff"
                   : (primaryDisk.used_percent > threshold.disk ? "#ef4444" : "#10b981"),
                 marginBottom: showProgressBars ? "4px" : "0"
               }}>
@@ -360,8 +360,8 @@ const AdminLanding = () => {
                   <div style={{
                     height: "100%",
                     width: `${primaryDisk.used_percent}%`,
-                    backgroundColor: isCritical 
-                      ? "#ffffff" 
+                    backgroundColor: isCritical
+                      ? "#ffffff"
                       : (primaryDisk.used_percent > threshold.disk ? "#ef4444" : "#10b981"),
                     transition: "width 0.3s ease"
                   }}></div>
@@ -421,10 +421,10 @@ const AdminLanding = () => {
   );
 
   return (
-    <div style={{ 
-      minHeight: "100vh", 
-      backgroundColor: "#f9fafb", 
-      fontFamily: "Arial, sans-serif" 
+    <div style={{
+      minHeight: "100vh",
+      backgroundColor: "#f9fafb",
+      fontFamily: "Arial, sans-serif"
     }}>
       <header style={{
         backgroundColor: "white",
@@ -488,6 +488,21 @@ const AdminLanding = () => {
                 {agentList.length} Servers
               </span>
             </div>
+            <button
+              onClick={() => navigate("/admin-server-stats")}
+              style={{
+                padding: "10px 20px",
+                backgroundColor: "#8b5cf6",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "14px",
+                fontWeight: "600",
+                cursor: "pointer"
+              }}
+            >
+              Server Stats
+            </button>
             <button
               onClick={() => navigate("/admin-data-export")}
               style={{
@@ -616,7 +631,7 @@ const AdminLanding = () => {
           justifyContent: "center",
           zIndex: 1000
         }}
-        onClick={() => setShowThresholdModal(false)}
+          onClick={() => setShowThresholdModal(false)}
         >
           <div style={{
             backgroundColor: "white",
@@ -626,7 +641,7 @@ const AdminLanding = () => {
             width: "90%",
             boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)"
           }}
-          onClick={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
             <div style={{
               display: "flex",
@@ -682,7 +697,7 @@ const AdminLanding = () => {
                 min="0"
                 step="0.1"
                 value={tempThreshold.load}
-                onChange={(e) => setTempThreshold({...tempThreshold, load: Number(e.target.value)})}
+                onChange={(e) => setTempThreshold({ ...tempThreshold, load: Number(e.target.value) })}
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -709,7 +724,7 @@ const AdminLanding = () => {
                 min="0"
                 max="100"
                 value={tempThreshold.cpu}
-                onChange={(e) => setTempThreshold({...tempThreshold, cpu: Number(e.target.value)})}
+                onChange={(e) => setTempThreshold({ ...tempThreshold, cpu: Number(e.target.value) })}
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -736,7 +751,7 @@ const AdminLanding = () => {
                 min="0"
                 max="100"
                 value={tempThreshold.disk}
-                onChange={(e) => setTempThreshold({...tempThreshold, disk: Number(e.target.value)})}
+                onChange={(e) => setTempThreshold({ ...tempThreshold, disk: Number(e.target.value) })}
                 style={{
                   width: "100%",
                   padding: "10px 12px",
