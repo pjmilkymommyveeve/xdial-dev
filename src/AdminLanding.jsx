@@ -55,9 +55,9 @@ const ServerTable = React.memo(({ servers, columnIndex, showProgressBars, thresh
         minWidth: "720px"
       }}>
         <div>Server IP</div>
-        <div>CPU</div>
-        <div>Disk</div>
         <div>Load Avg</div>
+        <div>Disk</div>
+        <div>CPU</div>
         <div>Hostname</div>
         <div style={{ textAlign: "right" }}>Actions</div>
       </div>
@@ -116,6 +116,51 @@ const ServerTable = React.memo(({ servers, columnIndex, showProgressBars, thresh
                 </div>
               )}
             </div>
+            
+            {/* Load Average */}
+            <div>
+              <div style={{
+                fontSize: showProgressBars ? "18px" : "16px",
+                fontWeight: "700",
+                color: isCritical 
+                  ? "#ffffff" 
+                  : (agent.load && agent.load.load1 > threshold.load ? "#ef4444" : "#10b981")
+              }}>
+                {agent.load && agent.load.load1 !== undefined ? agent.load.load1.toFixed(2) : 'N/A'}
+              </div>
+            </div>
+            
+            {/* Disk */}
+            <div>
+              <div style={{
+                fontSize: showProgressBars ? "14px" : "16px",
+                fontWeight: "600",
+                color: isCritical 
+                  ? "#ffffff" 
+                  : (primaryDisk.used_percent > threshold.disk ? "#ef4444" : "#10b981"),
+                marginBottom: showProgressBars ? "4px" : "0"
+              }}>
+                {showProgressBars && `${primaryDisk.mount} `}{primaryDisk.used_percent.toFixed(1)}%
+              </div>
+              {showProgressBars && (
+                <div style={{
+                  width: "100%",
+                  height: "6px",
+                  backgroundColor: isCritical ? "#dc2626" : "#f3f4f6",
+                  borderRadius: "3px",
+                  overflow: "hidden"
+                }}>
+                  <div style={{
+                    height: "100%",
+                    width: `${primaryDisk.used_percent}%`,
+                    backgroundColor: isCritical 
+                      ? "#ffffff" 
+                      : (primaryDisk.used_percent > threshold.disk ? "#ef4444" : "#10b981"),
+                    transition: "width 0.3s ease"
+                  }}></div>
+                </div>
+              )}
+            </div>
 
             {/* CPU */}
             <div>
@@ -149,51 +194,7 @@ const ServerTable = React.memo(({ servers, columnIndex, showProgressBars, thresh
               )}
             </div>
 
-            {/* Disk */}
-            <div>
-              <div style={{
-                fontSize: showProgressBars ? "14px" : "16px",
-                fontWeight: "600",
-                color: isCritical 
-                  ? "#ffffff" 
-                  : (primaryDisk.used_percent > threshold.disk ? "#ef4444" : "#10b981"),
-                marginBottom: showProgressBars ? "4px" : "0"
-              }}>
-                {showProgressBars && `${primaryDisk.mount} `}{primaryDisk.used_percent.toFixed(1)}%
-              </div>
-              {showProgressBars && (
-                <div style={{
-                  width: "100%",
-                  height: "6px",
-                  backgroundColor: isCritical ? "#dc2626" : "#f3f4f6",
-                  borderRadius: "3px",
-                  overflow: "hidden"
-                }}>
-                  <div style={{
-                    height: "100%",
-                    width: `${primaryDisk.used_percent}%`,
-                    backgroundColor: isCritical 
-                      ? "#ffffff" 
-                      : (primaryDisk.used_percent > threshold.disk ? "#ef4444" : "#10b981"),
-                    transition: "width 0.3s ease"
-                  }}></div>
-                </div>
-              )}
-            </div>
-
-            {/* Load Average */}
-            <div>
-              <div style={{
-                fontSize: showProgressBars ? "18px" : "16px",
-                fontWeight: "700",
-                color: isCritical 
-                  ? "#ffffff" 
-                  : (agent.load && agent.load.load1 > threshold.load ? "#ef4444" : "#10b981")
-              }}>
-                {agent.load && agent.load.load1 !== undefined ? agent.load.load1.toFixed(2) : 'N/A'}
-              </div>
-            </div>
-
+            
             {/* Hostname */}
             <div style={{
               fontSize: "13px",
