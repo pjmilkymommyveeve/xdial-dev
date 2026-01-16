@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
 const formatBytes = (bytes) => {
@@ -10,6 +10,241 @@ const formatBytes = (bytes) => {
 };
 
 const LOAD_METRICS_API_BASE = 'https://loadmetrics.xdialnetworks.com';
+
+const ServerTable = React.memo(({ servers, columnIndex, showProgressBars, thresholds, openThresholdModal, getServerStatus, getStatusColor }) => {
+  const tableRef = useRef(null);
+  const scrollPositionRef = useRef(0);
+
+  const handleScroll = useCallback((e) => {
+    scrollPositionRef.current = e.target.scrollLeft;
+  }, []);
+
+  useEffect(() => {
+    if (tableRef.current) {
+      tableRef.current.scrollLeft = scrollPositionRef.current;
+    }
+  });
+
+  return (
+    <div 
+      ref={tableRef}
+      onScroll={handleScroll}
+      style={{
+        backgroundColor: "white",
+        borderRadius: "12px",
+        overflow: "auto",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+        height: "fit-content"
+      }}
+    >
+      {/* Table Header */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: showProgressBars 
+          ? "200px 100px 100px 120px 120px 80px"
+          : "200px 80px 80px 120px 100px 80px",
+        gap: "12px",
+        padding: "16px 20px",
+        backgroundColor: "#f9fafb",
+        borderBottom: "2px solid #e5e7eb",
+        fontWeight: "700",
+        fontSize: "12px",
+        color: "#6b7280",
+        textTransform: "uppercase",
+        letterSpacing: "0.5px",
+        minWidth: "720px"
+      }}>
+        <div>Server IP</div>
+        <div>CPU</div>
+        <div>Disk</div>
+        <div>Load Avg</div>
+        <div>Hostname</div>
+        <div style={{ textAlign: "right" }}>Actions</div>
+      </div>
+
+      {/* Table Rows */}
+      {servers.map(agent => {
+        const status = getServerStatus(agent);
+        const isCritical = status === 'critical';
+        const statusColor = getStatusColor(status);
+        const threshold = thresholds[agent.ip] || { cpu: 80, disk: 90, load: 5 };
+        const primaryDisk = agent.disk[0] || { mount: '/', used_percent: 0, used: 0, total: 0 };
+
+        return (
+          <div 
+            key={agent.hostname}
+            style={{
+              display: "grid",
+              gridTemplateColumns: showProgressBars 
+                ? "200px 100px 100px 120px 120px 80px"
+                : "200px 80px 80px 120px 100px 80px",
+              gap: "12px",
+              padding: showProgressBars ? "16px 20px" : "12px 20px",
+              borderBottom: "1px solid #f3f4f6",
+              alignItems: "center",
+              transition: "background-color 0.2s ease",
+              backgroundColor: isCritical ? "#ef4444" : "transparent",
+              minWidth: "720px"
+            }}
+            onMouseEnter={(e) => {
+              if (!isCritical) {
+                e.currentTarget.style.backgroundColor = "#f9fafb";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isCritical) {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }
+            }}
+          >
+            {/* Server IP */}
+            <div>
+              <div style={{
+                fontSize: "15px",
+                fontWeight: "600",
+                color: isCritical ? "#ffffff" : "#111827",
+                marginBottom: showProgressBars ? "4px" : "0"
+              }}>
+                {agent.ip}
+              </div>
+              {showProgressBars && (
+                <div style={{
+                  fontSize: "11px",
+                  color: isCritical ? "#fee2e2" : "#9ca3af"
+                }}>
+                  Updated: {new Date(agent.timestamp * 1000).toLocaleTimeString()}
+                </div>
+              )}
+            </div>
+
+            {/* CPU */}
+            <div>
+              <div style={{
+                fontSize: showProgressBars ? "18px" : "16px",
+                fontWeight: "700",
+                color: isCritical 
+                  ? "#ffffff" 
+                  : (agent.cpu.total_percent > threshold.cpu ? "#ef4444" : "#10b981"),
+                marginBottom: showProgressBars ? "4px" : "0"
+              }}>
+                {agent.cpu.total_percent.toFixed(1)}%
+              </div>
+              {showProgressBars && (
+                <div style={{
+                  width: "100%",
+                  height: "6px",
+                  backgroundColor: isCritical ? "#dc2626" : "#f3f4f6",
+                  borderRadius: "3px",
+                  overflow: "hidden"
+                }}>
+                  <div style={{
+                    height: "100%",
+                    width: `${Math.min(agent.cpu.total_percent, 100)}%`,
+                    backgroundColor: isCritical 
+                      ? "#ffffff" 
+                      : (agent.cpu.total_percent > threshold.cpu ? "#ef4444" : "#10b981"),
+                    transition: "width 0.3s ease"
+                  }}></div>
+                </div>
+              )}
+            </div>
+
+            {/* Disk */}
+            <div>
+              <div style={{
+                fontSize: showProgressBars ? "14px" : "16px",
+                fontWeight: "600",
+                color: isCritical 
+                  ? "#ffffff" 
+                  : (primaryDisk.used_percent > threshold.disk ? "#ef4444" : "#10b981"),
+                marginBottom: showProgressBars ? "4px" : "0"
+              }}>
+                {showProgressBars && `${primaryDisk.mount} `}{primaryDisk.used_percent.toFixed(1)}%
+              </div>
+              {showProgressBars && (
+                <div style={{
+                  width: "100%",
+                  height: "6px",
+                  backgroundColor: isCritical ? "#dc2626" : "#f3f4f6",
+                  borderRadius: "3px",
+                  overflow: "hidden"
+                }}>
+                  <div style={{
+                    height: "100%",
+                    width: `${primaryDisk.used_percent}%`,
+                    backgroundColor: isCritical 
+                      ? "#ffffff" 
+                      : (primaryDisk.used_percent > threshold.disk ? "#ef4444" : "#10b981"),
+                    transition: "width 0.3s ease"
+                  }}></div>
+                </div>
+              )}
+            </div>
+
+            {/* Load Average */}
+            <div>
+              <div style={{
+                fontSize: showProgressBars ? "18px" : "16px",
+                fontWeight: "700",
+                color: isCritical 
+                  ? "#ffffff" 
+                  : (agent.load && agent.load.load1 > threshold.load ? "#ef4444" : "#10b981")
+              }}>
+                {agent.load && agent.load.load1 !== undefined ? agent.load.load1.toFixed(2) : 'N/A'}
+              </div>
+            </div>
+
+            {/* Hostname */}
+            <div style={{
+              fontSize: "13px",
+              color: isCritical ? "#fee2e2" : "#6b7280",
+              fontFamily: "monospace"
+            }}>
+              {agent.hostname}
+            </div>
+
+            {/* Actions */}
+            <div style={{ textAlign: "right" }}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openThresholdModal(agent.ip);
+                }}
+                style={{
+                  padding: showProgressBars ? "6px 12px" : "4px 10px",
+                  backgroundColor: isCritical ? "#ffffff" : "#f3f4f6",
+                  color: isCritical ? "#ef4444" : "#6b7280",
+                  border: isCritical ? "1px solid #ffffff" : "1px solid #e5e7eb",
+                  borderRadius: "6px",
+                  fontSize: "11px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease"
+                }}
+                onMouseEnter={(e) => {
+                  if (!isCritical) {
+                    e.currentTarget.style.backgroundColor = "#4f46e5";
+                    e.currentTarget.style.color = "white";
+                    e.currentTarget.style.borderColor = "#4f46e5";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isCritical) {
+                    e.currentTarget.style.backgroundColor = "#f3f4f6";
+                    e.currentTarget.style.color = "#6b7280";
+                    e.currentTarget.style.borderColor = "#e5e7eb";
+                  }
+                }}
+              >
+                Limits
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+});
 
 const AdminLanding = () => {
   const navigate = useNavigate();
@@ -135,12 +370,12 @@ const AdminLanding = () => {
     navigate("/");
   };
 
-  const openThresholdModal = (ip) => {
+  const openThresholdModal = useCallback((ip) => {
     setSelectedAgent(ip);
     const existing = thresholds[ip] || { cpu: 80, disk: 90, load: 5 };
     setTempThreshold(existing);
     setShowThresholdModal(true);
-  };
+  }, [thresholds]);
 
   const saveThreshold = async () => {
     try {
@@ -172,7 +407,7 @@ const AdminLanding = () => {
     }
   };
 
-  const getServerStatus = (agent) => {
+  const getServerStatus = useCallback((agent) => {
     const threshold = thresholds[agent.ip] || { cpu: 80, disk: 90, load: 5 };
     
     if (agent.cpu.total_percent > threshold.cpu) return 'critical';
@@ -182,11 +417,11 @@ const AdminLanding = () => {
     if (diskOverThreshold) return 'critical';
     
     return 'healthy';
-  };
+  }, [thresholds]);
 
-  const getStatusColor = (status) => {
+  const getStatusColor = useCallback((status) => {
     return status === 'critical' ? '#ef4444' : '#10b981';
-  };
+  }, []);
 
   const agentList = Object.values(agents)
     .filter(agent => agent.ip.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -205,222 +440,6 @@ const AdminLanding = () => {
       columns.push(agentList.slice(i, i + maxServersPerColumn));
     }
   }
-
-  const ServerTable = ({ servers }) => (
-    <div style={{
-      backgroundColor: "white",
-      borderRadius: "12px",
-      overflow: "auto",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-      height: "fit-content"
-    }}>
-      {/* Table Header */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: showProgressBars 
-          ? "200px 120px 100px 100px 120px 80px"
-          : "200px 120px 80px 80px 100px 80px",
-        gap: "12px",
-        padding: "16px 20px",
-        backgroundColor: "#f9fafb",
-        borderBottom: "2px solid #e5e7eb",
-        fontWeight: "700",
-        fontSize: "12px",
-        color: "#6b7280",
-        textTransform: "uppercase",
-        letterSpacing: "0.5px",
-        minWidth: "720px"
-      }}>
-        <div>Server IP</div>
-        <div>Load Avg</div>
-        <div>CPU</div>
-        <div>Disk</div>
-        <div>Hostname</div>
-        <div style={{ textAlign: "right" }}>Actions</div>
-      </div>
-
-      {/* Table Rows */}
-      {servers.map(agent => {
-        const status = getServerStatus(agent);
-        const isCritical = status === 'critical';
-        const statusColor = getStatusColor(status);
-        const threshold = thresholds[agent.ip] || { cpu: 80, disk: 90, load: 5 };
-        const primaryDisk = agent.disk[0] || { mount: '/', used_percent: 0, used: 0, total: 0 };
-
-        return (
-          <div 
-            key={agent.hostname}
-            style={{
-              display: "grid",
-              gridTemplateColumns: showProgressBars 
-                ? "200px 120px 100px 100px 120px 80px"
-                : "200px 120px 80px 80px 100px 80px",
-              gap: "12px",
-              padding: showProgressBars ? "16px 20px" : "12px 20px",
-              borderBottom: "1px solid #f3f4f6",
-              alignItems: "center",
-              transition: "background-color 0.2s ease",
-              backgroundColor: isCritical ? "#ef4444" : "transparent",
-              minWidth: "720px"
-            }}
-            onMouseEnter={(e) => {
-              if (!isCritical) {
-                e.currentTarget.style.backgroundColor = "#f9fafb";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isCritical) {
-                e.currentTarget.style.backgroundColor = "transparent";
-              }
-            }}
-          >
-            {/* Server IP */}
-            <div>
-              <div style={{
-                fontSize: "15px",
-                fontWeight: "600",
-                color: isCritical ? "#ffffff" : "#111827",
-                marginBottom: showProgressBars ? "4px" : "0"
-              }}>
-                {agent.ip}
-              </div>
-              {showProgressBars && (
-                <div style={{
-                  fontSize: "11px",
-                  color: isCritical ? "#fee2e2" : "#9ca3af"
-                }}>
-                  Updated: {new Date(agent.timestamp * 1000).toLocaleTimeString()}
-                </div>
-              )}
-            </div>
-
-            {/* Load Average */}
-            <div>
-              <div style={{
-                fontSize: showProgressBars ? "18px" : "16px",
-                fontWeight: "700",
-                color: isCritical 
-                  ? "#ffffff" 
-                  : (agent.load && agent.load.load1 > threshold.load ? "#ef4444" : "#10b981")
-              }}>
-                {agent.load && agent.load.load1 !== undefined ? agent.load.load1.toFixed(2) : 'N/A'}
-              </div>
-            </div>
-
-            {/* CPU */}
-            <div>
-              <div style={{
-                fontSize: showProgressBars ? "18px" : "16px",
-                fontWeight: "700",
-                color: isCritical 
-                  ? "#ffffff" 
-                  : (agent.cpu.total_percent > threshold.cpu ? "#ef4444" : "#10b981"),
-                marginBottom: showProgressBars ? "4px" : "0"
-              }}>
-                {agent.cpu.total_percent.toFixed(1)}%
-              </div>
-              {showProgressBars && (
-                <div style={{
-                  width: "100%",
-                  height: "6px",
-                  backgroundColor: isCritical ? "#dc2626" : "#f3f4f6",
-                  borderRadius: "3px",
-                  overflow: "hidden"
-                }}>
-                  <div style={{
-                    height: "100%",
-                    width: `${Math.min(agent.cpu.total_percent, 100)}%`,
-                    backgroundColor: isCritical 
-                      ? "#ffffff" 
-                      : (agent.cpu.total_percent > threshold.cpu ? "#ef4444" : "#10b981"),
-                    transition: "width 0.3s ease"
-                  }}></div>
-                </div>
-              )}
-            </div>
-
-            {/* Disk */}
-            <div>
-              <div style={{
-                fontSize: showProgressBars ? "14px" : "16px",
-                fontWeight: "600",
-                color: isCritical 
-                  ? "#ffffff" 
-                  : (primaryDisk.used_percent > threshold.disk ? "#ef4444" : "#10b981"),
-                marginBottom: showProgressBars ? "4px" : "0"
-              }}>
-                {showProgressBars && `${primaryDisk.mount} `}{primaryDisk.used_percent.toFixed(1)}%
-              </div>
-              {showProgressBars && (
-                <div style={{
-                  width: "100%",
-                  height: "6px",
-                  backgroundColor: isCritical ? "#dc2626" : "#f3f4f6",
-                  borderRadius: "3px",
-                  overflow: "hidden"
-                }}>
-                  <div style={{
-                    height: "100%",
-                    width: `${primaryDisk.used_percent}%`,
-                    backgroundColor: isCritical 
-                      ? "#ffffff" 
-                      : (primaryDisk.used_percent > threshold.disk ? "#ef4444" : "#10b981"),
-                    transition: "width 0.3s ease"
-                  }}></div>
-                </div>
-              )}
-            </div>
-
-            {/* Hostname */}
-            <div style={{
-              fontSize: "13px",
-              color: isCritical ? "#fee2e2" : "#6b7280",
-              fontFamily: "monospace"
-            }}>
-              {agent.hostname}
-            </div>
-
-            {/* Actions */}
-            <div style={{ textAlign: "right" }}>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openThresholdModal(agent.ip);
-                }}
-                style={{
-                  padding: showProgressBars ? "6px 12px" : "4px 10px",
-                  backgroundColor: isCritical ? "#ffffff" : "#f3f4f6",
-                  color: isCritical ? "#ef4444" : "#6b7280",
-                  border: isCritical ? "1px solid #ffffff" : "1px solid #e5e7eb",
-                  borderRadius: "6px",
-                  fontSize: "11px",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease"
-                }}
-                onMouseEnter={(e) => {
-                  if (!isCritical) {
-                    e.currentTarget.style.backgroundColor = "#4f46e5";
-                    e.currentTarget.style.color = "white";
-                    e.currentTarget.style.borderColor = "#4f46e5";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isCritical) {
-                    e.currentTarget.style.backgroundColor = "#f3f4f6";
-                    e.currentTarget.style.color = "#6b7280";
-                    e.currentTarget.style.borderColor = "#e5e7eb";
-                  }
-                }}
-              >
-                Limits
-              </button>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
 
   return (
     <div style={{ 
@@ -598,7 +617,16 @@ const AdminLanding = () => {
             gap: "24px"
           }}>
             {columns.map((columnServers, idx) => (
-              <ServerTable key={idx} servers={columnServers} />
+              <ServerTable 
+                key={idx} 
+                servers={columnServers} 
+                columnIndex={idx}
+                showProgressBars={showProgressBars}
+                thresholds={thresholds}
+                openThresholdModal={openThresholdModal}
+                getServerStatus={getServerStatus}
+                getStatusColor={getStatusColor}
+              />
             ))}
           </div>
         )}
