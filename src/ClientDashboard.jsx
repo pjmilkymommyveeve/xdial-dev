@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Chart from "chart.js/auto";
 import api from "./api";
 import DataExport from "./DataExport";
+import ClientHeader from "./ClientHeader";
 const getUserRole = () => {
   return localStorage.getItem("role") || sessionStorage.getItem("role");
 };
@@ -1385,86 +1386,17 @@ const MedicareDashboard = () => {
     <div style={styles.body}>
       {/* Note: Add this to your index.html: <meta name="viewport" content="width=device-width, initial-scale=1.0"> */}
       {/* Header */}
-      <div style={styles.header}>
-        <div style={styles.headerLeft}>
-          <div style={styles.welcomeText}>
-            <i
-              className="bi bi-telephone-fill"
-              style={{ fontSize: "20px" }}
-            ></i>
-            <span>
-              <strong>
-                Welcome back, {dashboardData?.client_name || "Client"}!
-              </strong>
-            </span>
-          </div>
-          <span style={styles.badge}>
-            Ext: {dashboardData?.campaign?.id || "N/A"}
-          </span>
-          <span style={styles.clientBadge}>
-            <i className="bi bi-person-circle"></i> Client View
-          </span>
-        </div>
-        <div style={styles.headerRight}>
-          <button
-            style={styles.btn}
-            onClick={() => (window.location.href = "/client-landing")}
-          >
-            <i className="bi bi-house-fill"></i> Back to Campaigns
-          </button>
-          <button
-            style={{
-              ...styles.btn,
-              ...(currentView === "statistics" ? styles.btnPrimary : {}),
-            }}
-            onClick={() => setCurrentView("statistics")}
-          >
-            <i className="bi bi-graph-up"></i> Statistics
-          </button>
-          <button
-            style={{
-              ...styles.btn,
-              ...(currentView === "dashboard" ? styles.btnPrimary : {}),
-            }}
-            onClick={() => setCurrentView("dashboard")}
-          >
-            <i className="bi bi-bar-chart-fill"></i> Reports
-          </button>
-          <button
-            style={styles.btn}
-            onClick={() =>
-              (window.location.href = `/recordings?campaign_id=${campaignId}`)
-            }
-          >
-            <i className="bi bi-mic-fill"></i> Recordings
-          </button>
-
-          {getUserRole() !== "client_member" && (
-            <button
-              style={{
-                ...styles.btn,
-                ...(currentView === "data-export" ? styles.btnPrimary : {}),
-              }}
-              onClick={() => setCurrentView("data-export")}
-            >
-              <i className="bi bi-download"></i> Data Export
-            </button>
-          )}
-          <button
-            style={styles.btn}
-            onClick={() => {
-              localStorage.removeItem("access_token");
-              localStorage.removeItem("user_id");
-              localStorage.removeItem("username");
-              localStorage.removeItem("role");
-
-              window.location.href = "/";
-            }}
-          >
-            <i className="bi bi-person-fill"></i> Logout
-          </button>
-        </div>
-      </div>
+      <ClientHeader
+        clientName={dashboardData?.client_name}
+        campaignId={dashboardData?.campaign?.id || campaignId}
+        activePage={
+          currentView === "statistics"
+            ? "statistics"
+            : currentView === "dashboard"
+              ? "reports"
+              : "data-export"
+        }
+      />
       <div style={styles.container}>
         {/* Statistics View */}
         {/* Statistics View */}

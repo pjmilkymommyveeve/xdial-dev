@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import ClientHeader from "./ClientHeader";
 
 const ClientRecordings = () => {
   const [recordings, setRecordings] = useState([]);
@@ -289,59 +290,11 @@ const ClientRecordings = () => {
       <style>{styles}</style>
       <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif", backgroundColor: "#f5f5f5", paddingBottom: "80px", minHeight: "100vh" }}>
         {/* Header */}
-        <header style={{ backgroundColor: "#fff", borderBottom: "1px solid #e5e5e5", padding: "12px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#1a73e8" }}>
-              <i className="bi bi-telephone-fill" style={{ fontSize: "20px" }}></i>
-              <span>
-                <strong>Welcome back, {clientName || "Client"}!</strong>
-              </span>
-            </div>
-            <span style={{ backgroundColor: "#1a73e8", color: "white", padding: "4px 12px", borderRadius: "4px", fontSize: "13px", fontWeight: 500 }}>
-              Ext: {campaignId || "N/A"}
-            </span>
-            <span style={{ backgroundColor: "#e8f5e9", color: "#2e7d32", padding: "4px 12px", borderRadius: "4px", fontSize: "13px", fontWeight: 500, display: "flex", alignItems: "center", gap: "6px" }}>
-              <i className="bi bi-person-circle"></i> Client View
-            </span>
-          </div>
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-            <button
-              className="btn btn-outline"
-              onClick={() => window.location.href = `/dashboard?campaign_id=${campaignId}&view=statistics`}
-            >
-              <i className="bi bi-bar-chart-fill"></i> Reports
-            </button>
-
-            <button className="btn btn-primary">
-              <i className="bi bi-mic-fill"></i> Recordings
-            </button>
-
-            <button
-              className="btn btn-outline"
-              onClick={() => {
-                sessionStorage.setItem("from_recordings", "true");
-                window.location.href = `/data-export?campaign_id=${campaignId}`;
-              }}
-            >
-              <i className="bi bi-download"></i> Data Export
-            </button>
-
-
-            <button
-              className="btn btn-outline"
-              onClick={() => {
-                localStorage.removeItem("access_token");
-                localStorage.removeItem("user_id");
-                localStorage.removeItem("username");
-                localStorage.removeItem("role");
-                sessionStorage.clear();
-                window.location.href = "/";
-              }}
-            >
-              <i className="bi bi-person-fill"></i> Logout
-            </button>
-          </div>
-        </header>
+        <ClientHeader
+          clientName={clientName}
+          campaignId={campaignId}
+          activePage="recordings"
+        />
 
         {/* Main Content */}
         <main style={{ padding: "24px" }}>

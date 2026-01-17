@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import api from "./api";
+import ClientHeader from "./ClientHeader";
 
 export default function DataExport() {
   const [campaignId, setCampaignId] = useState(null);
@@ -35,45 +36,45 @@ export default function DataExport() {
   useEffect(() => {
     const fetchExportOptions = async () => {
       if (!campaignId) return;
-      
+
       try {
         setLoading(true);
         setError("");
-        
+
         // Build query parameters for pre-filtering
         const params = new URLSearchParams();
-        
+
         // Use current state values
         const currentLists = selectedLists;
         const currentExportOptions = exportOptions;
-        
+
         if (currentLists.length > 0 && currentLists.length < (currentExportOptions?.list_ids?.length || Infinity)) {
           params.append("list_ids", currentLists.join(","));
         }
-        
+
         if (startDate) {
           params.append("start_date", startDate);
           if (startTime) {
             params.append("start_time", startTime);
           }
         }
-        
+
         if (endDate) {
           params.append("end_date", endDate);
           if (endTime) {
             params.append("end_time", endTime);
           }
         }
-        
+
         const queryString = params.toString();
         const url = `/export/${campaignId}/options${queryString ? `?${queryString}` : ""}`;
-        
+
         const response = await api.get(url);
         const data = response.data;
-        
+
         setExportOptions(data);
         setClientName(data.client_name);
-        
+
         // Only reset selections on initial load
         if (isInitialLoad.current) {
           setSelectedLists([]);
@@ -105,11 +106,11 @@ export default function DataExport() {
       setError("Campaign ID is required");
       return;
     }
-    
+
     try {
       setExporting(true);
       setError("");
-      
+
       const payload = {
         list_ids: selectedLists.length === 0 || selectedLists.length === exportOptions.list_ids.length ? [] : selectedLists.map(String),
         categories: selectedDispositions.length === 0 || selectedDispositions.length === exportOptions.all_categories.length ? [] : selectedDispositions,
@@ -123,18 +124,18 @@ export default function DataExport() {
       const response = await api.post(`/export/${campaignId}/download`, payload, {
         responseType: 'blob', // Important for downloading files
       });
-      
+
       // Get filename from Content-Disposition header or use default
       const contentDisposition = response.headers['content-disposition'];
       let filename = `call_data_${exportOptions?.campaign_name || campaignId}_${Date.now()}.csv`;
-      
+
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
         if (filenameMatch && filenameMatch[1]) {
           filename = filenameMatch[1].replace(/['"]/g, '');
         }
       }
-      
+
       // Create blob and download
       const blob = new Blob([response.data], { type: "text/csv;charset=utf-8;" });
       const url = window.URL.createObjectURL(blob);
@@ -145,7 +146,7 @@ export default function DataExport() {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-      
+
       // Show success message
       setError("");
       alert("Export completed successfully!");
@@ -187,14 +188,14 @@ export default function DataExport() {
   };
 
   const resetFilters = () => {
-  setExportType("all");
-  setSelectedLists([]);
-  setSelectedDispositions([]);
-  setStartDate(new Date().toISOString().split('T')[0]);
-  setStartTime("");
-  setEndDate("");
-  setEndTime("");
-};
+    setExportType("all");
+    setSelectedLists([]);
+    setSelectedDispositions([]);
+    setStartDate(new Date().toISOString().split('T')[0]);
+    setStartTime("");
+    setEndDate("");
+    setEndTime("");
+  };
 
   const getDispositionIcon = (name) => {
     const icons = {
@@ -225,7 +226,7 @@ export default function DataExport() {
     // Use the total_records from API response directly
     // The API already calculates this correctly based on filters
     if (!exportOptions) return 0;
-    
+
     // If dispositions are selected, sum their counts
     if (selectedDispositions.length > 0 && selectedDispositions.length < exportOptions.all_categories.length) {
       return selectedDispositions.reduce((sum, disp) => {
@@ -233,7 +234,7 @@ export default function DataExport() {
         return sum + (category?.count || 0);
       }, 0);
     }
-    
+
     // Otherwise use the total from API (which is already filtered by date/list if applicable)
     return exportOptions.total_records || 0;
   };
@@ -339,6 +340,12 @@ export default function DataExport() {
         }
       `}</style>
 
+      <ClientHeader
+        clientName={clientName}
+        campaignId={campaignId}
+        activePage="data-export"
+      />
+
       <main className="main-content">
         <div className="page-header">
           <h1 className="page-title">
@@ -416,42 +423,42 @@ export default function DataExport() {
                 <div className="grid-cols-4">
                   <div className="form-group">
                     <label className="form-label" htmlFor="start-date">Start Date</label>
-                    <input 
-                      type="date" 
-                      className="form-input" 
-                      id="start-date" 
-                      value={startDate} 
-                      onChange={(e) => setStartDate(e.target.value)} 
+                    <input
+                      type="date"
+                      className="form-input"
+                      id="start-date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
                     />
                   </div>
                   <div className="form-group">
                     <label className="form-label" htmlFor="start-time">Start Time</label>
-                    <input 
-                      type="time" 
-                      className="form-input" 
-                      id="start-time" 
-                      value={startTime} 
-                      onChange={(e) => setStartTime(e.target.value)} 
+                    <input
+                      type="time"
+                      className="form-input"
+                      id="start-time"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
                     />
                   </div>
                   <div className="form-group">
                     <label className="form-label" htmlFor="end-date">End Date</label>
-                    <input 
-                      type="date" 
-                      className="form-input" 
-                      id="end-date" 
-                      value={endDate} 
-                      onChange={(e) => setEndDate(e.target.value)} 
+                    <input
+                      type="date"
+                      className="form-input"
+                      id="end-date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
                     />
                   </div>
                   <div className="form-group">
                     <label className="form-label" htmlFor="end-time">End Time</label>
-                    <input 
-                      type="time" 
-                      className="form-input" 
-                      id="end-time" 
-                      value={endTime} 
-                      onChange={(e) => setEndTime(e.target.value)} 
+                    <input
+                      type="time"
+                      className="form-input"
+                      id="end-time"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
                     />
                   </div>
                 </div>
@@ -516,7 +523,7 @@ export default function DataExport() {
                     </div>
                   </div>
                 )}
-                
+
                 <div>
                   <div className="summary-row">
                     <span className="summary-label">Total Records:</span>
@@ -529,7 +536,7 @@ export default function DataExport() {
                     <span className="summary-value">{calculateEstimatedSize()}</span>
                   </div>
                 </div>
-                
+
                 <div>
                   <span className="summary-label">Selected List IDs:</span>
                   <div className="badge-group">
@@ -547,7 +554,7 @@ export default function DataExport() {
                     )}
                   </div>
                 </div>
-                
+
                 <div>
                   <span className="summary-label">Selected Dispositions:</span>
                   <div className="badge-group">
@@ -565,7 +572,7 @@ export default function DataExport() {
                     )}
                   </div>
                 </div>
-                
+
                 <div>
                   <span className="summary-label">Date Range:</span>
                   <div style={{ fontSize: "0.875rem", marginTop: "0.25rem", color: "#374151" }}>
@@ -587,10 +594,10 @@ export default function DataExport() {
 
             <div className="card">
               <div className="card-content space-y-4" style={{ paddingTop: "1.5rem" }}>
-                <button 
-                  className="btn btn-primary btn-lg" 
-                  style={{ width: "100%" }} 
-                  onClick={handleExport} 
+                <button
+                  className="btn btn-primary btn-lg"
+                  style={{ width: "100%" }}
+                  onClick={handleExport}
                   disabled={exporting}
                 >
                   {exporting ? (
