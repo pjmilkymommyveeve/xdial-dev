@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import ClientHeader from "./ClientHeader";
 
-const ClientRecordings = () => {
+const ClientRecordings = ({ isEmbedded }) => {
   const location = useLocation();
   const [recordings, setRecordings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -292,11 +292,13 @@ const ClientRecordings = () => {
       <style>{styles}</style>
       <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif", backgroundColor: "#f5f5f5", paddingBottom: "80px", minHeight: "100vh" }}>
         {/* Header */}
-        <ClientHeader
-          clientName={clientName}
-          campaignId={campaignId}
-          activePage="recordings"
-        />
+        {!isEmbedded && (
+          <ClientHeader
+            clientName={clientName}
+            campaignId={campaignId}
+            activePage="recordings"
+          />
+        )}
 
         {/* Main Content */}
         <main style={{ padding: "24px" }}>
@@ -640,9 +642,6 @@ const styles = `
     padding: 0;
     box-sizing: border-box;
   }
-    body{
-    zoom: 0.9;
-    }
   .card {
     background: white;
     border-radius: 0.75rem;

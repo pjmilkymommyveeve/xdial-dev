@@ -4,6 +4,7 @@ import Chart from "chart.js/auto";
 import api from "./api";
 import DataExport from "./DataExport";
 import ClientHeader from "./ClientHeader";
+import ClientRecordings from "./Clientrecordings";
 const getUserRole = () => {
   return localStorage.getItem("role") || sessionStorage.getItem("role");
 };
@@ -1395,9 +1396,12 @@ const MedicareDashboard = () => {
             ? "statistics"
             : currentView === "dashboard"
               ? "reports"
-              : "data-export"
+              : currentView === "recordings"
+                ? "recordings"
+                : "data-export"
         }
       />
+      {currentView === "recordings" && <ClientRecordings isEmbedded={true} />}
       <div style={styles.container}>
         {/* Statistics View */}
         {/* Statistics View */}
@@ -3241,7 +3245,7 @@ const MedicareDashboard = () => {
           </>
         )}
         {/* Data Export View */}
-        {currentView === "data-export" && <DataExport />}
+        {currentView === "data-export" && <DataExport isEmbedded={true} />}
       </div>{" "}
       {/* closing container div */}
       {/* Transcript Modal */}

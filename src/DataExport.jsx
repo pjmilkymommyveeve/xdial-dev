@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import api from "./api";
 import ClientHeader from "./ClientHeader";
 
-export default function DataExport() {
+export default function DataExport({ isEmbedded }) {
   const location = useLocation();
   const [campaignId, setCampaignId] = useState(null);
   const [exportOptions, setExportOptions] = useState(null);
@@ -270,7 +270,6 @@ export default function DataExport() {
     <div style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", backgroundColor: "#f9fafb", color: "#111827", lineHeight: "1.5", minHeight: "100vh" }}>
       <style>{`
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body{zoom: 0.9;}
         .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 0.375rem; font-size: 0.875rem; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; }
         .btn-primary { background-color: #3b82f6; color: white; }
         .btn-primary:hover { background-color: #2563eb; }
@@ -343,11 +342,13 @@ export default function DataExport() {
       `}</style>
       <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
 
-      <ClientHeader
-        clientName={clientName}
-        campaignId={campaignId}
-        activePage="data-export"
-      />
+      {!isEmbedded && (
+        <ClientHeader
+          clientName={clientName}
+          campaignId={campaignId}
+          activePage="data-export"
+        />
+      )}
 
       <main className="main-content">
         <div className="page-header">

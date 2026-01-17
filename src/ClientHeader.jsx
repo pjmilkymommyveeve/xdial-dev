@@ -66,7 +66,7 @@ export default function ClientHeader({
 
           <button
             className={`nav-btn ${activePage === "recordings" ? "active" : ""}`}
-            onClick={() => navigateTo("/recordings")}
+            onClick={() => navigateTo("/dashboard", "recordings")}
           >
             <i className="bi bi-mic-fill"></i>
             Recordings
@@ -75,7 +75,7 @@ export default function ClientHeader({
           {userRole !== "client_member" && (
             <button
               className={`nav-btn ${activePage === "data-export" ? "active" : ""}`}
-              onClick={() => navigateTo("/data-export")}
+              onClick={() => navigateTo("/dashboard", "data-export")}
             >
               <i className="bi bi-download"></i>
               Data Export
