@@ -38,6 +38,9 @@ const MedicareDashboard = () => {
   // Transfer metrics data
   const [transferMetrics, setTransferMetrics] = useState(null);
 
+  // Trend comparison state for reports page
+  const [showTrendComparison, setShowTrendComparison] = useState(false);
+
   // KEY FIX: Get campaign ID and force reload on mount
   // Get campaign ID on mount - don't auto-load data
   useEffect(() => {
@@ -296,6 +299,17 @@ const MedicareDashboard = () => {
       fetchTransferMetrics();
     }
   }, [campaignId, startDate, startTime, endDate, endTime, fetchTrigger]);
+
+  // Auto-reload when time range changes on dashboard (reports) view
+  useEffect(() => {
+    if (timeRange && currentView === "dashboard") {
+      // Small delay to prevent rapid successive calls
+      const timer = setTimeout(() => {
+        setFetchTrigger(prev => prev + 1);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [timeRange, currentView]);
 
   // Reset to page 1 when filters change
 
@@ -664,20 +678,111 @@ const MedicareDashboard = () => {
 
   const timeFilteredRecords = getTimeFilteredRecords();
 
+  // Get records for the previous period for trend comparison
+  const getPreviousPeriodRecords = () => {
+    if (!timeRange) return [];
+
+    const now = new Date();
+    let minutesBack = 0;
+
+    switch (timeRange) {
+      case "Last 5 Minutes":
+        minutesBack = 5;
+        break;
+      case "Last 15 Minutes":
+        minutesBack = 15;
+        break;
+      case "Last 1 Hour":
+        minutesBack = 60;
+        break;
+      case "Today":
+        // For Today, compare with Yesterday
+        const startOfToday = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+        );
+        const startOfYesterday = new Date(startOfToday);
+        startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+        const endOfYesterday = new Date(startOfToday); // Start of today is end of yesterday
+
+        return callRecords.filter((record) => {
+          if (!record.timestamp) return false;
+          const recordDate = parseTimestamp(record.timestamp);
+          return recordDate && recordDate >= startOfYesterday && recordDate < endOfYesterday;
+        });
+      default:
+        return [];
+    }
+
+    if (minutesBack > 0) {
+      // Find the most recent call timestamp
+      const allTimestamps = callRecords
+        .map((r) => parseTimestamp(r.timestamp))
+        .filter((d) => d !== null)
+        .sort((a, b) => b - a); // Sort descending (newest first)
+
+      if (allTimestamps.length === 0) {
+        return [];
+      }
+
+      const mostRecentCallTime = allTimestamps[0];
+      // Current period: [mostRecent - minutes, mostRecent]
+      // Previous period: [mostRecent - 2*minutes, mostRecent - minutes]
+
+      const endTime = new Date(mostRecentCallTime.getTime() - minutesBack * 60000);
+      const startTime = new Date(mostRecentCallTime.getTime() - 2 * minutesBack * 60000);
+
+      return callRecords.filter((record) => {
+        if (!record.timestamp) return false;
+        const recordDate = parseTimestamp(record.timestamp);
+        return (
+          recordDate &&
+          recordDate >= startTime &&
+          recordDate < endTime
+        );
+      });
+    }
+
+    return [];
+  };
+
+  const previousPeriodRecords = getPreviousPeriodRecords();
+
   const timeFilteredOutcomes = allCategories.map((cat) => {
     const catName = cat.name;
-    // Since we normalized categories in callRecords, just match by name
+    // Current period counts
     const countInTimeFiltered = timeFilteredRecords.filter(
       (r) => r.category === catName,
     ).length;
+    const currentPercentage = timeFilteredRecords.length
+      ? Math.round((countInTimeFiltered / timeFilteredRecords.length) * 100)
+      : 0;
+
+    // Previous period counts
+    const countInPreviousPeriod = previousPeriodRecords.filter(
+      (r) => r.category === catName,
+    ).length;
+    const previousPercentage = previousPeriodRecords.length
+      ? Math.round((countInPreviousPeriod / previousPeriodRecords.length) * 100)
+      : 0;
+
+    // Trend calculation
+    const diff = currentPercentage - previousPercentage;
+    let trend = "neutral";
+    if (diff > 0) trend = "up";
+    if (diff < 0) trend = "down";
+
     return {
       id: catName.toLowerCase().replace(/\s/g, "-"),
       label: catName,
       icon: getCategoryIcon(catName),
       count: countInTimeFiltered,
-      percentage: timeFilteredRecords.length
-        ? Math.round((countInTimeFiltered / timeFilteredRecords.length) * 100)
-        : 0,
+      percentage: currentPercentage,
+      previousCount: countInPreviousPeriod,
+      previousPercentage: previousPercentage,
+      trend: trend,
+      trendDiff: Math.abs(diff),
       color: cat.color || "#818589",
       bgColor: "#fff",
     };
@@ -2230,9 +2335,9 @@ const MedicareDashboard = () => {
                     <div
                       style={{
                         padding: "16px",
-                        backgroundColor: "#e8f5e9",
+                        backgroundColor: "#fff",
                         borderRadius: "8px",
-                        border: "1px solid #c8e6c9",
+                        border: "1px solid #e5e5e5",
                         textAlign: "center",
                       }}
                     >
@@ -2264,9 +2369,9 @@ const MedicareDashboard = () => {
                     <div
                       style={{
                         padding: "16px",
-                        backgroundColor: "#e3f2fd",
+                        backgroundColor: "#fff",
                         borderRadius: "8px",
-                        border: "1px solid #bbdefb",
+                        border: "1px solid #e5e5e5",
                         textAlign: "center",
                       }}
                     >
@@ -2298,9 +2403,9 @@ const MedicareDashboard = () => {
                     <div
                       style={{
                         padding: "16px",
-                        backgroundColor: "#ffebee",
+                        backgroundColor: "#fff",
                         borderRadius: "8px",
-                        border: "1px solid #ffcdd2",
+                        border: "1px solid #e5e5e5",
                         textAlign: "center",
                       }}
                     >
@@ -2374,13 +2479,13 @@ const MedicareDashboard = () => {
                       <option value="Today">Today</option>
                     </select>
                     <button
-                      onClick={() => setShowSummaryGraph(true)}
+                      onClick={() => setShowTrendComparison(!showTrendComparison)}
                       style={{
                         marginLeft: "10px",
                         padding: "7px 18px",
                         borderRadius: "8px",
-                        border: "1px solid #1a73e8",
-                        background: "#1a73e8",
+                        border: showTrendComparison ? "1px solid #28a745" : "1px solid #1a73e8",
+                        background: showTrendComparison ? "#28a745" : "#1a73e8",
                         color: "#fff",
                         fontSize: "15px",
                         fontWeight: 500,
@@ -2388,7 +2493,7 @@ const MedicareDashboard = () => {
                         transition: "all 0.2s",
                       }}
                     >
-                      Show Summary Graph
+                      {showTrendComparison ? "Hide Trends" : "Show Trends"}
                     </button>
                   </div>
                   <div
@@ -2474,6 +2579,35 @@ const MedicareDashboard = () => {
                               style={{ color: cat.color, fontSize: "18px" }}
                             ></i>
                             {cat.label}
+                            {showTrendComparison && (
+                              <span
+                                style={{
+                                  marginLeft: "8px",
+                                  fontSize: "12px",
+                                  color:
+                                    cat.trend === "up"
+                                      ? "#28a745"
+                                      : cat.trend === "down"
+                                        ? "#dc3545"
+                                        : "#6c757d",
+                                  fontWeight: "bold",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "2px",
+                                }}
+                              >
+                                {cat.trend === "up" && (
+                                  <i className="bi bi-arrow-up"></i>
+                                )}
+                                {cat.trend === "down" && (
+                                  <i className="bi bi-arrow-down"></i>
+                                )}
+                                {cat.trend === "neutral" && (
+                                  <i className="bi bi-dash"></i>
+                                )}
+                                {cat.trend !== "neutral" && `${cat.trendDiff}%`}
+                              </span>
+                            )}
                             <span
                               style={{
                                 marginLeft: "auto",
@@ -2557,6 +2691,35 @@ const MedicareDashboard = () => {
                               style={{ color: cat.color, fontSize: "18px" }}
                             ></i>
                             {cat.label}
+                            {showTrendComparison && (
+                              <span
+                                style={{
+                                  marginLeft: "8px",
+                                  fontSize: "12px",
+                                  color:
+                                    cat.trend === "up"
+                                      ? "#28a745"
+                                      : cat.trend === "down"
+                                        ? "#dc3545"
+                                        : "#6c757d",
+                                  fontWeight: "bold",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "2px",
+                                }}
+                              >
+                                {cat.trend === "up" && (
+                                  <i className="bi bi-arrow-up"></i>
+                                )}
+                                {cat.trend === "down" && (
+                                  <i className="bi bi-arrow-down"></i>
+                                )}
+                                {cat.trend === "neutral" && (
+                                  <i className="bi bi-dash"></i>
+                                )}
+                                {cat.trend !== "neutral" && `${cat.trendDiff}%`}
+                              </span>
+                            )}
                             <span
                               style={{
                                 marginLeft: "auto",

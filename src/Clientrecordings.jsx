@@ -6,7 +6,7 @@ const ClientRecordings = () => {
   const [error, setError] = useState(null);
   const [campaignId, setCampaignId] = useState(null);
   const [clientName, setClientName] = useState("");
-  
+
   // Filter states
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [searchText, setSearchText] = useState("");
@@ -14,12 +14,12 @@ const ClientRecordings = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState("time");
   const [sortDir, setSortDir] = useState("desc");
-  
+
   // Pagination data
   const [pagination, setPagination] = useState(null);
   const [totalServersQueried, setTotalServersQueried] = useState(0);
   const [serversWithData, setServersWithData] = useState(0);
-  
+
   // Audio player states
   const [showPlayer, setShowPlayer] = useState(false);
   const [currentRecording, setCurrentRecording] = useState(null);
@@ -29,36 +29,36 @@ const ClientRecordings = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [progress, setProgress] = useState(0);
-  
+
   const audioRef = useRef(null);
 
   // Get campaign ID from URL
   // KEY FIX: Get campaign ID and force reload
-useEffect(() => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const id = urlParams.get('campaign_id');
-  if (id) {
-    setCampaignId(id);
-    // Force reset state
-    setRecordings([]);
-    setLoading(true);
-    setError(null);
-  } else {
-    window.location.href = '/client-landing';
-  }
-}, []);
-// KEY FIX: Cleanup audio on unmount
-useEffect(() => {
-  return () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = "";
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get('campaign_id');
+    if (id) {
+      setCampaignId(id);
+      // Force reset state
+      setRecordings([]);
+      setLoading(true);
+      setError(null);
+    } else {
+      window.location.href = '/client-landing';
     }
-    setShowPlayer(false);
-    setIsPlaying(false);
-    setCurrentRecording(null);
-  };
-}, []);
+  }, []);
+  // KEY FIX: Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+      }
+      setShowPlayer(false);
+      setIsPlaying(false);
+      setCurrentRecording(null);
+    };
+  }, []);
   // Fetch client name
   const fetchClientName = async () => {
     try {
@@ -103,13 +103,13 @@ useEffect(() => {
     try {
       setLoading(true);
       const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token");
-      
+
       if (!token) {
         throw new Error("No authentication token found. Please login again.");
       }
 
       const url = `https://api.xlitecore.xdialnetworks.com/api/v1/recordings/campaign/${campaignId}?date=${selectedDate}&page=${currentPage}&page_size=${pageSize}&sort_by=${sortBy}&sort_dir=${sortDir}`;
-      
+
       const response = await fetch(url, {
         headers: {
           accept: "application/json",
@@ -159,7 +159,7 @@ useEffect(() => {
     setCurrentRecording(recording);
     setCurrentRowIndex(index);
     setShowPlayer(true);
-    
+
     if (audioRef.current) {
       audioRef.current.src = recording.file_url;
       audioRef.current.play();
@@ -265,7 +265,7 @@ useEffect(() => {
     const handleEnded = () => {
       setIsPlaying(false);
       setProgress(0);
-      
+
       if (autoplayEnabled && currentRowIndex < filteredRecordings.length - 1) {
         setTimeout(() => {
           playNext();
@@ -305,41 +305,41 @@ useEffect(() => {
             </span>
           </div>
           <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-            <button 
+            <button
               className="btn btn-outline"
               onClick={() => window.location.href = `/dashboard?campaign_id=${campaignId}&view=statistics`}
             >
               <i className="bi bi-bar-chart-fill"></i> Reports
             </button>
-            
+
             <button className="btn btn-primary">
               <i className="bi bi-mic-fill"></i> Recordings
             </button>
 
             <button
-  className="btn btn-outline"
-  onClick={() => {
-    sessionStorage.setItem("from_recordings", "true");
-    window.location.href = `/data-export?campaign_id=${campaignId}`;
-  }}
->
-  <i className="bi bi-download"></i> Data Export
-</button>
-
-            
-            <button     
               className="btn btn-outline"
-                onClick={() => {
-                  localStorage.removeItem("access_token");
-                  localStorage.removeItem("user_id");
-                  localStorage.removeItem("username");
-                  localStorage.removeItem("role");
-                  sessionStorage.clear();
-                  window.location.href = "/";
-                }}
-              >
-                <i className="bi bi-person-fill"></i> Logout
-              </button>
+              onClick={() => {
+                sessionStorage.setItem("from_recordings", "true");
+                window.location.href = `/data-export?campaign_id=${campaignId}`;
+              }}
+            >
+              <i className="bi bi-download"></i> Data Export
+            </button>
+
+
+            <button
+              className="btn btn-outline"
+              onClick={() => {
+                localStorage.removeItem("access_token");
+                localStorage.removeItem("user_id");
+                localStorage.removeItem("username");
+                localStorage.removeItem("role");
+                sessionStorage.clear();
+                window.location.href = "/";
+              }}
+            >
+              <i className="bi bi-person-fill"></i> Logout
+            </button>
           </div>
         </header>
 
@@ -376,9 +376,9 @@ useEffect(() => {
                       <i className="bi bi-calendar"></i>
                       Date
                     </label>
-                    <input 
-                      type="date" 
-                      value={selectedDate} 
+                    <input
+                      type="date"
+                      value={selectedDate}
                       onChange={(e) => {
                         setSelectedDate(e.target.value);
                         setCurrentPage(1);
@@ -393,9 +393,9 @@ useEffect(() => {
                       <i className="bi bi-search"></i>
                       Search
                     </label>
-                    <input 
-                      type="text" 
-                      placeholder="Search phone number, server..." 
+                    <input
+                      type="text"
+                      placeholder="Search phone number, server..."
                       value={searchText}
                       onChange={(e) => setSearchText(e.target.value)}
                       className="input"
@@ -407,7 +407,7 @@ useEffect(() => {
                     <label style={{ fontSize: "0.875rem", fontWeight: 500, color: "#374151" }}>
                       Records per page
                     </label>
-                    <select 
+                    <select
                       className="select"
                       value={pageSize}
                       onChange={(e) => {
@@ -427,8 +427,8 @@ useEffect(() => {
                     <label style={{ fontSize: "0.875rem", fontWeight: 500, color: "#374151" }}>
                       Actions
                     </label>
-                    <button 
-                      className="btn btn-outline" 
+                    <button
+                      className="btn btn-outline"
                       style={{ width: "100%" }}
                       onClick={fetchRecordings}
                       disabled={loading}
@@ -449,7 +449,7 @@ useEffect(() => {
                     Found {pagination?.total_records || 0} recordings for {new Date(selectedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                   </p>
                 </div>
-                
+
                 <p style={{ fontSize: "0.875rem", color: "#6b7280" }}>
                   Page {pagination?.page || 1} of {pagination?.total_pages || 1}
                 </p>
@@ -499,7 +499,7 @@ useEffect(() => {
                         </tr>
                       ) : (
                         filteredRecordings.map((recording, index) => (
-                          <tr 
+                          <tr
                             key={index}
                             className={currentRowIndex === index && showPlayer ? "playing" : ""}
                           >
@@ -509,14 +509,14 @@ useEffect(() => {
                             <td style={{ color: "#6b7280" }}>{recording.size}</td>
                             <td>
                               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-                                <button 
+                                <button
                                   className="btn btn-outline btn-sm"
                                   onClick={() => playRecording(recording, index)}
                                 >
                                   <i className="bi bi-play-fill" style={{ marginRight: "0.25rem" }}></i>
                                   Play
                                 </button>
-                                <button 
+                                <button
                                   className="btn btn-outline btn-sm"
                                   onClick={() => downloadRecording(recording)}
                                 >
@@ -541,9 +541,9 @@ useEffect(() => {
                           Showing {((pagination.page - 1) * pagination.page_size) + 1} to {Math.min(pagination.page * pagination.page_size, pagination.total_records)} of {pagination.total_records} recordings
                         </span>
                       </div>
-                      
+
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-                        <button 
+                        <button
                           className="btn btn-outline btn-sm"
                           onClick={() => setCurrentPage(1)}
                           disabled={!pagination.has_prev}
@@ -551,8 +551,8 @@ useEffect(() => {
                         >
                           <i className="bi bi-chevron-double-left"></i>
                         </button>
-                        
-                        <button 
+
+                        <button
                           className="btn btn-outline btn-sm"
                           onClick={() => setCurrentPage(currentPage - 1)}
                           disabled={!pagination.has_prev}
@@ -561,22 +561,22 @@ useEffect(() => {
                           <i className="bi bi-chevron-left" style={{ marginRight: "0.25rem" }}></i>
                           Previous
                         </button>
-                        
+
                         <div style={{ display: "flex", gap: "0.5rem" }}>
                           {(() => {
                             const pages = [];
                             const maxPagesToShow = 3;
                             let startPage = Math.max(1, currentPage - 1);
                             let endPage = Math.min(pagination.total_pages, startPage + maxPagesToShow - 1);
-                            
+
                             if (endPage - startPage < maxPagesToShow - 1) {
                               startPage = Math.max(1, endPage - maxPagesToShow + 1);
                             }
-                            
+
                             for (let i = startPage; i <= endPage; i++) {
                               pages.push(i);
                             }
-                            
+
                             return pages.map((page) => (
                               <button
                                 key={page}
@@ -588,8 +588,8 @@ useEffect(() => {
                             ));
                           })()}
                         </div>
-                        
-                        <button 
+
+                        <button
                           className="btn btn-outline btn-sm"
                           onClick={() => setCurrentPage(currentPage + 1)}
                           disabled={!pagination.has_next}
@@ -598,8 +598,8 @@ useEffect(() => {
                           Next
                           <i className="bi bi-chevron-right" style={{ marginLeft: "0.25rem" }}></i>
                         </button>
-                        
-                        <button 
+
+                        <button
                           className="btn btn-outline btn-sm"
                           onClick={() => setCurrentPage(pagination.total_pages)}
                           disabled={!pagination.has_next}
@@ -632,28 +632,28 @@ useEffect(() => {
 
             {/* Center: Player Controls */}
             <div className="player-center">
-              <button 
-                className="control-btn" 
-                onClick={playPrevious} 
+              <button
+                className="control-btn"
+                onClick={playPrevious}
                 disabled={currentRowIndex <= 0}
                 title="Previous"
               >
                 <i className="bi bi-skip-backward-fill"></i>
               </button>
-              
+
               <button className="play-btn" onClick={togglePlayPause}>
-                <i className={`fas fa-${isPlaying ? "pause" : "play"}`}></i>
+                <i className={`bi bi-${isPlaying ? "pause-fill" : "play-fill"}`}></i>
               </button>
-              
-              <button 
-                className="control-btn" 
-                onClick={playNext} 
+
+              <button
+                className="control-btn"
+                onClick={playNext}
                 disabled={currentRowIndex >= filteredRecordings.length - 1}
                 title="Next"
               >
                 <i className="bi bi-skip-forward-fill"></i>
               </button>
-              
+
               <div className="progress-wrapper">
                 <span className="time">{formatTime(currentTime)}</span>
                 <div className="progress-bar" onClick={seekAudio}>
@@ -665,13 +665,6 @@ useEffect(() => {
 
             {/* Right: Actions */}
             <div className="player-right">
-              <button 
-                className={`icon-btn ${autoplayEnabled ? "active" : ""}`}
-                onClick={() => setAutoplayEnabled(!autoplayEnabled)}
-                title={`Auto-play: ${autoplayEnabled ? "ON" : "OFF"}`}
-              >
-                <i className="bi bi-arrow-repeat"></i>
-              </button>
               <button className="icon-btn" onClick={closePlayer} title="Close">
                 <i className="bi bi-x-lg"></i>
               </button>
