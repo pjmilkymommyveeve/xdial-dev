@@ -1,16 +1,19 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function ClientHeader({
   clientName,
   campaignId,
   activePage, // "statistics" | "reports" | "recordings" | "data-export"
 }) {
-  const navigate = (path, view) => {
+  const routerNavigate = useNavigate();
+
+  const navigateTo = (path, view) => {
     let url = `${path}?campaign_id=${campaignId}`;
     if (view) {
       url += `&view=${view}`;
     }
-    window.location.href = url;
+    routerNavigate(url);
   };
 
   const handleLogout = () => {
@@ -39,7 +42,7 @@ export default function ClientHeader({
         <div className="header-buttons">
           <button
             className="nav-btn"
-            onClick={() => window.location.href = "/client-landing"}
+            onClick={() => routerNavigate("/client-landing")}
             title="Back to Campaigns"
           >
             <i className="bi bi-house-fill"></i>
@@ -47,7 +50,7 @@ export default function ClientHeader({
 
           <button
             className={`nav-btn ${activePage === "statistics" ? "active" : ""}`}
-            onClick={() => navigate("/dashboard", "statistics")}
+            onClick={() => navigateTo("/dashboard", "statistics")}
           >
             <i className="bi bi-graph-up"></i>
             Statistics
@@ -55,7 +58,7 @@ export default function ClientHeader({
 
           <button
             className={`nav-btn ${activePage === "reports" ? "active" : ""}`}
-            onClick={() => navigate("/dashboard", "dashboard")}
+            onClick={() => navigateTo("/dashboard", "dashboard")}
           >
             <i className="bi bi-bar-chart-fill"></i>
             Reports
@@ -63,7 +66,7 @@ export default function ClientHeader({
 
           <button
             className={`nav-btn ${activePage === "recordings" ? "active" : ""}`}
-            onClick={() => navigate("/recordings")}
+            onClick={() => navigateTo("/recordings")}
           >
             <i className="bi bi-mic-fill"></i>
             Recordings
@@ -72,7 +75,7 @@ export default function ClientHeader({
           {userRole !== "client_member" && (
             <button
               className={`nav-btn ${activePage === "data-export" ? "active" : ""}`}
-              onClick={() => navigate("/data-export")}
+              onClick={() => navigateTo("/data-export")}
             >
               <i className="bi bi-download"></i>
               Data Export

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import api from "./api";
 import ClientHeader from "./ClientHeader";
 
 export default function DataExport() {
+  const location = useLocation();
   const [campaignId, setCampaignId] = useState(null);
   const [exportOptions, setExportOptions] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -21,7 +23,7 @@ export default function DataExport() {
 
   // Get campaign ID from URL params
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(location.search);
     const id = params.get("campaign_id");
     if (id) {
       setCampaignId(parseInt(id, 10));
@@ -30,7 +32,7 @@ export default function DataExport() {
       setError("Campaign ID is required");
       setLoading(false);
     }
-  }, []);
+  }, [location.search]);
 
   // Fetch export options when campaign ID or filters change
   useEffect(() => {
@@ -339,6 +341,7 @@ export default function DataExport() {
           .grid-cols-4 { grid-template-columns: 1fr; }
         }
       `}</style>
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
 
       <ClientHeader
         clientName={clientName}

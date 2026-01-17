@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import ClientHeader from "./ClientHeader";
 
 const ClientRecordings = () => {
+  const location = useLocation();
   const [recordings, setRecordings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -36,7 +38,7 @@ const ClientRecordings = () => {
   // Get campaign ID from URL
   // KEY FIX: Get campaign ID and force reload
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
+    const urlParams = new URLSearchParams(location.search);
     const id = urlParams.get('campaign_id');
     if (id) {
       setCampaignId(id);
@@ -47,7 +49,7 @@ const ClientRecordings = () => {
     } else {
       window.location.href = '/client-landing';
     }
-  }, []);
+  }, [location.search]);
   // KEY FIX: Cleanup audio on unmount
   useEffect(() => {
     return () => {

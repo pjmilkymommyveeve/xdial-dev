@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import Chart from "chart.js/auto";
 import api from "./api";
 import DataExport from "./DataExport";
@@ -7,6 +8,7 @@ const getUserRole = () => {
   return localStorage.getItem("role") || sessionStorage.getItem("role");
 };
 const MedicareDashboard = () => {
+  const location = useLocation();
   const [currentView, setCurrentView] = useState("statistics");
   const [showSummaryGraph, setShowSummaryGraph] = useState(false);
   const [dashboardData, setDashboardData] = useState(null);
@@ -42,22 +44,21 @@ const MedicareDashboard = () => {
   // Trend comparison state for reports page
   const [showTrendComparison, setShowTrendComparison] = useState(false);
 
-  // KEY FIX: Get campaign ID and force reload on mount
-  // Get campaign ID on mount - don't auto-load data
+  // KEY FIX: Get campaign ID and force reload on mount or URL change
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
+    const urlParams = new URLSearchParams(location.search);
     const id = urlParams.get("campaign_id");
     const view = urlParams.get("view"); // Check for view parameter
     if (id) {
       setCampaignId(id);
       // Set view to statistics by default, or use view parameter if provided
       setCurrentView(view || "statistics");
-      // Set today's date as default
-      setStartDate(new Date().toISOString().split("T")[0]);
+      // Set today's date as default if not set
+      setStartDate((prev) => prev || new Date().toISOString().split("T")[0]);
     } else {
       window.location.href = "/client-landing";
     }
-  }, []); // Only run once on mount
+  }, [location.search]);
   useEffect(() => {
     if (currentView === "data-export" && getUserRole() === "client_member") {
       setCurrentView("dashboard"); // Redirect to dashboard if they try to access
