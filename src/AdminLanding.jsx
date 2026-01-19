@@ -619,6 +619,22 @@ const AdminLanding = () => {
             </button>
 
             <button
+              onClick={() => navigate("/admin-campaigns")}
+              style={{
+                padding: "10px 20px",
+                backgroundColor: "#06b6d4",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "14px",
+                fontWeight: "600",
+                cursor: "pointer",
+              }}
+            >
+              Campaigns
+            </button>
+
+            <button
               onClick={() => navigate("/admin-data-export")}
               style={{
                 padding: "10px 20px",
