@@ -311,9 +311,9 @@ const AdminLanding = () => {
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [thresholds, setThresholds] = useState({});
   const [tempThreshold, setTempThreshold] = useState({
-    cpu: 80,
-    disk: 90,
-    load: 5,
+    cpu: 60,
+    disk: 70,
+    load: 4,
   });
   const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
   const [showProgressBars, setShowProgressBars] = useState(true);
