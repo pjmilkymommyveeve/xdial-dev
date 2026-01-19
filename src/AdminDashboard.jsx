@@ -79,7 +79,18 @@ const navigate = useNavigate();
       }
 
       if (!firstPageRes.ok) {
-        throw new Error(`Failed to fetch dashboard data: ${firstPageRes.status}`);
+        let errorMessage = `Failed to fetch dashboard data: ${firstPageRes.status}`;
+        try {
+          const errorData = await firstPageRes.json();
+          errorMessage = errorData.detail || errorData.message || errorMessage;
+        } catch (parseErr) {
+          if (firstPageRes.status >= 500) {
+            errorMessage = 'Server error occurred. Please try again later or contact support if the problem persists.';
+          } else if (firstPageRes.status === 401) {
+            errorMessage = 'Session expired. Please login again.';
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       const firstPageData = await firstPageRes.json();
@@ -130,7 +141,14 @@ const navigate = useNavigate();
       setLoading(false);
     } catch (err) {
       console.error("Fetch error:", err);
-      setError(err.message);
+      
+      // Handle network errors (CORS, connection issues, etc.)
+      if (err.name === 'TypeError' && (err.message.includes('NetworkError') || err.message.includes('fetch'))) {
+        setError('Unable to connect to the server. This may be due to network issues or server configuration. Please try again later.');
+      } else {
+        setError(err.message);
+      }
+      
       setLoading(false);
       
       if (err.message.includes("authentication") || err.message.includes("login")) {
@@ -329,8 +347,84 @@ const navigate = useNavigate();
 
   if (error) {
     return (
-      <div style={{ padding: 40, color: "red", textAlign: "center", fontFamily: "Arial, sans-serif" }}>
-        Error: {error}
+      <div style={{ 
+        padding: '40px', 
+        maxWidth: '600px', 
+        margin: '0 auto', 
+        textAlign: 'center',
+        fontFamily: 'Arial, sans-serif'
+      }}>
+        <div style={{
+          backgroundColor: '#FEE2E2',
+          border: '1px solid #FCA5A5',
+          borderRadius: '12px',
+          padding: '24px',
+          marginTop: '60px'
+        }}>
+          <h2 style={{
+            color: '#DC2626',
+            fontSize: '20px',
+            fontWeight: '600',
+            marginBottom: '12px'
+          }}>
+            Unable to Load Dashboard
+          </h2>
+          <p style={{
+            color: '#991B1B',
+            fontSize: '14px',
+            lineHeight: '1.5',
+            marginBottom: '20px'
+          }}>
+            {error}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              backgroundColor: '#DC2626',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '10px 20px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              marginRight: '10px'
+            }}
+          >
+            Try Again
+          </button>
+          <button
+            onClick={() => window.location.href = '/admin-landing'}
+            style={{
+              backgroundColor: '#6B7280',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '10px 20px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              marginRight: '10px'
+            }}
+          >
+            Go Back
+          </button>
+          <button
+            onClick={() => window.location.href = '/'}
+            style={{
+              backgroundColor: '#4F46E5',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '10px 20px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Login Again
+          </button>
+        </div>
       </div>
     );
   }

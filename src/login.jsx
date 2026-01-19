@@ -49,10 +49,59 @@ const LoginPage = () => {
         })
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        throw new Error('Unable to process server response. Please try again later.');
+      }
 
+      // Handle different error scenarios
       if (!response.ok) {
-        throw new Error(data.detail || 'Login failed. Please check your credentials.');
+        // Authentication errors (401 or 403)
+        if (response.status === 401 || response.status === 403) {
+          const errorMessage = data.detail || 'Invalid username or password. Please check your credentials and try again.';
+          setError(errorMessage);
+          
+          // Clear any existing tokens
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('user_id');
+          localStorage.removeItem('username');
+          localStorage.removeItem('role');
+          
+          // Reset form after a delay
+          setTimeout(() => {
+            setFormData({
+              username: '',
+              password: ''
+            });
+          }, 2000);
+          
+          setLoading(false);
+          return;
+        }
+        
+        // Rate limiting (429)
+        if (response.status === 429) {
+          setError('Too many login attempts. Please wait a few minutes before trying again.');
+          setLoading(false);
+          return;
+        }
+        
+        // Server errors (5xx)
+        if (response.status >= 500) {
+          setError('Server error occurred. Please try again later or contact support if the problem persists.');
+          setLoading(false);
+          return;
+        }
+        
+        // Other errors
+        throw new Error(data.detail || data.message || 'Login failed. Please try again.');
+      }
+
+      // Validate response data
+      if (!data.access_token || !data.user_id || !data.role) {
+        throw new Error('Invalid server response. Please try again or contact support.');
       }
 
       // Store in localStorage only
@@ -73,7 +122,12 @@ const LoginPage = () => {
       }, 1500);
 
     } catch (err) {
-      setError(err.message || 'An error occurred during login');
+      // Network errors
+      if (err.name === 'TypeError' && err.message.includes('fetch')) {
+        setError('Network error. Please check your internet connection and try again.');
+      } else {
+        setError(err.message || 'An unexpected error occurred. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

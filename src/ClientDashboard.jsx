@@ -194,13 +194,31 @@ const MedicareDashboard = () => {
           throw new Error("Session expired. Please login again.");
         }
 
-        if (!response.ok) throw new Error("Failed to fetch dashboard data");
+        if (!response.ok) {
+          // Try to get error details from response
+          let errorMessage = "Failed to fetch dashboard data";
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.detail || errorData.message || errorMessage;
+          } catch (parseErr) {
+            // If we can't parse the error, use the status
+            if (response.status >= 500) {
+              errorMessage = "Server error occurred. Please try again later or contact support if the problem persists.";
+            }
+          }
+          throw new Error(errorMessage);
+        }
 
         const data = await response.json();
         setDashboardData(data);
         setLoading(false);
       } catch (err) {
-        setError(err.message);
+        // Handle network errors (CORS, connection issues, etc.)
+        if (err.name === 'TypeError' && (err.message.includes('NetworkError') || err.message.includes('fetch'))) {
+          setError('Unable to connect to the server. This may be due to network issues or server configuration. Please try again later.');
+        } else {
+          setError(err.message);
+        }
         setLoading(false);
 
         if (err.message.includes("login")) {
@@ -246,12 +264,30 @@ const MedicareDashboard = () => {
           },
         });
 
+        if (response.status === 401) {
+          // Session expired - redirect to login
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('user_id');
+          localStorage.removeItem('username');
+          localStorage.removeItem('role');
+          window.location.href = '/';
+          return;
+        }
+
         if (response.ok) {
           const data = await response.json();
           setTimeseriesData(data);
+        } else {
+          console.warn('Timeseries data unavailable - server returned status:', response.status);
+          // Don't break the dashboard, just log the issue
         }
       } catch (err) {
-        console.error("Error fetching timeseries data:", err);
+        // Handle network/CORS errors silently for timeseries (non-critical feature)
+        if (err.name === 'TypeError' && (err.message.includes('NetworkError') || err.message.includes('fetch'))) {
+          console.warn('Network error fetching timeseries data - feature temporarily unavailable');
+        } else {
+          console.error("Error fetching timeseries data:", err);
+        }
       } finally {
         setTimeseriesLoading(false);
       }
@@ -289,12 +325,30 @@ const MedicareDashboard = () => {
           },
         });
 
+        if (response.status === 401) {
+          // Session expired - redirect to login
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('user_id');
+          localStorage.removeItem('username');
+          localStorage.removeItem('role');
+          window.location.href = '/';
+          return;
+        }
+
         if (response.ok) {
           const data = await response.json();
           setTransferMetrics(data);
+        } else {
+          console.warn('Transfer metrics unavailable - server returned status:', response.status);
+          // Don't break the dashboard, just log the issue
         }
       } catch (err) {
-        console.error("Error fetching transfer metrics:", err);
+        // Handle network/CORS errors silently for transfer metrics (non-critical feature)
+        if (err.name === 'TypeError' && (err.message.includes('NetworkError') || err.message.includes('fetch'))) {
+          console.warn('Network error fetching transfer metrics - feature temporarily unavailable');
+        } else {
+          console.error("Error fetching transfer metrics:", err);
+        }
       }
     };
 
@@ -891,10 +945,6 @@ const MedicareDashboard = () => {
     return category === "Qualified";
   };
 
-  // Function to parse timestamp
-  // Replace the parseTimestamp function (around line 483)
-
-  // Function to process summary data for time-based graph
   // Function to process summary data for time-based graph
   const processSummaryData = () => {
     if (!callRecords || callRecords.length === 0) {
@@ -1379,8 +1429,82 @@ const MedicareDashboard = () => {
     );
   if (error)
     return (
-      <div style={{ padding: 40, color: "red", textAlign: "center" }}>
-        Error: {error}
+      <div style={{ 
+        padding: '40px', 
+        maxWidth: '600px', 
+        margin: '0 auto', 
+        textAlign: 'center' 
+      }}>
+        <div style={{
+          backgroundColor: '#FEE2E2',
+          border: '1px solid #FCA5A5',
+          borderRadius: '12px',
+          padding: '24px'
+        }}>
+          <h2 style={{
+            color: '#DC2626',
+            fontSize: '20px',
+            fontWeight: '600',
+            marginBottom: '12px'
+          }}>
+            Unable to Load Dashboard
+          </h2>
+          <p style={{
+            color: '#991B1B',
+            fontSize: '14px',
+            lineHeight: '1.5',
+            marginBottom: '20px'
+          }}>
+            {error}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              backgroundColor: '#DC2626',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '10px 20px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              marginRight: '10px'
+            }}
+          >
+            Try Again
+          </button>
+          <button
+            onClick={() => window.location.href = '/client-landing'}
+            style={{
+              backgroundColor: '#6B7280',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '10px 20px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              marginRight: '10px'
+            }}
+          >
+            Go Back
+          </button>
+          <button
+            onClick={() => window.location.href = '/'}
+            style={{
+              backgroundColor: '#4F46E5',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '10px 20px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Login Again
+          </button>
+        </div>
       </div>
     );
 

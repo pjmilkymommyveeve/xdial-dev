@@ -102,7 +102,12 @@ const ClientLanding = () => {
       setData(result);
       setError("");
     } catch (err) {
-      setError(err.message || "An error occurred while fetching data");
+      // Handle network errors (CORS, connection issues, etc.)
+      if (err.name === 'TypeError' && (err.message.includes('NetworkError') || err.message.includes('fetch'))) {
+        setError('Unable to connect to the server. This may be due to network issues or server configuration. Please try again later.');
+      } else {
+        setError(err.message || "An error occurred while fetching data");
+      }
       console.error("Fetch error:", err);
 
       if (err.message.includes("login")) {
@@ -175,14 +180,74 @@ const ClientLanding = () => {
     return (
       <>
         <style>{styles}</style>
-        <div className="error-container">
-          <i className="bi bi-exclamation-triangle"></i>
-          <p>{error}</p>
-          {!error.includes("login") && (
-            <button onClick={fetchCampaignData} className="retry-btn">
-              Retry
-            </button>
-          )}
+        <div style={{
+          padding: '40px',
+          maxWidth: '600px',
+          margin: '0 auto',
+          textAlign: 'center',
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <div style={{
+            backgroundColor: '#FEE2E2',
+            border: '1px solid #FCA5A5',
+            borderRadius: '12px',
+            padding: '24px',
+            width: '100%'
+          }}>
+            <h2 style={{
+              color: '#DC2626',
+              fontSize: '20px',
+              fontWeight: '600',
+              marginBottom: '12px'
+            }}>
+              Unable to Load Campaigns
+            </h2>
+            <p style={{
+              color: '#991B1B',
+              fontSize: '14px',
+              lineHeight: '1.5',
+              marginBottom: '20px'
+            }}>
+              {error}
+            </p>
+            {!error.includes("login") && (
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <button
+                  onClick={fetchCampaignData}
+                  style={{
+                    backgroundColor: '#DC2626',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '10px 20px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Try Again
+                </button>
+                <button
+                  onClick={() => window.location.href = '/'}
+                  style={{
+                    backgroundColor: '#4F46E5',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '10px 20px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Login Again
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </>
     );
