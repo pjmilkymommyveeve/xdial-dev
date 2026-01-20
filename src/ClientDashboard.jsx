@@ -29,7 +29,6 @@ const MedicareDashboard = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortColumn, setSortColumn] = useState("id"); // Default sort by ID
   const [sortDirection, setSortDirection] = useState("desc"); // 'asc' or 'desc'
-  const [fetchTrigger, setFetchTrigger] = useState(0); // Trigger for manual data fetching
 
   // Modal states
   const [showTranscriptModal, setShowTranscriptModal] = useState(false);
@@ -229,11 +228,11 @@ const MedicareDashboard = () => {
       }
     };
 
-    // Only fetch if fetchTrigger > 0 (meaning Apply Filters was clicked) or on initial load/page change
-    if (fetchTrigger > 0 || currentPage > 0) {
+    // Auto-fetch when any filter changes
+    if (campaignId && startDate) {
       fetchData();
     }
-  }, [campaignId, fetchTrigger, currentPage]); // Added currentPage dependency
+  }, [campaignId, currentPage, startDate, endDate, searchText, listId, selectedOutcomes]); // Auto-apply filters
 
   // Fetch timeseries data for the graph
   useEffect(() => {
@@ -293,10 +292,10 @@ const MedicareDashboard = () => {
       }
     };
 
-    if (fetchTrigger > 0 || currentPage > 0) {
+    if (campaignId && startDate) {
       fetchTimeseriesData();
     }
-  }, [campaignId, startDate, startTime, endDate, endTime, fetchTrigger]);
+  }, [campaignId, startDate, startTime, endDate, endTime]);
 
   // Fetch transfer metrics from API
   useEffect(() => {
@@ -352,20 +351,14 @@ const MedicareDashboard = () => {
       }
     };
 
-    if (fetchTrigger > 0 || currentPage > 0) {
+    if (campaignId && startDate) {
       fetchTransferMetrics();
     }
-  }, [campaignId, startDate, startTime, endDate, endTime, fetchTrigger]);
+  }, [campaignId, startDate, startTime, endDate, endTime]);
 
-  // Auto-reload when time range changes on dashboard (reports) view
+  // Auto-reload is no longer needed since filters auto-apply
   useEffect(() => {
-    if (timeRange && currentView === "dashboard") {
-      // Small delay to prevent rapid successive calls
-      const timer = setTimeout(() => {
-        setFetchTrigger(prev => prev + 1);
-      }, 300);
-      return () => clearTimeout(timer);
-    }
+    // This effect can be used for time range specific logic if needed
   }, [timeRange, currentView]);
 
   // Reset to page 1 when filters change
@@ -894,12 +887,6 @@ const MedicareDashboard = () => {
     // Do nothing
   };
 
-  // Handle Apply Filters button
-  const handleApplyFilters = () => {
-    setCurrentPage(1);
-    setFetchTrigger((prev) => prev + 1); // Increment to trigger useEffect
-  };
-
   const handleReset = () => {
     setSearchText("");
     setListId("");
@@ -910,8 +897,7 @@ const MedicareDashboard = () => {
     setSelectedOutcomes([]);
     setTimeRange("");
     setCurrentPage(1);
-    setLoading(true);
-    setFetchTrigger((prev) => prev + 1); // Trigger data fetch with reset values
+    // Filters will auto-apply due to useEffect dependencies
   };
 
   // Handle column sorting
@@ -1626,7 +1612,7 @@ const MedicareDashboard = () => {
                 </div>
               </div>
 
-              {/* Apply Filters Button */}
+              {/* Reset Button */}
               <div
                 style={{
                   display: "flex",
@@ -1635,16 +1621,6 @@ const MedicareDashboard = () => {
                   flexWrap: "wrap",
                 }}
               >
-                <button
-                  onClick={handleApplyFilters}
-                  style={{
-                    ...styles.btn,
-                    ...styles.btnPrimary,
-                  }}
-                >
-                  <i className="bi bi-funnel-fill"></i>
-                  Apply Filters
-                </button>
                 <button
                   onClick={handleReset}
                   style={{
@@ -2083,16 +2059,6 @@ const MedicareDashboard = () => {
                   flexWrap: "wrap",
                 }}
               >
-                <button
-                  onClick={handleApplyFilters}
-                  style={{
-                    ...styles.btn,
-                    ...styles.btnPrimary,
-                  }}
-                >
-                  <i className="bi bi-funnel-fill"></i>
-                  Apply Filters
-                </button>
                 <button
                   onClick={handleReset}
                   style={{
