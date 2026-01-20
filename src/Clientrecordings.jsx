@@ -36,7 +36,6 @@ const ClientRecordings = ({ isEmbedded }) => {
   const audioRef = useRef(null);
 
   // Get campaign ID from URL
-  // KEY FIX: Get campaign ID and force reload
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const id = urlParams.get('campaign_id');
@@ -50,7 +49,8 @@ const ClientRecordings = ({ isEmbedded }) => {
       window.location.href = '/client-landing';
     }
   }, [location.search]);
-  // KEY FIX: Cleanup audio on unmount
+
+  // Cleanup audio on unmount
   useEffect(() => {
     return () => {
       if (audioRef.current) {
@@ -62,6 +62,7 @@ const ClientRecordings = ({ isEmbedded }) => {
       setCurrentRecording(null);
     };
   }, []);
+
   // Fetch client name
   const fetchClientName = async () => {
     try {
@@ -95,12 +96,12 @@ const ClientRecordings = ({ isEmbedded }) => {
     }
   }, [campaignId]);
 
-  // Fetch recordings
+  // Fetch recordings - now includes searchText dependency
   useEffect(() => {
     if (campaignId) {
       fetchRecordings();
     }
-  }, [campaignId, selectedDate, currentPage, pageSize, sortBy, sortDir]);
+  }, [campaignId, selectedDate, currentPage, pageSize, sortBy, sortDir, searchText]);
 
   const fetchRecordings = async () => {
     try {
@@ -111,7 +112,13 @@ const ClientRecordings = ({ isEmbedded }) => {
         throw new Error("No authentication token found. Please login again.");
       }
 
-      const url = `https://api.xlitecore.xdialnetworks.com/api/v1/recordings/campaign/${campaignId}?date=${selectedDate}&page=${currentPage}&page_size=${pageSize}&sort_by=${sortBy}&sort_dir=${sortDir}`;
+      // Build URL with optional number parameter
+      let url = `https://api.xlitecore.xdialnetworks.com/api/v1/recordings/campaign/${campaignId}?date=${selectedDate}&page=${currentPage}&page_size=${pageSize}&sort_by=${sortBy}&sort_dir=${sortDir}`;
+
+      // Add number parameter if searchText is provided
+      if (searchText && searchText.trim()) {
+        url += `&number=${encodeURIComponent(searchText.trim())}`;
+      }
 
       const response = await fetch(url, {
         headers: {
@@ -146,17 +153,6 @@ const ClientRecordings = ({ isEmbedded }) => {
     }
   };
 
-  // Filter recordings by search text
-  const filteredRecordings = recordings.filter(recording => {
-    if (!searchText) return true;
-    const searchLower = searchText.toLowerCase();
-    return (
-      recording.phone_number?.toLowerCase().includes(searchLower) ||
-      recording.extension?.toString().includes(searchLower) ||
-      recording.server_name?.toLowerCase().includes(searchLower)
-    );
-  });
-
   // Audio player functions
   const playRecording = (recording, index) => {
     setCurrentRecording(recording);
@@ -182,14 +178,14 @@ const ClientRecordings = ({ isEmbedded }) => {
   };
 
   const playNext = () => {
-    if (currentRowIndex < filteredRecordings.length - 1) {
-      playRecording(filteredRecordings[currentRowIndex + 1], currentRowIndex + 1);
+    if (currentRowIndex < recordings.length - 1) {
+      playRecording(recordings[currentRowIndex + 1], currentRowIndex + 1);
     }
   };
 
   const playPrevious = () => {
     if (currentRowIndex > 0) {
-      playRecording(filteredRecordings[currentRowIndex - 1], currentRowIndex - 1);
+      playRecording(recordings[currentRowIndex - 1], currentRowIndex - 1);
     }
   };
 
@@ -269,7 +265,7 @@ const ClientRecordings = ({ isEmbedded }) => {
       setIsPlaying(false);
       setProgress(0);
 
-      if (autoplayEnabled && currentRowIndex < filteredRecordings.length - 1) {
+      if (autoplayEnabled && currentRowIndex < recordings.length - 1) {
         setTimeout(() => {
           playNext();
         }, 500);
@@ -285,7 +281,7 @@ const ClientRecordings = ({ isEmbedded }) => {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('ended', handleEnded);
     };
-  }, [autoplayEnabled, currentRowIndex, filteredRecordings]);
+  }, [autoplayEnabled, currentRowIndex, recordings]);
 
   return (
     <>
@@ -308,7 +304,7 @@ const ClientRecordings = ({ isEmbedded }) => {
               <h1 style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#111827", display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
                 <i className="bi bi-file-earmark-music" style={{ color: "#3b82f6" }}></i>
                 Call Recordings
-                <span style={{ fontSize: "1.125rem", fontWeight: 400, color: "#6b7280" }}>- Extension {campaignId || "N/A"}</span>
+                <span style={{ fontSize: "1.125rem", fontWeight: 400, color: "#6b7280" }}>- Campaign {campaignId || "N/A"}</span>
               </h1>
               <p style={{ color: "#6b7280", marginTop: "0.25rem" }}>
                 Listen to and download your call recordings
@@ -344,17 +340,20 @@ const ClientRecordings = ({ isEmbedded }) => {
                     />
                   </div>
 
-                  {/* Search */}
+                  {/* Search - Now filters by phone number on backend */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                     <label style={{ fontSize: "0.875rem", fontWeight: 500, color: "#374151", display: "flex", alignItems: "center", gap: "0.25rem" }}>
                       <i className="bi bi-search"></i>
-                      Search
+                      Search Phone Number
                     </label>
                     <input
                       type="text"
-                      placeholder="Search phone number, server..."
+                      placeholder="Enter phone number..."
                       value={searchText}
-                      onChange={(e) => setSearchText(e.target.value)}
+                      onChange={(e) => {
+                        setSearchText(e.target.value);
+                        setCurrentPage(1); // Reset to page 1 on new search
+                      }}
                       className="input"
                     />
                   </div>
@@ -404,6 +403,7 @@ const ClientRecordings = ({ isEmbedded }) => {
                 <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
                   <p style={{ fontSize: "0.875rem", color: "#6b7280" }}>
                     Found {pagination?.total_records || 0} recordings for {new Date(selectedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                    {searchText && ` matching "${searchText}"`}
                   </p>
                 </div>
 
@@ -426,10 +426,10 @@ const ClientRecordings = ({ isEmbedded }) => {
                             <i className={`fas fa-chevron-${sortBy === "time" ? (sortDir === "desc" ? "down" : "up") : "down"} sort-icon`} style={{ opacity: sortBy === "time" ? 1 : 0 }}></i>
                           </div>
                         </th>
-                        <th onClick={() => handleSort("phone_number")} style={{ cursor: "pointer" }}>
+                        <th onClick={() => handleSort("phone")} style={{ cursor: "pointer" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
                             Phone Number
-                            <i className={`fas fa-chevron-${sortBy === "phone_number" ? (sortDir === "desc" ? "down" : "up") : "up"} sort-icon`} style={{ opacity: sortBy === "phone_number" ? 1 : 0 }}></i>
+                            <i className={`fas fa-chevron-${sortBy === "phone" ? (sortDir === "desc" ? "down" : "up") : "up"} sort-icon`} style={{ opacity: sortBy === "phone" ? 1 : 0 }}></i>
                           </div>
                         </th>
                         <th onClick={() => handleSort("duration")} style={{ cursor: "pointer" }}>
@@ -444,18 +444,23 @@ const ClientRecordings = ({ isEmbedded }) => {
                             <i className={`fas fa-chevron-${sortBy === "size" ? (sortDir === "desc" ? "down" : "up") : "up"} sort-icon`} style={{ opacity: sortBy === "size" ? 1 : 0 }}></i>
                           </div>
                         </th>
+                        <th>Server</th>
+                        <th>Extension</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredRecordings.length === 0 ? (
+                      {recordings.length === 0 ? (
                         <tr>
-                          <td colSpan={5} style={{ textAlign: "center", color: "#6b7280", padding: "2rem" }}>
-                            No recordings found for the selected date.
+                          <td colSpan={7} style={{ textAlign: "center", color: "#6b7280", padding: "2rem" }}>
+                            {searchText
+                              ? `No recordings found for phone number "${searchText}" on ${new Date(selectedDate).toLocaleDateString()}`
+                              : `No recordings found for ${new Date(selectedDate).toLocaleDateString()}`
+                            }
                           </td>
                         </tr>
                       ) : (
-                        filteredRecordings.map((recording, index) => (
+                        recordings.map((recording, index) => (
                           <tr
                             key={index}
                             className={currentRowIndex === index && showPlayer ? "playing" : ""}
@@ -464,6 +469,8 @@ const ClientRecordings = ({ isEmbedded }) => {
                             <td style={{ fontWeight: 500 }}>{recording.phone_number}</td>
                             <td>{recording.duration}</td>
                             <td style={{ color: "#6b7280" }}>{recording.size}</td>
+                            <td style={{ color: "#6b7280", fontSize: "0.813rem" }}>{recording.server_name}</td>
+                            <td style={{ color: "#6b7280", fontSize: "0.813rem" }}>{recording.extension}</td>
                             <td>
                               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
                                 <button
@@ -582,7 +589,7 @@ const ClientRecordings = ({ isEmbedded }) => {
               <div className="player-info">
                 <div className="player-phone">{currentRecording?.phone_number || "N/A"}</div>
                 <div className="player-meta">
-                  {currentRecording?.server_name || "N/A"} • {currentRecording?.time?.split(', ')[1] || "N/A"}
+                  {currentRecording?.server_name || "N/A"} • {currentRecording?.time || "N/A"}
                 </div>
               </div>
             </div>
@@ -605,7 +612,7 @@ const ClientRecordings = ({ isEmbedded }) => {
               <button
                 className="control-btn"
                 onClick={playNext}
-                disabled={currentRowIndex >= filteredRecordings.length - 1}
+                disabled={currentRowIndex >= recordings.length - 1}
                 title="Next"
               >
                 <i className="bi bi-skip-forward-fill"></i>
@@ -755,6 +762,7 @@ const styles = `
     border: 1px solid #fde68a;
     color: #92400e;
   }
+
 
   .select {
     display: block;
