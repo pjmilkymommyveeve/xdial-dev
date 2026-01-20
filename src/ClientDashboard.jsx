@@ -603,21 +603,15 @@ const MedicareDashboard = () => {
         ? matchedCategory.name
         : call.category;
 
-      // Get the color, with override for Qualified category
-      let categoryColor = call.category_color ||
-        matchedCategory?.color ||
-        getCategoryColor(normalizedCategory);
-      
-      if (normalizedCategory === "Qualified") {
-        categoryColor = "#3B9AFF";
-      }
-
       return {
         id: call.id,
         phone: call.number,
         listId: call.list_id,
         category: normalizedCategory, // Use normalized category name
-        categoryColor: categoryColor,
+        categoryColor:
+          call.category_color ||
+          matchedCategory?.color ||
+          getCategoryColor(normalizedCategory),
         timestamp: call.timestamp,
         transcript: call.transcription,
         transferred: call.transferred,
@@ -670,7 +664,7 @@ const MedicareDashboard = () => {
       percentage: totalCalls > 0
         ? Math.round((count / totalCalls) * 100)
         : 0,
-      color: catName === "Qualified" ? "#3B9AFF" : (cat.color || "#818589"),
+      color: cat.color || "#818589",
       bgColor: "#fff",
     };
   });
@@ -846,7 +840,7 @@ const MedicareDashboard = () => {
       previousPercentage: previousPercentage,
       trend: trend,
       trendDiff: Math.abs(diff),
-      color: catName === "Qualified" ? "#3B9AFF" : (cat.color || "#818589"),
+      color: cat.color || "#818589",
       bgColor: "#fff",
     };
   });
@@ -1924,6 +1918,10 @@ const MedicareDashboard = () => {
                   {/* Category Checkboxes */}
                   {outcomes.map((outcome) => {
                     const isSelected = selectedOutcomes.includes(outcome.label);
+                    // Override color for Qualified category on statistics page only
+                    const displayColor = currentView === "statistics" && outcome.label === "Qualified" 
+                      ? "#3B9AFF" 
+                      : outcome.color;
                     return (
                       <div
                         key={outcome.id}
@@ -1935,7 +1933,7 @@ const MedicareDashboard = () => {
                           borderRadius: "6px",
                           border: "1px solid #e5e5e5",
                           backgroundColor: isSelected
-                            ? outcome.color + "11"
+                            ? displayColor + "11"
                             : "#fff",
                           cursor: "pointer",
                           transition: "all 0.2s",
@@ -1988,7 +1986,7 @@ const MedicareDashboard = () => {
                           <span
                             style={{
                               fontSize: "12px",
-                              color: outcome.color,
+                              color: displayColor,
                               fontWeight: 600,
                             }}
                           >
