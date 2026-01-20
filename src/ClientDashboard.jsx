@@ -1229,7 +1229,19 @@ const MedicareDashboard = () => {
       return { labels: [], datasets: [] };
     }
 
-    const intervals = timeseriesData.intervals;
+    const allIntervals = timeseriesData.intervals;
+
+    // Filter to only include intervals with active data (at least one category has count > 0)
+    // This makes the graph start from "active time" where data begins
+    const intervals = allIntervals.filter(interval => {
+      const totalCount = interval.categories.reduce((sum, cat) => sum + (cat.count || 0), 0);
+      return totalCount > 0;
+    });
+
+    // If no intervals have data, return empty
+    if (intervals.length === 0) {
+      return { labels: [], datasets: [] };
+    }
 
     // Get all unique categories from the timeseries data
     const allCategoriesFromTimeseries = new Set();
@@ -1673,7 +1685,53 @@ const MedicareDashboard = () => {
                   </div>
                   <div style={{ fontSize: "13px", color: "#777" }}>
                     {(() => {
-                      // Check if different dates are selected (and end date is actually set)
+                      // Helper function to format hour
+                      const formatHour = (h) => {
+                        const display = h % 12 || 12;
+                        const ampm = h < 12 ? "AM" : "PM";
+                        return `${display} ${ampm}`;
+                      };
+
+                      // Use timeseries data to determine active time range
+                      if (timeseriesData && timeseriesData.intervals && timeseriesData.intervals.length > 0) {
+                        // Filter to only intervals with data (active time)
+                        const activeIntervals = timeseriesData.intervals.filter(interval => {
+                          const totalCount = interval.categories.reduce((sum, cat) => sum + (cat.count || 0), 0);
+                          return totalCount > 0;
+                        });
+
+                        if (activeIntervals.length === 0) {
+                          return "No data available for selected date range";
+                        }
+
+                        const firstActiveInterval = activeIntervals[0];
+                        const lastActiveInterval = activeIntervals[activeIntervals.length - 1];
+                        const firstDate = new Date(firstActiveInterval.interval_start);
+                        const lastDate = new Date(lastActiveInterval.interval_start);
+
+                        // Check if different dates are selected (multi-day view)
+                        const showDateView = startDate && endDate && startDate !== endDate;
+
+                        if (showDateView) {
+                          const start = new Date(startDate);
+                          const end = new Date(endDate);
+                          const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+                          return `Daily breakdown across ${daysDiff} days (${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })})`;
+                        }
+
+                        // Single day - show active time range
+                        const startHour = firstDate.getHours();
+                        const endHour = lastDate.getHours();
+                        const dateStr = firstDate.toLocaleDateString("en-US", {
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric",
+                        });
+
+                        return `Active time: ${formatHour(startHour)} to ${formatHour(endHour)} on ${dateStr}`;
+                      }
+
+                      // Fallback: Check if different dates are selected (and end date is actually set)
                       const showDateView =
                         startDate && endDate && startDate !== endDate;
 
@@ -1703,101 +1761,8 @@ const MedicareDashboard = () => {
                           },
                         )}`;
                       }
-                      // Filter records by selected date/time
-                      const filteredTimestamps = callRecords
-                        .filter((r) => {
-                          if (!r.timestamp) return false;
-                          const recordDate = parseTimestamp(r.timestamp);
-                          if (!recordDate) return false;
 
-                          if (startDate) {
-                            const startDateTime = parseUserInputDate(
-                              startDate,
-                              startTime,
-                            );
-                            if (startDateTime && recordDate < startDateTime)
-                              return false;
-                          }
-
-                          if (endDate) {
-                            const endDateTime = parseUserInputDate(
-                              endDate,
-                              endTime || "23:59:59",
-                            );
-                            if (endDateTime && recordDate > endDateTime)
-                              return false;
-                          }
-
-                          return true;
-                        })
-                        .map((r) => parseTimestamp(r.timestamp))
-                        .filter((d) => d !== null);
-
-                      if (filteredTimestamps.length === 0)
-                        return "No data available for selected date range";
-
-                      filteredTimestamps.sort((a, b) => a - b);
-                      const earliestDate = filteredTimestamps[0];
-                      const latestDate =
-                        filteredTimestamps[filteredTimestamps.length - 1];
-
-                      const earliestDateStr =
-                        formatDateForComparison(earliestDate);
-                      const latestDateStr = formatDateForComparison(latestDate);
-                      const isSingleDay = earliestDateStr === latestDateStr;
-
-                      if (isSingleDay) {
-                        // Determine hour range
-                        let startHour, endHour;
-
-                        if (startTime || endTime) {
-                          const startDateTime = parseUserInputDate(
-                            startDate,
-                            startTime || "00:00",
-                          );
-                          const endDateTime = parseUserInputDate(
-                            endDate || startDate,
-                            endTime || "23:59",
-                          );
-                          startHour = startDateTime
-                            ? startDateTime.getHours()
-                            : earliestDate.getHours();
-                          endHour = endDateTime
-                            ? endDateTime.getHours()
-                            : latestDate.getHours();
-                        } else {
-                          startHour = earliestDate.getHours();
-                          endHour = latestDate.getHours();
-                        }
-
-                        const formatHour = (h) => {
-                          const display = h % 12 || 12;
-                          const ampm = h < 12 ? "AM" : "PM";
-                          return `${display} ${ampm}`;
-                        };
-
-                        return `Hourly breakdown from ${formatHour(
-                          startHour,
-                        )} to ${formatHour(
-                          endHour,
-                        )} on ${earliestDate.toLocaleDateString("en-US", {
-                          month: "long",
-                          day: "numeric",
-                          year: "numeric",
-                        })}`;
-                      } else {
-                        const daysDiff =
-                          Math.ceil(
-                            (latestDate - earliestDate) / (1000 * 60 * 60 * 24),
-                          ) + 1;
-                        return `Daily breakdown across ${daysDiff} days (${earliestDate.toLocaleDateString(
-                          "en-US",
-                          { month: "short", day: "numeric" },
-                        )} - ${latestDate.toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })})`;
-                      }
+                      return "No data available";
                     })()}
                   </div>
                 </div>
