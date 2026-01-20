@@ -603,15 +603,21 @@ const MedicareDashboard = () => {
         ? matchedCategory.name
         : call.category;
 
+      // Get the color, with override for Qualified category
+      let categoryColor = call.category_color ||
+        matchedCategory?.color ||
+        getCategoryColor(normalizedCategory);
+      
+      if (normalizedCategory === "Qualified") {
+        categoryColor = "#3B9AFF";
+      }
+
       return {
         id: call.id,
         phone: call.number,
         listId: call.list_id,
         category: normalizedCategory, // Use normalized category name
-        categoryColor:
-          call.category_color ||
-          matchedCategory?.color ||
-          getCategoryColor(normalizedCategory),
+        categoryColor: categoryColor,
         timestamp: call.timestamp,
         transcript: call.transcription,
         transferred: call.transferred,
@@ -664,7 +670,7 @@ const MedicareDashboard = () => {
       percentage: totalCalls > 0
         ? Math.round((count / totalCalls) * 100)
         : 0,
-      color: cat.color || "#818589",
+      color: catName === "Qualified" ? "#3B9AFF" : (cat.color || "#818589"),
       bgColor: "#fff",
     };
   });
@@ -840,7 +846,7 @@ const MedicareDashboard = () => {
       previousPercentage: previousPercentage,
       trend: trend,
       trendDiff: Math.abs(diff),
-      color: cat.color || "#818589",
+      color: catName === "Qualified" ? "#3B9AFF" : (cat.color || "#818589"),
       bgColor: "#fff",
     };
   });
@@ -1295,6 +1301,11 @@ const MedicareDashboard = () => {
           color = categoryData.color;
           break;
         }
+      }
+
+      // Override color for Qualified category to light blue
+      if (categoryName === "Qualified") {
+        color = "#3B9AFF";
       }
 
       return {
