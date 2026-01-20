@@ -402,21 +402,24 @@ const IntegrationForm = () => {
 
             {formData.campaign && availableModels.length > 0 && (
               <div className="form-group">
-                <label htmlFor="model">
+                <label>
                   Model <span className="required">*</span>
                 </label>
-                <select
-                  id="model"
-                  name="model"
-                  value={formData.model}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Select Model</option>
+                <div className="radio-group">
                   {availableModels.map(model => (
-                    <option key={model} value={model}>{model}</option>
+                    <label key={model} className="radio-label">
+                      <input
+                        type="radio"
+                        name="model"
+                        value={model}
+                        checked={formData.model === model}
+                        onChange={handleChange}
+                        required
+                      />
+                      <span>{model}</span>
+                    </label>
                   ))}
-                </select>
+                </div>
               </div>
             )}
 
