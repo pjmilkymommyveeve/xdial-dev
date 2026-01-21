@@ -635,7 +635,7 @@ const AdminLanding = () => {
             </button>
 
             <button
-              onClick={() => navigate("/adminvoicestats")}
+              onClick={() => navigate("/admin-voice-stats")}
               style={{
                 padding: "10px 20px",
                 backgroundColor: "#f59e0b",
