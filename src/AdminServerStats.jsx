@@ -404,6 +404,7 @@ const AdminServerStats = () => {
               boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
             }}
           >
+            <div style={{ fontSize: "48px", marginBottom: "16px" }}>⏳</div>
             <h3
               style={{
                 margin: "0 0 8px 0",
@@ -895,12 +896,12 @@ const AdminServerStats = () => {
                                 toggleServerExpand(server.server_id)
                               }
                               onMouseOver={(e) =>
-                              (e.currentTarget.style.backgroundColor =
-                                "#f3f4f6")
+                                (e.currentTarget.style.backgroundColor =
+                                  "#f3f4f6")
                               }
                               onMouseOut={(e) =>
-                              (e.currentTarget.style.backgroundColor =
-                                idx % 2 === 0 ? "#ffffff" : "#f9fafb")
+                                (e.currentTarget.style.backgroundColor =
+                                  idx % 2 === 0 ? "#ffffff" : "#f9fafb")
                               }
                             >
                               <td
@@ -1014,10 +1015,10 @@ const AdminServerStats = () => {
                                       width: `${server.total_bots > 0 ? (server.active_bots / server.total_bots) * 100 : 0}%`,
                                       backgroundColor:
                                         server.active_bots >
-                                          server.total_bots * 0.8
+                                        server.total_bots * 0.8
                                           ? "#ef4444"
                                           : server.active_bots >
-                                            server.total_bots * 0.5
+                                              server.total_bots * 0.5
                                             ? "#f59e0b"
                                             : "#10b981",
                                       height: "100%",
@@ -1034,10 +1035,10 @@ const AdminServerStats = () => {
                                 >
                                   {server.total_bots > 0
                                     ? Math.round(
-                                      (server.active_bots /
-                                        server.total_bots) *
-                                      100,
-                                    )
+                                        (server.active_bots /
+                                          server.total_bots) *
+                                          100,
+                                      )
                                     : 0}
                                   %
                                 </div>
@@ -1170,7 +1171,7 @@ const AdminServerStats = () => {
                                                 style={{
                                                   borderBottom:
                                                     cidx <
-                                                      server.campaigns.length - 1
+                                                    server.campaigns.length - 1
                                                       ? "1px solid #e5e7eb"
                                                       : "none",
                                                 }}
@@ -1298,12 +1299,12 @@ const AdminServerStats = () => {
                                 toggleServerExpand(server.server_id)
                               }
                               onMouseOver={(e) =>
-                              (e.currentTarget.style.backgroundColor =
-                                "#f3f4f6")
+                                (e.currentTarget.style.backgroundColor =
+                                  "#f3f4f6")
                               }
                               onMouseOut={(e) =>
-                              (e.currentTarget.style.backgroundColor =
-                                idx % 2 === 0 ? "#ffffff" : "#f9fafb")
+                                (e.currentTarget.style.backgroundColor =
+                                  idx % 2 === 0 ? "#ffffff" : "#f9fafb")
                               }
                             >
                               <td
@@ -1417,10 +1418,10 @@ const AdminServerStats = () => {
                                       width: `${server.total_bots > 0 ? (server.active_bots / server.total_bots) * 100 : 0}%`,
                                       backgroundColor:
                                         server.active_bots >
-                                          server.total_bots * 0.8
+                                        server.total_bots * 0.8
                                           ? "#ef4444"
                                           : server.active_bots >
-                                            server.total_bots * 0.5
+                                              server.total_bots * 0.5
                                             ? "#f59e0b"
                                             : "#10b981",
                                       height: "100%",
@@ -1437,10 +1438,10 @@ const AdminServerStats = () => {
                                 >
                                   {server.total_bots > 0
                                     ? Math.round(
-                                      (server.active_bots /
-                                        server.total_bots) *
-                                      100,
-                                    )
+                                        (server.active_bots /
+                                          server.total_bots) *
+                                          100,
+                                      )
                                     : 0}
                                   %
                                 </div>
@@ -1573,7 +1574,7 @@ const AdminServerStats = () => {
                                                 style={{
                                                   borderBottom:
                                                     cidx <
-                                                      server.campaigns.length - 1
+                                                    server.campaigns.length - 1
                                                       ? "1px solid #e5e7eb"
                                                       : "none",
                                                 }}
