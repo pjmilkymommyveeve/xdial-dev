@@ -635,6 +635,22 @@ const AdminLanding = () => {
             </button>
 
             <button
+              onClick={() => navigate("/adminvoicestats")}
+              style={{
+                padding: "10px 20px",
+                backgroundColor: "#f59e0b",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "14px",
+                fontWeight: "600",
+                cursor: "pointer",
+              }}
+            >
+              Voice Stats
+            </button>
+
+            <button
               onClick={() => navigate("/admin-data-export")}
               style={{
                 padding: "10px 20px",
