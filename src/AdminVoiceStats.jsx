@@ -9,6 +9,8 @@ const AdminVoiceStats = () => {
   const [error, setError] = useState(null);
   const [stats, setStats] = useState(null);
   const [debugInfo, setDebugInfo] = useState(null);
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState("");
   const callsChartRef = useRef(null);
   const transfersChartRef = useRef(null);
   const callsChartInstance = useRef(null);
@@ -33,12 +35,17 @@ const AdminVoiceStats = () => {
       console.log("Base URL:", api.defaults?.baseURL || "Not set");
       console.log("Token:", localStorage.getItem("token") ? "Present" : "Missing");
       console.log("Full URL:", `${api.defaults?.baseURL || ''}/campaigns/stats/overall-voice-stats`);
-      
+
+      const params = {};
+      if (startDate) params.start_date = startDate;
+      if (endDate) params.end_date = endDate;
+
       const response = await api.get("/campaigns/stats/overall-voice-stats", {
+        params,
         timeout: 120000,
         signal: abortControllerRef.current.signal
       });
-      
+
       console.log("✅ Stats fetched successfully:", response.data);
       setStats(response.data);
       setError(null);
@@ -70,7 +77,7 @@ const AdminVoiceStats = () => {
       setDebugInfo(debugData);
 
       let errorMessage = "Failed to fetch voice statistics";
-      
+
       if (err.code === 'ECONNABORTED') {
         errorMessage = "Request timed out. Please try again.";
       } else if (err.message === "Network Error") {
@@ -96,7 +103,7 @@ const AdminVoiceStats = () => {
         abortControllerRef.current.abort();
       }
     };
-  }, []);
+  }, [startDate, endDate]);
 
   useEffect(() => {
     if (!stats || !stats.voice_stats) return;
@@ -181,11 +188,7 @@ const AdminVoiceStats = () => {
     };
   }, [stats]);
 
-  const handleLogout = () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    navigate("/");
-  };
+
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#f9fafb" }}>
@@ -206,12 +209,12 @@ const AdminVoiceStats = () => {
       </div>
 
       <div style={{ maxWidth: "1200px", margin: "24px auto", padding: "0 24px" }}>
-        {/* Action Buttons */}
-        <div style={{ display: "flex", gap: "12px", marginBottom: "24px" }}>
+        {/* Filters */}
+        <div style={{ display: "flex", gap: "12px", marginBottom: "24px", alignItems: "flex-end", justifyContent: "space-between" }}>
           <button
             onClick={() => navigate("/admin-landing")}
             style={{
-              padding: "9px 18px",
+              padding: "8px 16px",
               backgroundColor: "#4f46e5",
               color: "white",
               border: "none",
@@ -220,30 +223,75 @@ const AdminVoiceStats = () => {
               fontWeight: "600",
               cursor: "pointer",
               transition: "background-color 0.2s",
+              height: "38px" // Fixed height for alignment
             }}
             onMouseOver={(e) => (e.target.style.backgroundColor = "#4338ca")}
             onMouseOut={(e) => (e.target.style.backgroundColor = "#4f46e5")}
           >
             ← Dashboard
           </button>
-          <button
-            onClick={handleLogout}
-            style={{
-              padding: "9px 18px",
-              backgroundColor: "#ef4444",
-              color: "white",
-              border: "none",
-              borderRadius: "6px",
-              fontSize: "14px",
-              fontWeight: "600",
-              cursor: "pointer",
-              transition: "background-color 0.2s",
-            }}
-            onMouseOver={(e) => (e.target.style.backgroundColor = "#dc2626")}
-            onMouseOut={(e) => (e.target.style.backgroundColor = "#ef4444")}
-          >
-            Logout
-          </button>
+
+          <div style={{ display: "flex", gap: "12px", alignItems: "flex-end" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <label style={{ fontSize: "12px", color: "#6b7280", fontWeight: "600" }}>Start Date</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "6px",
+                  border: "1px solid #d1d5db",
+                  fontSize: "14px",
+                  outline: "none",
+                  color: "#374151",
+                  height: "38px", // Fixed height including border
+                  boxSizing: "border-box"
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <label style={{ fontSize: "12px", color: "#6b7280", fontWeight: "600" }}>End Date</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "6px",
+                  border: "1px solid #d1d5db",
+                  fontSize: "14px",
+                  outline: "none",
+                  color: "#374151",
+                  height: "38px", // Fixed height including border
+                  boxSizing: "border-box"
+                }}
+              />
+            </div>
+
+            <button
+              onClick={fetchStats}
+              style={{
+                padding: "8px 16px",
+                backgroundColor: "#10b981",
+                color: "white",
+                border: "none",
+                borderRadius: "6px",
+                fontSize: "14px",
+                fontWeight: "600",
+                cursor: "pointer",
+                transition: "background-color 0.2s",
+                height: "38px" // Fixed height for alignment
+              }}
+              onMouseOver={(e) => (e.target.style.backgroundColor = "#059669")}
+              onMouseOut={(e) => (e.target.style.backgroundColor = "#10b981")}
+            >
+              Apply Filter
+            </button>
+          </div>
+
+
         </div>
 
         {/* Loading State */}
@@ -282,7 +330,7 @@ const AdminVoiceStats = () => {
             <div style={{ color: "#991b1b", fontSize: "16px", fontWeight: "600", marginBottom: "12px" }}>
               ⚠️ {error}
             </div>
-            
+
             {/* Debug Information */}
             {debugInfo && (
               <details style={{ marginTop: "16px", fontSize: "13px" }}>
