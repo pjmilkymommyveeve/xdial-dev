@@ -9,29 +9,43 @@ const AdminVoiceStats = () => {
     const [error, setError] = useState(null);
     const [stats, setStats] = useState(null);
 
-
-
     const callsChartRef = useRef(null);
     const transfersChartRef = useRef(null);
     const callsChartInstance = useRef(null);
     const transfersChartInstance = useRef(null);
+    const abortControllerRef = useRef(null);
 
     const fetchStats = async () => {
+        // Cancel any existing request
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+
+        // Create new abort controller
+        abortControllerRef.current = new AbortController();
+
         setLoading(true);
         try {
             const response = await api.get("/campaigns/stats/overall-voice-stats", {
-                timeout: 600000 // 10 minutes timeout
+                timeout: 120000, // Reduced to 2 minutes
+                signal: abortControllerRef.current.signal
             });
             console.log("Stats fetched successfully:", response.data);
             setStats(response.data);
             setError(null);
         } catch (err) {
+            // Don't set error if request was cancelled
+            if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
+                console.log("Request was cancelled");
+                return;
+            }
+
             console.error("Error fetching voice stats:", err);
             let errorMessage = "Failed to fetch voice statistics";
             if (err.code === 'ECONNABORTED') {
-                errorMessage = "Request timed out. The server took too long to respond.";
+                errorMessage = "Request timed out. Please try again.";
             } else if (err.message === "Network Error") {
-                errorMessage = "Network Error: Unable to reach the server. This might be a CORS issue or the server is down.";
+                errorMessage = "Network Error: Unable to reach the server. Please check your connection.";
             } else if (err.response) {
                 errorMessage = `Server Error: ${err.response.status} - ${err.response.data?.message || err.message}`;
             } else if (err.message) {
@@ -45,9 +59,14 @@ const AdminVoiceStats = () => {
 
     useEffect(() => {
         fetchStats();
+
+        // Cleanup function to abort request on unmount
+        return () => {
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+        };
     }, []);
-
-
 
     useEffect(() => {
         if (!stats || !stats.voice_stats) return;
@@ -224,8 +243,6 @@ const AdminVoiceStats = () => {
             </header>
 
             <div style={{ maxWidth: "1600px", margin: "0 auto", padding: "24px" }}>
-
-
                 {/* Loading State */}
                 {loading && (
                     <div
@@ -261,9 +278,24 @@ const AdminVoiceStats = () => {
                             marginBottom: "24px",
                         }}
                     >
-                        <p style={{ margin: 0, color: "#dc2626", fontWeight: "500" }}>
+                        <p style={{ margin: "0 0 12px 0", color: "#dc2626", fontWeight: "500" }}>
                             ⚠️ {error}
                         </p>
+                        <button
+                            onClick={fetchStats}
+                            style={{
+                                padding: "8px 16px",
+                                backgroundColor: "#4f46e5",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "6px",
+                                fontSize: "14px",
+                                fontWeight: "600",
+                                cursor: "pointer",
+                            }}
+                        >
+                            Retry
+                        </button>
                     </div>
                 )}
 
