@@ -645,7 +645,7 @@ const AdminCampaigns = () => {
                             color: "#374151",
                           }}
                         >
-                          Campaign
+                          Client
                         </th>
                         <th
                           style={{
@@ -655,7 +655,7 @@ const AdminCampaigns = () => {
                             color: "#374151",
                           }}
                         >
-                          Client
+                          Campaign
                         </th>
                         <th
                           style={{
@@ -804,33 +804,18 @@ const AdminCampaigns = () => {
                               {campaign.client_campaign_model_id}
                             </td>
                             <td style={{ padding: "12px 16px" }}>
-                              <div
-                                style={{
-                                  fontWeight: "600",
-                                  color: "#111827",
-                                }}
-                              >
-                                {campaign.campaign_name}
+                              <div>
+                                <div style={{ fontWeight: "600", color: "#111827" }}>
+                                  {campaign.client_name}
+                                </div>
+                                <div style={{ fontSize: "12px", color: "#9ca3af" }}>
+                                  {campaign.client_username}
+                                </div>
                               </div>
                             </td>
                             <td style={{ padding: "12px 16px" }}>
-                              <div>
-                                <div
-                                  style={{
-                                    fontWeight: "600",
-                                    color: "#111827",
-                                  }}
-                                >
-                                  {campaign.client_name}
-                                </div>
-                                <div
-                                  style={{
-                                    fontSize: "12px",
-                                    color: "#9ca3af",
-                                  }}
-                                >
-                                  {campaign.client_username}
-                                </div>
+                              <div style={{ fontWeight: "600", color: "#111827" }}>
+                                {campaign.campaign_name}
                               </div>
                             </td>
                             <td
