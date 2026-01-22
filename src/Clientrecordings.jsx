@@ -444,7 +444,6 @@ const ClientRecordings = ({ isEmbedded }) => {
                             <i className={`fas fa-chevron-${sortBy === "size" ? (sortDir === "desc" ? "down" : "up") : "up"} sort-icon`} style={{ opacity: sortBy === "size" ? 1 : 0 }}></i>
                           </div>
                         </th>
-                        <th>Server</th>
                         <th>Extension</th>
                         <th>Actions</th>
                       </tr>
@@ -452,7 +451,7 @@ const ClientRecordings = ({ isEmbedded }) => {
                     <tbody>
                       {recordings.length === 0 ? (
                         <tr>
-                          <td colSpan={7} style={{ textAlign: "center", color: "#6b7280", padding: "2rem" }}>
+                          <td colSpan={6} style={{ textAlign: "center", color: "#6b7280", padding: "2rem" }}>
                             {searchText
                               ? `No recordings found for phone number "${searchText}" on ${new Date(selectedDate).toLocaleDateString()}`
                               : `No recordings found for ${new Date(selectedDate).toLocaleDateString()}`
@@ -469,7 +468,6 @@ const ClientRecordings = ({ isEmbedded }) => {
                             <td style={{ fontWeight: 500 }}>{recording.phone_number}</td>
                             <td>{recording.duration}</td>
                             <td style={{ color: "#6b7280" }}>{recording.size}</td>
-                            <td style={{ color: "#6b7280", fontSize: "0.813rem" }}>{recording.server_name}</td>
                             <td style={{ color: "#6b7280", fontSize: "0.813rem" }}>{recording.extension}</td>
                             <td>
                               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
