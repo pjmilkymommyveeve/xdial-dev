@@ -58,7 +58,7 @@ const navigate = useNavigate();
       }
 
       let apiUrl = `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/admin/${campaignId}/dashboard?start_date=${startDate}`;
-      if (endDate && endDate !== startDate) {
+      if (endDate) {
         apiUrl += `&end_date=${endDate}`;
       }
       apiUrl += `&page=1&page_size=50`;
@@ -105,7 +105,7 @@ const navigate = useNavigate();
       const pagePromises = [];
       for (let page = 2; page <= totalPages; page++) {
         let pageUrl = `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/admin/${campaignId}/dashboard?start_date=${startDate}`;
-        if (endDate && endDate !== startDate) {
+        if (endDate) {
           pageUrl += `&end_date=${endDate}`;
         }
         pageUrl += `&page=${page}&page_size=50`;

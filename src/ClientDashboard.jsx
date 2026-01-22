@@ -163,7 +163,7 @@ const MedicareDashboard = () => {
         // Construct API URL with all filters
         const params = new URLSearchParams();
         params.append("start_date", startDate);
-        if (endDate && endDate !== startDate) {
+        if (endDate) {
           params.append("end_date", endDate);
         }
         params.append("page", currentPage);
@@ -248,7 +248,7 @@ const MedicareDashboard = () => {
         const params = new URLSearchParams();
         params.append("start_date", startDate);
         if (startTime) params.append("start_time", startTime);
-        if (endDate && endDate !== startDate) {
+        if (endDate) {
           params.append("end_date", endDate);
         }
         if (endTime) params.append("end_time", endTime);
@@ -310,7 +310,7 @@ const MedicareDashboard = () => {
         const params = new URLSearchParams();
         params.append("start_date", startDate);
         if (startTime) params.append("start_time", startTime);
-        if (endDate && endDate !== startDate) {
+        if (endDate) {
           params.append("end_date", endDate);
         }
         if (endTime) params.append("end_time", endTime);
