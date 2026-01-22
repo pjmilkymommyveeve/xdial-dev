@@ -8,9 +8,17 @@ const AdminVoiceStats = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [stats, setStats] = useState(null);
+  const [campaignStats, setCampaignStats] = useState(null);
   const [debugInfo, setDebugInfo] = useState(null);
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState("");
+  const [expandedCampaignId, setExpandedCampaignId] = useState(null);
+  
+  // Filter states
+  const [clientSearchTerm, setClientSearchTerm] = useState("");
+  const [campaignSearchTerm, setCampaignSearchTerm] = useState("");
+  const [serverSearchTerm, setServerSearchTerm] = useState("");
+  
   const callsChartRef = useRef(null);
   const transfersChartRef = useRef(null);
   const callsChartInstance = useRef(null);
@@ -18,45 +26,54 @@ const AdminVoiceStats = () => {
   const abortControllerRef = useRef(null);
 
   const fetchStats = async () => {
-    // Cancel any existing request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
 
-    // Create new abort controller
     abortControllerRef.current = new AbortController();
     setLoading(true);
     setError(null);
     setDebugInfo(null);
 
     try {
-      // Log the request details for debugging
       console.log("=== API Request Debug Info ===");
       console.log("Base URL:", api.defaults?.baseURL || "Not set");
       console.log("Token:", localStorage.getItem("token") ? "Present" : "Missing");
-      console.log("Full URL:", `${api.defaults?.baseURL || ''}/campaigns/stats/overall-voice-stats`);
-
+      
       const params = {};
       if (startDate) params.start_date = startDate;
       if (endDate) params.end_date = endDate;
 
-      const response = await api.get("/campaigns/stats/overall-voice-stats", {
+      console.log("Request params:", params);
+
+      // Fetch voice stats
+      const voiceResponse = await api.get("/campaigns/stats/overall-voice-stats", {
         params,
         timeout: 120000,
         signal: abortControllerRef.current.signal
       });
 
-      console.log("✅ Stats fetched successfully:", response.data);
-      setStats(response.data);
+      console.log("✅ Voice stats fetched successfully");
+
+      // Fetch campaign stats
+      const campaignResponse = await api.get("/campaigns/stats/all-campaigns-transfer-stats", {
+        params,
+        timeout: 120000,
+        signal: abortControllerRef.current.signal
+      });
+
+      console.log("✅ Campaign stats fetched successfully");
+      
+      setStats(voiceResponse.data);
+      setCampaignStats(campaignResponse.data);
       setError(null);
     } catch (err) {
-      // Don't set error if request was cancelled
       if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
         console.log("Request was cancelled");
         return;
       }
 
-      console.error("❌ Error fetching voice stats:", err);
+      console.error("❌ Error fetching stats:", err);
       console.error("Error details:", {
         message: err.message,
         code: err.code,
@@ -64,24 +81,22 @@ const AdminVoiceStats = () => {
         config: err.config
       });
 
-      // Detailed debug info
       const debugData = {
         errorType: err.name || "Unknown",
         errorCode: err.code || "No code",
+        errorMessage: err.message,
         requestURL: err.config?.url || "Unknown",
-        baseURL: err.config?.baseURL || "Not set",
-        headers: err.config?.headers || {},
+        baseURL: err.config?.baseURL || api.defaults?.baseURL || "Not set",
         responseStatus: err.response?.status || "No response",
         responseData: err.response?.data || "No data"
       };
       setDebugInfo(debugData);
 
       let errorMessage = "Failed to fetch voice statistics";
-
       if (err.code === 'ECONNABORTED') {
         errorMessage = "Request timed out. Please try again.";
-      } else if (err.message === "Network Error") {
-        errorMessage = "Network Error: Unable to reach the server. This might be a CORS issue or the server is down.";
+      } else if (err.message === "Network Error" || err.message?.includes("NetworkError")) {
+        errorMessage = "Network Error: Unable to reach the server. Please check your connection and API configuration.";
       } else if (err.response) {
         errorMessage = `Server Error: ${err.response.status} - ${err.response.data?.message || err.message}`;
       } else if (err.message) {
@@ -97,7 +112,6 @@ const AdminVoiceStats = () => {
   useEffect(() => {
     fetchStats();
 
-    // Cleanup function to abort request on unmount
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -108,7 +122,6 @@ const AdminVoiceStats = () => {
   useEffect(() => {
     if (!stats || !stats.voice_stats) return;
 
-    // Cleanup existing charts
     if (callsChartInstance.current) {
       callsChartInstance.current.destroy();
     }
@@ -120,13 +133,11 @@ const AdminVoiceStats = () => {
     const totalCallsData = stats.voice_stats.map(v => v.total_calls);
     const transfersData = stats.voice_stats.map(v => v.transferred_calls);
 
-    // Generate colors
     const colors = [
       '#4f46e5', '#10b981', '#f59e0b', '#ef4444',
       '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'
     ];
 
-    // Calls Chart
     if (callsChartRef.current) {
       const ctx = callsChartRef.current.getContext("2d");
       callsChartInstance.current = new Chart(ctx, {
@@ -154,7 +165,6 @@ const AdminVoiceStats = () => {
       });
     }
 
-    // Transfers Chart
     if (transfersChartRef.current) {
       const ctx = transfersChartRef.current.getContext("2d");
       transfersChartInstance.current = new Chart(ctx, {
@@ -188,7 +198,19 @@ const AdminVoiceStats = () => {
     };
   }, [stats]);
 
+  const toggleCampaignExpand = (campaignId) => {
+    setExpandedCampaignId(expandedCampaignId === campaignId ? null : campaignId);
+  };
 
+  // Filter campaigns
+  const filteredCampaigns = campaignStats?.campaigns?.filter((campaign) => {
+    const clientMatch = campaign.client_name?.toLowerCase().includes(clientSearchTerm.toLowerCase());
+    const campaignMatch = campaign.campaign_name?.toLowerCase().includes(campaignSearchTerm.toLowerCase());
+    const serverMatch = serverSearchTerm === "" || 
+      campaign.voice_stats?.some(v => v.voice_name?.toLowerCase().includes(serverSearchTerm.toLowerCase()));
+    
+    return clientMatch && campaignMatch && serverMatch;
+  }) || [];
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#f9fafb" }}>
@@ -198,7 +220,7 @@ const AdminVoiceStats = () => {
         padding: "24px",
         boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
       }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1600px", margin: "0 auto" }}>
           <h1 style={{ color: "white", fontSize: "28px", fontWeight: "700", margin: "0 0 8px 0" }}>
             Voice Statistics Dashboard
           </h1>
@@ -208,7 +230,7 @@ const AdminVoiceStats = () => {
         </div>
       </div>
 
-      <div style={{ maxWidth: "1200px", margin: "24px auto", padding: "0 24px" }}>
+      <div style={{ maxWidth: "1600px", margin: "24px auto", padding: "0 24px" }}>
         {/* Filters */}
         <div style={{ display: "flex", gap: "12px", marginBottom: "24px", alignItems: "flex-end", justifyContent: "space-between" }}>
           <button
@@ -223,7 +245,7 @@ const AdminVoiceStats = () => {
               fontWeight: "600",
               cursor: "pointer",
               transition: "background-color 0.2s",
-              height: "38px" // Fixed height for alignment
+              height: "38px"
             }}
             onMouseOver={(e) => (e.target.style.backgroundColor = "#4338ca")}
             onMouseOut={(e) => (e.target.style.backgroundColor = "#4f46e5")}
@@ -245,7 +267,7 @@ const AdminVoiceStats = () => {
                   fontSize: "14px",
                   outline: "none",
                   color: "#374151",
-                  height: "38px", // Fixed height including border
+                  height: "38px",
                   boxSizing: "border-box"
                 }}
               />
@@ -264,34 +286,13 @@ const AdminVoiceStats = () => {
                   fontSize: "14px",
                   outline: "none",
                   color: "#374151",
-                  height: "38px", // Fixed height including border
+                  height: "38px",
                   boxSizing: "border-box"
                 }}
               />
             </div>
 
-            <button
-              onClick={fetchStats}
-              style={{
-                padding: "8px 16px",
-                backgroundColor: "#10b981",
-                color: "white",
-                border: "none",
-                borderRadius: "6px",
-                fontSize: "14px",
-                fontWeight: "600",
-                cursor: "pointer",
-                transition: "background-color 0.2s",
-                height: "38px" // Fixed height for alignment
-              }}
-              onMouseOver={(e) => (e.target.style.backgroundColor = "#059669")}
-              onMouseOut={(e) => (e.target.style.backgroundColor = "#10b981")}
-            >
-              Apply Filter
-            </button>
           </div>
-
-
         </div>
 
         {/* Loading State */}
@@ -331,7 +332,6 @@ const AdminVoiceStats = () => {
               ⚠️ {error}
             </div>
 
-            {/* Debug Information */}
             {debugInfo && (
               <details style={{ marginTop: "16px", fontSize: "13px" }}>
                 <summary style={{ cursor: "pointer", fontWeight: "600", color: "#7f1d1d", marginBottom: "8px" }}>
@@ -472,7 +472,8 @@ const AdminVoiceStats = () => {
               backgroundColor: "white",
               borderRadius: "8px",
               boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-              overflow: "hidden"
+              overflow: "hidden",
+              marginBottom: "24px"
             }}>
               <div style={{ padding: "20px", borderBottom: "1px solid #e5e7eb" }}>
                 <h2 style={{ fontSize: "20px", fontWeight: "700", color: "#111827", margin: 0 }}>
@@ -524,6 +525,356 @@ const AdminVoiceStats = () => {
                 </table>
               </div>
             </div>
+
+            {/* Campaign Stats Section */}
+            {campaignStats && (
+              <>
+                {/* Search Filters */}
+                <div style={{
+                  backgroundColor: "white",
+                  borderRadius: "12px",
+                  padding: "20px",
+                  marginBottom: "24px",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
+                }}>
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+                    gap: "16px"
+                  }}>
+                    <div>
+                      <label style={{
+                        display: "block",
+                        fontSize: "13px",
+                        fontWeight: "600",
+                        color: "#374151",
+                        marginBottom: "6px"
+                      }}>
+                        Search Clients
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Search by client name..."
+                        value={clientSearchTerm}
+                        onChange={(e) => setClientSearchTerm(e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "8px 12px",
+                          border: "1px solid #d1d5db",
+                          borderRadius: "6px",
+                          fontSize: "14px",
+                          boxSizing: "border-box"
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{
+                        display: "block",
+                        fontSize: "13px",
+                        fontWeight: "600",
+                        color: "#374151",
+                        marginBottom: "6px"
+                      }}>
+                        Search Campaigns
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Search by campaign name..."
+                        value={campaignSearchTerm}
+                        onChange={(e) => setCampaignSearchTerm(e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "8px 12px",
+                          border: "1px solid #d1d5db",
+                          borderRadius: "6px",
+                          fontSize: "14px",
+                          boxSizing: "border-box"
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{
+                        display: "block",
+                        fontSize: "13px",
+                        fontWeight: "600",
+                        color: "#374151",
+                        marginBottom: "6px"
+                      }}>
+                        Search Voices
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Search by voice name..."
+                        value={serverSearchTerm}
+                        onChange={(e) => setServerSearchTerm(e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "8px 12px",
+                          border: "1px solid #d1d5db",
+                          borderRadius: "6px",
+                          fontSize: "14px",
+                          boxSizing: "border-box"
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Campaign Statistics Table */}
+                <div style={{
+                  backgroundColor: "white",
+                  borderRadius: "12px",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                  overflow: "hidden"
+                }}>
+                  <div style={{ padding: "20px", borderBottom: "1px solid #e5e7eb" }}>
+                    <h2 style={{
+                      margin: 0,
+                      fontSize: "18px",
+                      fontWeight: "700",
+                      color: "#111827"
+                    }}>
+                      Campaign Statistics ({filteredCampaigns.length} campaigns)
+                    </h2>
+                  </div>
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{
+                      width: "100%",
+                      borderCollapse: "collapse",
+                      fontSize: "14px"
+                    }}>
+                      <thead>
+                        <tr style={{
+                          backgroundColor: "#f9fafb",
+                          borderBottom: "2px solid #e5e7eb"
+                        }}>
+                          <th style={{
+                            padding: "12px 16px",
+                            textAlign: "left",
+                            fontWeight: "600",
+                            color: "#374151",
+                            width: "30px"
+                          }}></th>
+                          <th style={{
+                            padding: "12px 16px",
+                            textAlign: "left",
+                            fontWeight: "600",
+                            color: "#374151"
+                          }}>Campaign</th>
+                          <th style={{
+                            padding: "12px 16px",
+                            textAlign: "left",
+                            fontWeight: "600",
+                            color: "#374151"
+                          }}>Client</th>
+                          <th style={{
+                            padding: "12px 16px",
+                            textAlign: "center",
+                            fontWeight: "600",
+                            color: "#374151"
+                          }}>Model</th>
+                          <th style={{
+                            padding: "12px 16px",
+                            textAlign: "center",
+                            fontWeight: "600",
+                            color: "#374151"
+                          }}>Status</th>
+                          <th style={{
+                            padding: "12px 16px",
+                            textAlign: "center",
+                            fontWeight: "600",
+                            color: "#374151"
+                          }}>Total Calls</th>
+                          <th style={{
+                            padding: "12px 16px",
+                            textAlign: "center",
+                            fontWeight: "600",
+                            color: "#374151"
+                          }}>Transferred</th>
+                          <th style={{
+                            padding: "12px 16px",
+                            textAlign: "center",
+                            fontWeight: "600",
+                            color: "#374151"
+                          }}>Transfer Rate</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredCampaigns.map((campaign, idx) => (
+                          <React.Fragment key={campaign.campaign_id}>
+                            <tr
+                              style={{
+                                borderBottom: expandedCampaignId === campaign.campaign_id ? "none" : "1px solid #e5e7eb",
+                                backgroundColor: idx % 2 === 0 ? "#ffffff" : "#f9fafb",
+                                cursor: "pointer",
+                                transition: "background-color 0.2s"
+                              }}
+                              onClick={() => toggleCampaignExpand(campaign.campaign_id)}
+                              onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f3f4f6"}
+                              onMouseOut={(e) => e.currentTarget.style.backgroundColor = idx % 2 === 0 ? "#ffffff" : "#f9fafb"}
+                            >
+                              <td style={{ padding: "12px 16px", textAlign: "center" }}>
+                                <span style={{
+                                  display: "inline-block",
+                                  transition: "transform 0.2s",
+                                  transform: expandedCampaignId === campaign.campaign_id ? "rotate(90deg)" : "rotate(0deg)"
+                                }}>
+                                  ▶
+                                </span>
+                              </td>
+                              <td style={{ padding: "12px 16px" }}>
+                                <div style={{ fontWeight: "600", color: "#111827" }}>
+                                  {campaign.campaign_name}
+                                </div>
+                              </td>
+                              <td style={{ padding: "12px 16px", color: "#6b7280" }}>
+                                {campaign.client_name}
+                              </td>
+                              <td style={{ padding: "12px 16px", textAlign: "center" }}>
+                                <span style={{
+                                  padding: "4px 8px",
+                                  backgroundColor: campaign.model_name === "Advanced" ? "#dbeafe" : "#fef3c7",
+                                  color: campaign.model_name === "Advanced" ? "#1e40af" : "#b45309",
+                                  borderRadius: "4px",
+                                  fontSize: "12px",
+                                  fontWeight: "600"
+                                }}>
+                                  {campaign.model_name}
+                                </span>
+                              </td>
+                              <td style={{ padding: "12px 16px", textAlign: "center" }}>
+                                <span style={{
+                                  padding: "4px 8px",
+                                  backgroundColor: campaign.is_active ? "#d1fae5" : "#f3f4f6",
+                                  color: campaign.is_active ? "#065f46" : "#6b7280",
+                                  borderRadius: "4px",
+                                  fontSize: "11px",
+                                  fontWeight: "600"
+                                }}>
+                                  {campaign.is_active ? "Active" : "Inactive"}
+                                </span>
+                              </td>
+                              <td style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>
+                                {campaign.total_calls?.toLocaleString()}
+                              </td>
+                              <td style={{ padding: "12px 16px", textAlign: "center", fontWeight: "600", color: "#10b981" }}>
+                                {campaign.transferred_calls?.toLocaleString()}
+                              </td>
+                              <td style={{ padding: "12px 16px", textAlign: "center", fontWeight: "600", color: "#4f46e5" }}>
+                                {campaign.transfer_rate}%
+                              </td>
+                            </tr>
+
+                            {/* Expanded Voice Details */}
+                            {expandedCampaignId === campaign.campaign_id && campaign.voice_stats && campaign.voice_stats.length > 0 && (
+                              <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
+                                <td colSpan="8" style={{ padding: 0, backgroundColor: "#f9fafb" }}>
+                                  <div style={{ padding: "16px 24px", animation: "slideDown 0.3s ease-out" }}>
+                                    <div style={{
+                                      fontSize: "13px",
+                                      fontWeight: "600",
+                                      color: "#374151",
+                                      marginBottom: "12px"
+                                    }}>
+                                      Voice Performance for this Campaign ({campaign.voice_stats.length} voices)
+                                    </div>
+                                    <table style={{
+                                      width: "100%",
+                                      borderCollapse: "collapse",
+                                      fontSize: "13px",
+                                      backgroundColor: "white",
+                                      borderRadius: "8px",
+                                      overflow: "hidden"
+                                    }}>
+                                      <thead>
+                                        <tr style={{ backgroundColor: "#f3f4f6" }}>
+                                          <th style={{
+                                            padding: "10px 12px",
+                                            textAlign: "left",
+                                            fontWeight: "600",
+                                            color: "#4b5563"
+                                          }}>Voice Name</th>
+                                          <th style={{
+                                            padding: "10px 12px",
+                                            textAlign: "center",
+                                            fontWeight: "600",
+                                            color: "#4b5563"
+                                          }}>Total Calls</th>
+                                          <th style={{
+                                            padding: "10px 12px",
+                                            textAlign: "center",
+                                            fontWeight: "600",
+                                            color: "#4b5563"
+                                          }}>Transferred</th>
+                                          <th style={{
+                                            padding: "10px 12px",
+                                            textAlign: "center",
+                                            fontWeight: "600",
+                                            color: "#4b5563"
+                                          }}>Transfer Rate</th>
+                                          <th style={{
+                                            padding: "10px 12px",
+                                            textAlign: "center",
+                                            fontWeight: "600",
+                                            color: "#4b5563"
+                                          }}>Qualified</th>
+                                          <th style={{
+                                            padding: "10px 12px",
+                                            textAlign: "center",
+                                            fontWeight: "600",
+                                            color: "#4b5563"
+                                          }}>Non-Qualified</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {campaign.voice_stats.map((voice, vidx) => (
+                                          <tr key={vidx} style={{
+                                            borderBottom: vidx < campaign.voice_stats.length - 1 ? "1px solid #e5e7eb" : "none"
+                                          }}>
+                                            <td style={{ padding: "10px 12px" }}>
+                                              <div style={{ fontWeight: "600", color: "#111827" }}>
+                                                {voice.voice_name}
+                                              </div>
+                                            </td>
+                                            <td style={{ padding: "10px 12px", textAlign: "center", color: "#6b7280" }}>
+                                              {voice.total_calls?.toLocaleString()}
+                                            </td>
+                                            <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: "600", color: "#10b981" }}>
+                                              {voice.transferred_calls?.toLocaleString()}
+                                            </td>
+                                            <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: "600", color: "#4f46e5" }}>
+                                              {voice.transfer_rate}%
+                                            </td>
+                                            <td style={{ padding: "10px 12px", textAlign: "center", color: "#059669" }}>
+                                              {voice.qualified_transferred_calls?.toLocaleString()}
+                                              <span style={{ fontSize: "11px", color: "#6b7280", marginLeft: "4px" }}>
+                                                ({voice.qualified_transfer_rate}%)
+                                              </span>
+                                            </td>
+                                            <td style={{ padding: "10px 12px", textAlign: "center", color: "#dc2626" }}>
+                                              {voice.non_qualified_transferred_calls?.toLocaleString()}
+                                              <span style={{ fontSize: "11px", color: "#6b7280", marginLeft: "4px" }}>
+                                                ({voice.non_qualified_transfer_rate}%)
+                                              </span>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
           </>
         )}
       </div>
@@ -533,9 +884,19 @@ const AdminVoiceStats = () => {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            max-height: 0;
+          }
+          to {
+            opacity: 1;
+            max-height: 1000px;
+          }
+        }
       `}</style>
     </div>
   );
 };
 
-export default AdminVoiceStats;
+export default AdminVoiceStats; 
