@@ -17,7 +17,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
-const navigate = useNavigate();
+  const navigate = useNavigate();
 
   // Dynamic stage filter states
   const [stageFilters, setStageFilters] = useState({});
@@ -25,145 +25,145 @@ const navigate = useNavigate();
 
   // Get campaign ID on mount and set today's date
   useEffect(() => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const id = urlParams.get("campaign_id");
-  if (id) {
-    setCampaignId(id);
-    setCurrentView("dashboard");
-    // Set default start date to today
-    const today = new Date().toISOString().split('T')[0];
-    setStartDate(today);
-  } else {
-    // Redirect to admin landing if no campaign_id
-    window.location.href = "/admin-landing";
-  }
-}, []);
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get("campaign_id");
+    if (id) {
+      setCampaignId(id);
+      setCurrentView("dashboard");
+      // Set default start date to today
+      const today = new Date().toISOString().split('T')[0];
+      setStartDate(today);
+    } else {
+      // Redirect to admin landing if no campaign_id
+      window.location.href = "/admin-landing";
+    }
+  }, []);
 
   // Fetch dashboard data from API
   useEffect(() => {
-  const fetchData = async () => {
-    if (!campaignId || !startDate) return; // Don't fetch without campaign ID and start date
+    const fetchData = async () => {
+      if (!campaignId || !startDate) return; // Don't fetch without campaign ID and start date
 
-    setLoading(true);
-    setError(null);
-    try {
-      const token = localStorage.getItem("access_token");
-      
-      if (!token) {
-        setError("Not authenticated. Please login again.");
-        setTimeout(() => {
-          window.location.href = "/";
-        }, 2000);
-        return;
-      }
+      setLoading(true);
+      setError(null);
+      try {
+        const token = localStorage.getItem("access_token");
 
-      let apiUrl = `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/admin/${campaignId}/dashboard?start_date=${startDate}`;
-      if (endDate) {
-        apiUrl += `&end_date=${endDate}`;
-      }
-      apiUrl += `&page=1&page_size=50`;
-
-      const firstPageRes = await fetch(apiUrl, {
-        headers: {
-          accept: "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (firstPageRes.status === 401 || firstPageRes.status === 403) {
-        localStorage.clear();
-        setTimeout(() => {
-          window.location.href = "/";
-        }, 2000);
-        return;
-      }
-
-      if (!firstPageRes.ok) {
-        let errorMessage = `Failed to fetch dashboard data: ${firstPageRes.status}`;
-        try {
-          const errorData = await firstPageRes.json();
-          errorMessage = errorData.detail || errorData.message || errorMessage;
-        } catch (parseErr) {
-          if (firstPageRes.status >= 500) {
-            errorMessage = 'Server error occurred. Please try again later or contact support if the problem persists.';
-          } else if (firstPageRes.status === 401) {
-            errorMessage = 'Session expired. Please login again.';
-          }
+        if (!token) {
+          setError("Not authenticated. Please login again.");
+          setTimeout(() => {
+            window.location.href = "/";
+          }, 2000);
+          return;
         }
-        throw new Error(errorMessage);
-      }
 
-      const firstPageData = await firstPageRes.json();
-      const totalPages = firstPageData.pagination?.total_pages || 1;
-
-      if (totalPages === 1) {
-        processAndSetData(firstPageData);
-        setLoading(false);
-        return;
-      }
-
-      const pagePromises = [];
-      for (let page = 2; page <= totalPages; page++) {
-        let pageUrl = `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/admin/${campaignId}/dashboard?start_date=${startDate}`;
+        let apiUrl = `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/admin/${campaignId}/dashboard?start_date=${startDate}`;
         if (endDate) {
-          pageUrl += `&end_date=${endDate}`;
+          apiUrl += `&end_date=${endDate}`;
         }
-        pageUrl += `&page=${page}&page_size=50`;
+        apiUrl += `&page=1&page_size=50`;
 
-        pagePromises.push(
-          fetch(pageUrl, {
-            headers: {
-              accept: "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          }).then((res) => res.json())
-        );
+        const firstPageRes = await fetch(apiUrl, {
+          headers: {
+            accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (firstPageRes.status === 401 || firstPageRes.status === 403) {
+          localStorage.clear();
+          setTimeout(() => {
+            window.location.href = "/";
+          }, 2000);
+          return;
+        }
+
+        if (!firstPageRes.ok) {
+          let errorMessage = `Failed to fetch dashboard data: ${firstPageRes.status}`;
+          try {
+            const errorData = await firstPageRes.json();
+            errorMessage = errorData.detail || errorData.message || errorMessage;
+          } catch (parseErr) {
+            if (firstPageRes.status >= 500) {
+              errorMessage = 'Server error occurred. Please try again later or contact support if the problem persists.';
+            } else if (firstPageRes.status === 401) {
+              errorMessage = 'Session expired. Please login again.';
+            }
+          }
+          throw new Error(errorMessage);
+        }
+
+        const firstPageData = await firstPageRes.json();
+        const totalPages = firstPageData.pagination?.total_pages || 1;
+
+        if (totalPages === 1) {
+          processAndSetData(firstPageData);
+          setLoading(false);
+          return;
+        }
+
+        const pagePromises = [];
+        for (let page = 2; page <= totalPages; page++) {
+          let pageUrl = `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/admin/${campaignId}/dashboard?start_date=${startDate}`;
+          if (endDate) {
+            pageUrl += `&end_date=${endDate}`;
+          }
+          pageUrl += `&page=${page}&page_size=50`;
+
+          pagePromises.push(
+            fetch(pageUrl, {
+              headers: {
+                accept: "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+            }).then((res) => res.json())
+          );
+        }
+
+        const additionalPages = await Promise.all(pagePromises);
+        const allCalls = [
+          ...firstPageData.calls,
+          ...additionalPages.flatMap((pageData) => pageData.calls || []),
+        ];
+
+        const combinedData = {
+          ...firstPageData,
+          calls: allCalls,
+          pagination: {
+            ...firstPageData.pagination,
+            total_records: allCalls.length,
+            current_page: 1,
+            total_pages: 1,
+          },
+        };
+
+        processAndSetData(combinedData);
+        setLoading(false);
+      } catch (err) {
+        console.error("Fetch error:", err);
+
+        // Handle network errors (CORS, connection issues, etc.)
+        if (err.name === 'TypeError' && (err.message.includes('NetworkError') || err.message.includes('fetch'))) {
+          setError('Unable to connect to the server. This may be due to network issues or server configuration. Please try again later.');
+        } else {
+          setError(err.message);
+        }
+
+        setLoading(false);
+
+        if (err.message.includes("authentication") || err.message.includes("login")) {
+          setTimeout(() => {
+            window.location.href = "/";
+          }, 2000);
+        }
       }
+    };
 
-      const additionalPages = await Promise.all(pagePromises);
-      const allCalls = [
-        ...firstPageData.calls,
-        ...additionalPages.flatMap((pageData) => pageData.calls || []),
-      ];
-
-      const combinedData = {
-        ...firstPageData,
-        calls: allCalls,
-        pagination: {
-          ...firstPageData.pagination,
-          total_records: allCalls.length,
-          current_page: 1,
-          total_pages: 1,
-        },
-      };
-
-      processAndSetData(combinedData);
-      setLoading(false);
-    } catch (err) {
-      console.error("Fetch error:", err);
-      
-      // Handle network errors (CORS, connection issues, etc.)
-      if (err.name === 'TypeError' && (err.message.includes('NetworkError') || err.message.includes('fetch'))) {
-        setError('Unable to connect to the server. This may be due to network issues or server configuration. Please try again later.');
-      } else {
-        setError(err.message);
-      }
-      
-      setLoading(false);
-      
-      if (err.message.includes("authentication") || err.message.includes("login")) {
-        setTimeout(() => {
-          window.location.href = "/";
-        }, 2000);
-      }
+    // Only fetch if fetchTrigger > 0 (meaning Apply Filters was clicked)
+    if (fetchTrigger > 0) {
+      fetchData();
     }
-  };
-
-  // Only fetch if fetchTrigger > 0 (meaning Apply Filters was clicked)
-  if (fetchTrigger > 0) {
-    fetchData();
-  }
-}, [campaignId, fetchTrigger, startDate, endDate]);
+  }, [campaignId, fetchTrigger, startDate, endDate]);
 
   const processAndSetData = (data) => {
     const stages = new Set();
@@ -172,7 +172,7 @@ const navigate = useNavigate();
         stages.add(stage.stage);
       });
     });
-    
+
     const stagesArray = Array.from(stages).sort((a, b) => a - b);
     setAvailableStages(stagesArray);
     setDashboardData(data);
@@ -186,10 +186,10 @@ const navigate = useNavigate();
 
   const getStageCategories = (stageNumber) => {
     if (!dashboardData?.calls) return [];
-    
+
     const categoryCounts = {};
     let totalForStage = 0;
-    
+
     dashboardData.calls.forEach(call => {
       const stageData = call.stages?.find(s => s.stage === stageNumber);
       if (stageData && stageData.category) {
@@ -197,7 +197,7 @@ const navigate = useNavigate();
         totalForStage++;
       }
     });
-    
+
     return Object.keys(categoryCounts).sort().map(cat => ({
       name: cat,
       count: categoryCounts[cat],
@@ -207,7 +207,7 @@ const navigate = useNavigate();
 
   const getCategoryColor = (category) => {
     if (!dashboardData?.all_categories) return "#6c757d";
-    
+
     const cat = dashboardData.all_categories.find(
       (c) => c.name === category || c.original_name === category
     );
@@ -219,12 +219,12 @@ const navigate = useNavigate();
       if (searchText) {
         const searchLower = searchText.toLowerCase();
         const phoneMatch = record.number?.toLowerCase().includes(searchLower);
-        const stageMatches = record.stages?.some(stage => 
+        const stageMatches = record.stages?.some(stage =>
           stage.category?.toLowerCase().includes(searchLower) ||
           stage.voice?.toLowerCase().includes(searchLower) ||
           stage.transcription?.toLowerCase().includes(searchLower)
         );
-        
+
         if (!phoneMatch && !stageMatches) {
           return false;
         }
@@ -233,7 +233,7 @@ const navigate = useNavigate();
       for (let stageNum of availableStages) {
         const filterKey = `stage${stageNum}`;
         const selectedCategories = stageFilters[filterKey] || [];
-        
+
         if (selectedCategories.length > 0) {
           const stageData = record.stages?.find(s => s.stage === stageNum);
           if (!stageData || !selectedCategories.includes(stageData.category)) {
@@ -288,10 +288,10 @@ const navigate = useNavigate();
     }
   };
   const handleLogout = () => {
-  localStorage.clear();
-  sessionStorage.clear();
-  navigate("/");
-};
+    localStorage.clear();
+    sessionStorage.clear();
+    navigate("/");
+  };
 
 
   const handleReset = () => {
@@ -301,7 +301,7 @@ const navigate = useNavigate();
     setStartTime("");
     setEndDate("");
     setEndTime("");
-    
+
     const resetFilters = {};
     availableStages.forEach(stageNum => {
       resetFilters[`stage${stageNum}`] = [];
@@ -323,17 +323,17 @@ const navigate = useNavigate();
   };
 
   const handleApplyFilters = () => {
-  setCurrentPage(1);
-  setFetchTrigger((prev) => prev + 1); // Trigger data fetch
-};
+    setCurrentPage(1);
+    setFetchTrigger((prev) => prev + 1); // Trigger data fetch
+  };
 
   // Calculate filtered percentage
   const calculateFilteredPercentage = () => {
     if (!dashboardData?.calls || dashboardData.calls.length === 0) return 0;
-    
+
     const totalCalls = dashboardData.calls.length;
     const filteredCount = filteredCallRecords.length;
-    
+
     return totalCalls > 0 ? Math.round((filteredCount / totalCalls) * 100) : 0;
   };
 
@@ -347,10 +347,10 @@ const navigate = useNavigate();
 
   if (error) {
     return (
-      <div style={{ 
-        padding: '40px', 
-        maxWidth: '600px', 
-        margin: '0 auto', 
+      <div style={{
+        padding: '40px',
+        maxWidth: '600px',
+        margin: '0 auto',
         textAlign: 'center',
         fontFamily: 'Arial, sans-serif'
       }}>
@@ -431,32 +431,93 @@ const navigate = useNavigate();
 
   return (
     <div style={{ margin: 0, padding: 0, fontFamily: "Arial, sans-serif", backgroundColor: "#f5f5f5", minHeight: "100vh", zoom: "0.8" }}>
-      {/* Header */}
-      <header className="dashboard-header">
-  <div className="header-content">
-    <div className="header-left">
-      <h1><i className="bi bi-speedometer2"></i> Onboarding</h1>
-      <p>Manage AI bot integration requests</p>
-    </div>
-    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-      <button className="logout-btn" onClick={() => navigate('/integration-form')}>
-        <i className="bi bi-file-earmark-plus"></i>
-        Add Client
-      </button>
-      <button className="logout-btn" onClick={handleLogout}>
-        <i className="bi bi-box-arrow-right"></i>
-        Client Management
-      </button>
-       <button 
-        className="logout-btn" 
-        onClick={() => navigate(`/recordings?campaign_id=${campaignId}`)}
+      <header
+        style={{
+          backgroundColor: "white",
+          borderBottom: "1px solid #e5e7eb",
+          padding: "20px 0",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+          marginBottom: "24px",
+        }}
       >
-        <i className="bi bi-mic-fill"></i>
-        Recordings
-      </button>
-    </div>
-  </div>
-</header>
+        <div
+          style={{
+            maxWidth: "1800px",
+            margin: "0 auto",
+            padding: "0 32px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
+        >
+          {/* Left Side: Title and Subtitle */}
+          <div>
+            <h1
+              style={{
+                margin: "0 0 4px 0",
+                fontSize: "28px",
+                fontWeight: "700",
+                color: "#111827",
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+              }}
+            >
+              <i className="bi bi-speedometer2" style={{ color: "#4f46e5" }}></i> Onboarding
+            </h1>
+            <p style={{ margin: 0, color: "#6b7280", fontSize: "14px", fontWeight: "500" }}>
+              Manage AI bot integration requests
+            </p>
+          </div>
+
+          {/* Right Side: Buttons */}
+          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+            <button
+              onClick={handleLogout}
+              style={{
+                padding: "10px 20px",
+                backgroundColor: "#ef4444", // Red (Client Management / Logout)
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "14px",
+                fontWeight: "600",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                transition: "background-color 0.2s"
+              }}
+            >
+              <i className="bi bi-box-arrow-right"></i>
+              Client Management
+            </button>
+
+            <button
+              onClick={() => navigate(`/recordings?campaign_id=${campaignId}`)}
+              style={{
+                padding: "10px 20px",
+                backgroundColor: "#db2777", // Pink/Rose (Recordings)
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "14px",
+                fontWeight: "600",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                transition: "background-color 0.2s"
+              }}
+            >
+              <i className="bi bi-mic-fill"></i>
+              Recordings
+            </button>
+          </div>
+        </div>
+      </header>
 
       <div className="main-container" style={{ maxWidth: "1800px", margin: "0 auto", padding: "24px 32px" }}>
         {/* Search & Filter Section */}
@@ -523,7 +584,7 @@ const navigate = useNavigate();
               {availableStages.map(stageNum => {
                 const categories = getStageCategories(stageNum);
                 const filterKey = `stage${stageNum}`;
-                
+
                 return (
                   <div key={stageNum} className="filter-box" style={{ border: "1px solid #e5e5e5", borderRadius: "8px", padding: "16px", backgroundColor: "#fafafa" }}>
                     <div className="filter-title" style={{ fontSize: "14px", fontWeight: 600, marginBottom: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
@@ -562,30 +623,30 @@ const navigate = useNavigate();
                 <i className="bi bi-arrow-clockwise"></i> Reset
               </button>
             </div>
-            
+
             {/* Filtered Results Percentage */}
             <div className="filter-results" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <span style={{ fontSize: "13px", color: "#666", fontWeight: 500 }}>
                 Filtered Results:
               </span>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <div className="percentage-badge" style={{ 
-                  backgroundColor: "#e3f2fd", 
-                  color: "#1976d2", 
-                  padding: "6px 12px", 
-                  borderRadius: "6px", 
-                  fontSize: "14px", 
+                <div className="percentage-badge" style={{
+                  backgroundColor: "#e3f2fd",
+                  color: "#1976d2",
+                  padding: "6px 12px",
+                  borderRadius: "6px",
+                  fontSize: "14px",
                   fontWeight: 600,
                   border: "1px solid #90caf9"
                 }}>
                   {filteredCallRecords.length} calls
                 </div>
-                <div className="percentage-badge" style={{ 
-                  backgroundColor: "#d32f2f", 
-                  color: "white", 
-                  padding: "6px 12px", 
-                  borderRadius: "6px", 
-                  fontSize: "14px", 
+                <div className="percentage-badge" style={{
+                  backgroundColor: "#d32f2f",
+                  color: "white",
+                  padding: "6px 12px",
+                  borderRadius: "6px",
+                  fontSize: "14px",
                   fontWeight: 600,
                   minWidth: "60px",
                   textAlign: "center"
@@ -631,7 +692,7 @@ const navigate = useNavigate();
               onChange={(e) => setSearchText(e.target.value)}
             />
           </div>
-          
+
           <div className="table-container" style={{ overflowX: "auto" }}>
             <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
               <thead>
@@ -680,10 +741,10 @@ const navigate = useNavigate();
                       <td style={{ padding: "12px", color: "#666" }}>
                         {record.stages?.[0]?.voice || "-"}
                       </td>
-                      
+
                       {availableStages.map(stageNum => {
                         const stageData = record.stages?.find(s => s.stage === stageNum);
-                        
+
                         if (stageData) {
                           return (
                             <React.Fragment key={stageNum}>
@@ -714,7 +775,7 @@ const navigate = useNavigate();
                           );
                         }
                       })}
-                      
+
                       <td style={{ padding: "12px", color: "#666" }}>
                         {record.first_timestamp}
                       </td>
@@ -789,7 +850,7 @@ const navigate = useNavigate();
         rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
       />
-      
+
       <style>{`
         /* Mobile Responsive Styles */
         @media (max-width: 768px) {

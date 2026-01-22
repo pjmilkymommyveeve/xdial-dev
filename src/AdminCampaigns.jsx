@@ -94,9 +94,9 @@ const AdminCampaigns = () => {
     let matchesSelectedFilters = true;
     if (selectedFilters.length > 0) {
       matchesSelectedFilters = selectedFilters.every((filter) => {
-        if (filter === "archived" || filter === "disabled" || 
-            filter === "enabled" || filter === "not-approved" || 
-            filter === "testing") {
+        if (filter === "archived" || filter === "disabled" ||
+          filter === "enabled" || filter === "not-approved" ||
+          filter === "testing") {
           return campaign.current_status?.toLowerCase() === filter.replace("-", " ");
         } else if (filter === "active") {
           return campaign.is_active === true;
@@ -769,8 +769,8 @@ const AdminCampaigns = () => {
                               (e.currentTarget.style.backgroundColor = "#f3f4f6")
                             }
                             onMouseOut={(e) =>
-                              (e.currentTarget.style.backgroundColor =
-                                idx % 2 === 0 ? "#ffffff" : "#f9fafb")
+                            (e.currentTarget.style.backgroundColor =
+                              idx % 2 === 0 ? "#ffffff" : "#f9fafb")
                             }
                           >
                             <td
@@ -901,10 +901,10 @@ const AdminCampaigns = () => {
                             >
                               {campaign.end_date
                                 ? new Date(campaign.end_date).toLocaleDateString("en-US", {
-                                    year: "numeric",
-                                    month: "short",
-                                    day: "numeric",
-                                  })
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                })
                                 : "-"}
                             </td>
                             <td
@@ -1096,7 +1096,7 @@ const AdminCampaigns = () => {
                                               style={{
                                                 borderBottom:
                                                   gidx <
-                                                  campaign.server_extension_groups.length - 1
+                                                    campaign.server_extension_groups.length - 1
                                                     ? "1px solid #e5e7eb"
                                                     : "none",
                                               }}
