@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-
 const AdminDashboard = () => {
   const [currentView, setCurrentView] = useState("dashboard");
   const [searchText, setSearchText] = useState("");
@@ -10,8 +9,8 @@ const AdminDashboard = () => {
   const [endDate, setEndDate] = useState("");
   const [endTime, setEndTime] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortColumn, setSortColumn] = useState("id");
-  const [sortDirection, setSortDirection] = useState("asc");
+  const [sortColumn, setSortColumn] = useState("timestamp"); // Default sort by timestamp
+  const [sortDirection, setSortDirection] = useState("desc");
   const [campaignId, setCampaignId] = useState(null);
   const [fetchTrigger, setFetchTrigger] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -31,7 +30,12 @@ const AdminDashboard = () => {
       setCampaignId(id);
       setCurrentView("dashboard");
       // Set default start date to today
-      const today = new Date().toISOString().split('T')[0];
+      // Set default start date to today (Local Time)
+      const date = new Date();
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const today = `${year}-${month}-${day}`;
       setStartDate(today);
     } else {
       // Redirect to admin landing if no campaign_id
@@ -40,9 +44,14 @@ const AdminDashboard = () => {
   }, []);
 
   // Fetch dashboard data from API
+  // Fetch dashboard data from API
   useEffect(() => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
     const fetchData = async () => {
-      if (!campaignId || !startDate) return; // Don't fetch without campaign ID and start date
+      // Allow fetching even if startDate is empty
+      if (!campaignId) return;
 
       setLoading(true);
       setError(null);
@@ -57,20 +66,47 @@ const AdminDashboard = () => {
           return;
         }
 
-        let apiUrl = `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/admin/${campaignId}/dashboard?start_date=${startDate}`;
-        if (endDate) {
-          apiUrl += `&end_date=${endDate}`;
-        }
-        apiUrl += `&page=1&page_size=50`;
+        // Construct Stage Filters JSON
+        const stageFiltersParam = Object.entries(stageFilters).reduce((acc, [key, categories]) => {
+          if (categories && categories.length > 0) {
+            const stageNum = parseInt(key.replace("stage", ""), 10);
+            if (!isNaN(stageNum)) {
+              acc.push({ stage: stageNum, categories: categories });
+            }
+          }
+          return acc;
+        }, []);
 
-        const firstPageRes = await fetch(apiUrl, {
+        let apiUrl = `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/admin/${campaignId}/dashboard?`;
+
+        // Use URLSearchParams for cleaner URL construction
+        const params = new URLSearchParams();
+        if (startDate) params.append('start_date', startDate);
+        if (endDate) params.append('end_date', endDate);
+        if (startTime) params.append('start_time', startTime);
+        if (endTime) params.append('end_time', endTime);
+        if (searchText) params.append('search', searchText);
+        params.append('page', currentPage.toString());
+        params.append('page_size', '50');
+        params.append('sort_order', sortDirection);
+
+        if (stageFiltersParam.length > 0) {
+          params.append('stage_filters', JSON.stringify(stageFiltersParam));
+        }
+
+        const finalUrl = apiUrl + params.toString();
+        // Decode only for display logging if needed, but fetch works fine with encoded
+        console.log("Fetching Dashboard Data URL:", finalUrl);
+
+        const res = await fetch(finalUrl, {
           headers: {
             accept: "application/json",
             Authorization: `Bearer ${token}`,
           },
+          signal: signal
         });
 
-        if (firstPageRes.status === 401 || firstPageRes.status === 403) {
+        if (res.status === 401 || res.status === 403) {
           localStorage.clear();
           setTimeout(() => {
             window.location.href = "/";
@@ -78,78 +114,45 @@ const AdminDashboard = () => {
           return;
         }
 
-        if (!firstPageRes.ok) {
-          let errorMessage = `Failed to fetch dashboard data: ${firstPageRes.status}`;
+        if (!res.ok) {
+          let errorMessage = `Failed to fetch dashboard data: ${res.status}`;
           try {
-            const errorData = await firstPageRes.json();
+            const errorData = await res.json();
             errorMessage = errorData.detail || errorData.message || errorMessage;
           } catch (parseErr) {
-            if (firstPageRes.status >= 500) {
+            if (res.status >= 500) {
               errorMessage = 'Server error occurred. Please try again later or contact support if the problem persists.';
-            } else if (firstPageRes.status === 401) {
+            } else if (res.status === 401) {
               errorMessage = 'Session expired. Please login again.';
             }
           }
           throw new Error(errorMessage);
         }
 
-        const firstPageData = await firstPageRes.json();
-        const totalPages = firstPageData.pagination?.total_pages || 1;
+        const data = await res.json();
+        // Log data for debugging "inconsistent data" issues
+        console.log("Dashboard Data Response:", data);
 
-        if (totalPages === 1) {
-          processAndSetData(firstPageData);
+        if (!signal.aborted) {
+          processAndSetData(data);
           setLoading(false);
+        }
+
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          console.log('Fetch aborted');
           return;
         }
-
-        const pagePromises = [];
-        for (let page = 2; page <= totalPages; page++) {
-          let pageUrl = `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/admin/${campaignId}/dashboard?start_date=${startDate}`;
-          if (endDate) {
-            pageUrl += `&end_date=${endDate}`;
-          }
-          pageUrl += `&page=${page}&page_size=50`;
-
-          pagePromises.push(
-            fetch(pageUrl, {
-              headers: {
-                accept: "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-            }).then((res) => res.json())
-          );
-        }
-
-        const additionalPages = await Promise.all(pagePromises);
-        const allCalls = [
-          ...firstPageData.calls,
-          ...additionalPages.flatMap((pageData) => pageData.calls || []),
-        ];
-
-        const combinedData = {
-          ...firstPageData,
-          calls: allCalls,
-          pagination: {
-            ...firstPageData.pagination,
-            total_records: allCalls.length,
-            current_page: 1,
-            total_pages: 1,
-          },
-        };
-
-        processAndSetData(combinedData);
-        setLoading(false);
-      } catch (err) {
         console.error("Fetch error:", err);
-
-        // Handle network errors (CORS, connection issues, etc.)
         if (err.name === 'TypeError' && (err.message.includes('NetworkError') || err.message.includes('fetch'))) {
           setError('Unable to connect to the server. This may be due to network issues or server configuration. Please try again later.');
         } else {
           setError(err.message);
         }
 
-        setLoading(false);
+        if (!signal.aborted) {
+          setLoading(false);
+        }
 
         if (err.message.includes("authentication") || err.message.includes("login")) {
           setTimeout(() => {
@@ -159,154 +162,89 @@ const AdminDashboard = () => {
       }
     };
 
-    // Only fetch if fetchTrigger > 0 (meaning Apply Filters was clicked)
-    if (fetchTrigger > 0) {
-      fetchData();
-    }
-  }, [campaignId, fetchTrigger, startDate, endDate]);
+    fetchData();
+
+    return () => {
+      controller.abort();
+    };
+  }, [campaignId, fetchTrigger, currentPage, sortDirection]);
 
   const processAndSetData = (data) => {
-    const stages = new Set();
-    data.calls?.forEach(call => {
-      call.stages?.forEach(stage => {
-        stages.add(stage.stage);
-      });
-    });
+    // Determine available stages from the current page of calls
+    // We want columns 0 to N where N is the max stage found.
+    // If no calls, we can't really guess, so empty.
 
-    const stagesArray = Array.from(stages).sort((a, b) => a - b);
+    let maxStage = -1;
+    if (data.calls && data.calls.length > 0) {
+      data.calls.forEach(call => {
+        // Only consider actual stage data present in the response
+        if (call.stages) {
+          call.stages.forEach(s => {
+            if (s.stage !== undefined && s.stage > maxStage) {
+              maxStage = s.stage;
+            }
+          });
+        }
+      });
+    }
+
+    // If we have existing filters for higher stages, we should probably keep showing them
+    // so the user can uncheck them.
+    const filteredStages = Object.keys(stageFilters)
+      .map(k => parseInt(k.replace('stage', ''), 10))
+      .filter(n => !isNaN(n));
+
+    if (filteredStages.length > 0) {
+      const maxFiltered = Math.max(...filteredStages);
+      if (maxFiltered > maxStage) maxStage = maxFiltered;
+    }
+
+    const stagesArray = [];
+    if (maxStage >= 0) {
+      for (let i = 0; i <= maxStage; i++) {
+        stagesArray.push(i);
+      }
+    }
+
     setAvailableStages(stagesArray);
     setDashboardData(data);
-
-    const initialFilters = {};
-    stagesArray.forEach(stageNum => {
-      initialFilters[`stage${stageNum}`] = [];
-    });
-    setStageFilters(initialFilters);
-  };
-
-  const getStageCategories = (stageNumber) => {
-    if (!dashboardData?.calls) return [];
-
-    const categoryCounts = {};
-    let totalForStage = 0;
-
-    dashboardData.calls.forEach(call => {
-      const stageData = call.stages?.find(s => s.stage === stageNumber);
-      if (stageData && stageData.category) {
-        categoryCounts[stageData.category] = (categoryCounts[stageData.category] || 0) + 1;
-        totalForStage++;
-      }
-    });
-
-    return Object.keys(categoryCounts).sort().map(cat => ({
-      name: cat,
-      count: categoryCounts[cat],
-      percentage: totalForStage > 0 ? Math.round((categoryCounts[cat] / totalForStage) * 100) : 0
-    }));
   };
 
   const getCategoryColor = (category) => {
     if (!dashboardData?.all_categories) return "#6c757d";
-
     const cat = dashboardData.all_categories.find(
       (c) => c.name === category || c.original_name === category
     );
     return cat?.color || "#6c757d";
   };
 
-  const filteredCallRecords = (dashboardData?.calls || [])
-    .filter((record) => {
-      if (searchText) {
-        const searchLower = searchText.toLowerCase();
-        const phoneMatch = record.number?.toLowerCase().includes(searchLower);
-        const stageMatches = record.stages?.some(stage =>
-          stage.category?.toLowerCase().includes(searchLower) ||
-          stage.voice?.toLowerCase().includes(searchLower) ||
-          stage.transcription?.toLowerCase().includes(searchLower)
-        );
-
-        if (!phoneMatch && !stageMatches) {
-          return false;
-        }
-      }
-
-      for (let stageNum of availableStages) {
-        const filterKey = `stage${stageNum}`;
-        const selectedCategories = stageFilters[filterKey] || [];
-
-        if (selectedCategories.length > 0) {
-          const stageData = record.stages?.find(s => s.stage === stageNum);
-          if (!stageData || !selectedCategories.includes(stageData.category)) {
-            return false;
-          }
-        }
-      }
-
-      return true;
-    })
-    .sort((a, b) => {
-      let aValue, bValue;
-
-      switch (sortColumn) {
-        case "id":
-          aValue = a.id;
-          bValue = b.id;
-          break;
-        case "phone":
-          aValue = a.number?.toLowerCase() || "";
-          bValue = b.number?.toLowerCase() || "";
-          break;
-        case "timestamp":
-          aValue = new Date(a.first_timestamp).getTime();
-          bValue = new Date(b.first_timestamp).getTime();
-          break;
-        default:
-          aValue = a.id;
-          bValue = b.id;
-      }
-
-      let comparison = 0;
-      if (aValue < bValue) comparison = -1;
-      if (aValue > bValue) comparison = 1;
-
-      return sortDirection === "asc" ? comparison : -comparison;
-    });
-
-  const RECORDS_PER_PAGE = 25;
-  const totalFilteredRecords = filteredCallRecords.length;
-  const totalPages = Math.ceil(totalFilteredRecords / RECORDS_PER_PAGE);
-  const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
-  const endIndex = startIndex + RECORDS_PER_PAGE;
-  const paginatedRecords = filteredCallRecords.slice(startIndex, endIndex);
-
   const handleSort = (column) => {
-    if (sortColumn === column) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortColumn(column);
-      setSortDirection("asc");
+    // API only supports timestamp sorting via 'sort_order'
+    if (column === "timestamp") {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+      setSortColumn("timestamp");
     }
+    // For other columns, we can't sort server-side per requirements (only sort_order defined for timestamp)
   };
+
   const handleLogout = () => {
     localStorage.clear();
     sessionStorage.clear();
     navigate("/");
   };
 
-
   const handleReset = () => {
     setSearchText("");
-    const today = new Date().toISOString().split('T')[0];
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const today = `${year}-${month}-${day}`;
     setStartDate(today);
     setStartTime("");
     setEndDate("");
     setEndTime("");
-
-    const resetFilters = {};
-    availableStages.forEach(stageNum => {
-      resetFilters[`stage${stageNum}`] = [];
-    });
-    setStageFilters(resetFilters);
+    setStageFilters({});
     setCurrentPage(1);
     setFetchTrigger((prev) => prev + 1);
   };
@@ -319,111 +257,48 @@ const AdminDashboard = () => {
         ? prev[filterKey].filter(c => c !== category)
         : [...(prev[filterKey] || []), category]
     }));
-    setCurrentPage(1);
+    // Note: We do NOT trigger fetch immediately on checkbox toggle to avoid spamming.
+    // User must click "Apply Filters".
   };
 
   const handleApplyFilters = () => {
     setCurrentPage(1);
-    setFetchTrigger((prev) => prev + 1); // Trigger data fetch
+    setFetchTrigger((prev) => prev + 1);
   };
 
-  // Calculate filtered percentage
-  const calculateFilteredPercentage = () => {
-    if (!dashboardData?.calls || dashboardData.calls.length === 0) return 0;
-
-    const totalCalls = dashboardData.calls.length;
-    const filteredCount = filteredCallRecords.length;
-
-    return totalCalls > 0 ? Math.round((filteredCount / totalCalls) * 100) : 0;
+  // Helper to render sidebar filter options
+  // Use all_categories from API to populate options
+  const getAllCategories = () => {
+    return dashboardData?.all_categories || [];
   };
 
-  if (loading && fetchTrigger > 0) {
+  // No client-side filtered count
+  const totalRecords = dashboardData?.pagination?.total_records || 0;
+  // If we want to show "Showing X of Y", use pagination data
+  const pageSize = 50;
+  const startRecord = (currentPage - 1) * pageSize + 1;
+  const endRecord = Math.min(currentPage * pageSize, totalRecords);
+
+  if (loading && !dashboardData && fetchTrigger > 0) {
+    // Only show full loading if we have NO data yet and are fetching
     return (
       <div style={{ padding: 40, textAlign: "center", fontFamily: "Arial, sans-serif" }}>
         Loading dashboard...
       </div>
     );
   }
+  // Allow loading indicator overlay or just spinner? 
+  // For now, keep simple.
 
-  if (error) {
+  if (error && !dashboardData) {
     return (
-      <div style={{
-        padding: '40px',
-        maxWidth: '600px',
-        margin: '0 auto',
-        textAlign: 'center',
-        fontFamily: 'Arial, sans-serif'
-      }}>
-        <div style={{
-          backgroundColor: '#FEE2E2',
-          border: '1px solid #FCA5A5',
-          borderRadius: '12px',
-          padding: '24px',
-          marginTop: '60px'
-        }}>
-          <h2 style={{
-            color: '#DC2626',
-            fontSize: '20px',
-            fontWeight: '600',
-            marginBottom: '12px'
-          }}>
-            Unable to Load Dashboard
-          </h2>
-          <p style={{
-            color: '#991B1B',
-            fontSize: '14px',
-            lineHeight: '1.5',
-            marginBottom: '20px'
-          }}>
-            {error}
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            style={{
-              backgroundColor: '#DC2626',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '10px 20px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              marginRight: '10px'
-            }}
-          >
-            Try Again
-          </button>
-          <button
-            onClick={() => window.location.href = '/admin-landing'}
-            style={{
-              backgroundColor: '#6B7280',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '10px 20px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              marginRight: '10px'
-            }}
-          >
-            Go Back
-          </button>
-          <button
-            onClick={() => window.location.href = '/'}
-            style={{
-              backgroundColor: '#4F46E5',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '10px 20px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer'
-            }}
-          >
-            Login Again
-          </button>
+      <div style={{ padding: '40px', maxWidth: '600px', margin: '0 auto', textAlign: 'center', fontFamily: 'Arial, sans-serif' }}>
+        <div style={{ backgroundColor: '#FEE2E2', border: '1px solid #FCA5A5', borderRadius: '12px', padding: '24px', marginTop: '60px' }}>
+          <h2 style={{ color: '#DC2626', fontSize: '20px', fontWeight: '600', marginBottom: '12px' }}>Unable to Load Dashboard</h2>
+          <p style={{ color: '#991B1B', fontSize: '14px', lineHeight: '1.5', marginBottom: '20px' }}>{error}</p>
+          <button onClick={() => window.location.reload()} style={{ backgroundColor: '#DC2626', color: 'white', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', marginRight: '10px' }}>Try Again</button>
+          <button onClick={() => window.location.href = '/admin-landing'} style={{ backgroundColor: '#6B7280', color: 'white', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', marginRight: '10px' }}>Go Back</button>
+          <button onClick={() => window.location.href = '/'} style={{ backgroundColor: '#4F46E5', color: 'white', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Login Again</button>
         </div>
       </div>
     );
@@ -465,10 +340,11 @@ const AdminDashboard = () => {
                 gap: "12px",
               }}
             >
-              <i className="bi bi-speedometer2" style={{ color: "#4f46e5" }}></i> Onboarding
+              <i className="bi bi-speedometer2" style={{ color: "#4f46e5" }}></i>
+              {dashboardData?.client_name ? `${dashboardData.client_name} - ` : ""} {dashboardData?.campaign?.name || "Onboarding"}
             </h1>
             <p style={{ margin: 0, color: "#6b7280", fontSize: "14px", fontWeight: "500" }}>
-              Manage AI bot integration requests
+              {dashboardData?.campaign?.model ? `Model: ${dashboardData.campaign.model}` : "Manage AI bot integration requests"}
             </p>
           </div>
 
@@ -478,7 +354,7 @@ const AdminDashboard = () => {
               onClick={handleLogout}
               style={{
                 padding: "10px 20px",
-                backgroundColor: "#ef4444", // Red (Client Management / Logout)
+                backgroundColor: "#ef4444",
                 color: "white",
                 border: "none",
                 borderRadius: "8px",
@@ -499,7 +375,7 @@ const AdminDashboard = () => {
               onClick={() => navigate(`/recordings?campaign_id=${campaignId}`)}
               style={{
                 padding: "10px 20px",
-                backgroundColor: "#db2777", // Pink/Rose (Recordings)
+                backgroundColor: "#db2777",
                 color: "white",
                 border: "none",
                 borderRadius: "8px",
@@ -531,9 +407,10 @@ const AdminDashboard = () => {
           <input
             type="text"
             style={{ width: "100%", padding: "10px 12px", border: "1px solid #ddd", borderRadius: "4px", fontSize: "14px", marginBottom: "20px" }}
-            placeholder="Search by phone number, voice, or category..."
+            placeholder="Search by phone number, voice, or category (Press Apply to search)..."
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleApplyFilters()}
           />
 
           {/* Date and Time Inputs */}
@@ -574,7 +451,6 @@ const AdminDashboard = () => {
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
               />
-
             </div>
           </div>
 
@@ -582,7 +458,7 @@ const AdminDashboard = () => {
           {availableStages.length > 0 && (
             <div className="filter-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "20px", marginBottom: "20px" }}>
               {availableStages.map(stageNum => {
-                const categories = getStageCategories(stageNum);
+                const categories = getAllCategories();
                 const filterKey = `stage${stageNum}`;
 
                 return (
@@ -590,7 +466,7 @@ const AdminDashboard = () => {
                     <div className="filter-title" style={{ fontSize: "14px", fontWeight: 600, marginBottom: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
                       <i className="bi bi-funnel-fill"></i> Stage {stageNum} Categories
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: '200px', overflowY: 'auto' }}>
                       {categories.map(categoryData => (
                         <label key={categoryData.name} className="checkbox-label" style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer" }}>
                           <input
@@ -599,11 +475,12 @@ const AdminDashboard = () => {
                             onChange={() => handleStageFilterToggle(stageNum, categoryData.name)}
                             style={{ cursor: "pointer" }}
                           />
-                          <span style={{ color: getCategoryColor(categoryData.name), fontWeight: 500, flex: 1 }}>
+                          <span style={{ color: categoryData.color, fontWeight: 500, flex: 1 }}>
                             {categoryData.name}
                           </span>
                           <span style={{ fontSize: "12px", color: "#666", fontWeight: 600 }}>
-                            {categoryData.percentage}%
+                            {/* Display global count since we don't have stage-specific counts without fetching all data */}
+                            {/* {categoryData.count} */}
                           </span>
                         </label>
                       ))}
@@ -624,10 +501,10 @@ const AdminDashboard = () => {
               </button>
             </div>
 
-            {/* Filtered Results Percentage */}
+            {/* Total Results */}
             <div className="filter-results" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <span style={{ fontSize: "13px", color: "#666", fontWeight: 500 }}>
-                Filtered Results:
+                Total Results:
               </span>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <div className="percentage-badge" style={{
@@ -639,19 +516,7 @@ const AdminDashboard = () => {
                   fontWeight: 600,
                   border: "1px solid #90caf9"
                 }}>
-                  {filteredCallRecords.length} calls
-                </div>
-                <div className="percentage-badge" style={{
-                  backgroundColor: "#d32f2f",
-                  color: "white",
-                  padding: "6px 12px",
-                  borderRadius: "6px",
-                  fontSize: "14px",
-                  fontWeight: 600,
-                  minWidth: "60px",
-                  textAlign: "center"
-                }}>
-                  {calculateFilteredPercentage()}%
+                  {totalRecords} calls
                 </div>
               </div>
             </div>
@@ -665,42 +530,22 @@ const AdminDashboard = () => {
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
                 <i className="bi bi-telephone-fill" style={{ fontSize: "18px", color: "#666" }}></i>
                 <h2 className="section-title" style={{ margin: 0, fontSize: "16px", fontWeight: 600 }}>
-                  Call Records ({totalFilteredRecords} total)
+                  Call Records
                 </h2>
-                {totalFilteredRecords !== dashboardData?.calls?.length && (
-                  <span className="percentage-badge" style={{
-                    backgroundColor: "#d32f2f",
-                    color: "white",
-                    padding: "4px 10px",
-                    borderRadius: "4px",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    marginLeft: "8px"
-                  }}>
-                    {calculateFilteredPercentage()}%
-                  </span>
-                )}
+                {loading && <span style={{ fontSize: '12px', color: '#666', marginLeft: '10px' }}>(Updating...)</span>}
               </div>
               <p style={{ margin: 0, fontSize: "12px", color: "#999" }}>All times are displayed in US Eastern Time (EST/EDT)</p>
             </div>
-            <input
-              type="text"
-              className="table-search"
-              style={{ width: "300px", padding: "8px 12px", border: "1px solid #ddd", borderRadius: "4px", fontSize: "13px" }}
-              placeholder="Search calls..."
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-            />
           </div>
 
           <div className="table-container" style={{ overflowX: "auto" }}>
             <table className="data-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
               <thead>
                 <tr style={{ backgroundColor: "#fafafa", borderBottom: "2px solid #e0e0e0" }}>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: 600, cursor: "pointer", minWidth: "60px" }} onClick={() => handleSort("id")}>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: 600, minWidth: "60px" }}>
                     #
                   </th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: 600, cursor: "pointer", minWidth: "130px" }} onClick={() => handleSort("phone")}>
+                  <th style={{ textAlign: "left", padding: "12px", fontWeight: 600, minWidth: "130px" }}>
                     Phone No
                   </th>
                   <th style={{ textAlign: "left", padding: "12px", fontWeight: 600, minWidth: "80px" }}>
@@ -716,20 +561,26 @@ const AdminDashboard = () => {
                       </th>
                     </React.Fragment>
                   ))}
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: 600, cursor: "pointer", minWidth: "160px" }} onClick={() => handleSort("timestamp")}>
+                  <th
+                    style={{ textAlign: "left", padding: "12px", fontWeight: 600, cursor: "pointer", minWidth: "160px", display: 'flex', alignItems: 'center', gap: '4px' }}
+                    onClick={() => handleSort("timestamp")}
+                  >
                     Timestamp (US EST/EDT)
+                    {sortColumn === "timestamp" && (
+                      <i className={`bi bi-caret-${sortDirection === "asc" ? "up" : "down"}-fill`} style={{ fontSize: '10px' }}></i>
+                    )}
                   </th>
                 </tr>
               </thead>
-              <tbody>
-                {paginatedRecords.length === 0 ? (
+              <tbody style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+                {!dashboardData?.calls || dashboardData.calls.length === 0 ? (
                   <tr>
                     <td colSpan={4 + (availableStages.length * 2)} style={{ textAlign: "center", color: "#888", padding: 24 }}>
                       No call records found.
                     </td>
                   </tr>
                 ) : (
-                  paginatedRecords.map((record) => (
+                  dashboardData.calls.map((record) => (
                     <tr
                       key={record.id}
                       style={{ borderBottom: "1px solid #f0f0f0" }}
@@ -789,7 +640,11 @@ const AdminDashboard = () => {
           {/* Pagination */}
           <div className="pagination-container" style={{ marginTop: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div className="pagination-info" style={{ fontSize: "13px", color: "#666" }}>
-              Showing {paginatedRecords.length > 0 ? startIndex + 1 : 0} to {Math.min(endIndex, totalFilteredRecords)} of {totalFilteredRecords} records
+              {totalRecords > 0 ? (
+                <>Showing {startRecord} to {endRecord} of {totalRecords} records</>
+              ) : (
+                "No records found"
+              )}
             </div>
             <div className="pagination-buttons" style={{ display: "flex", gap: "8px" }}>
               <button
@@ -801,6 +656,7 @@ const AdminDashboard = () => {
               </button>
 
               {(() => {
+                const totalPages = dashboardData?.pagination?.total_pages || 1;
                 const pages = [];
                 const maxPagesToShow = 5;
                 let startPage = Math.max(1, currentPage - 2);
@@ -835,9 +691,17 @@ const AdminDashboard = () => {
               })()}
 
               <button
-                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                style={{ padding: "6px 12px", border: "1px solid #ddd", borderRadius: "4px", backgroundColor: "white", cursor: currentPage === totalPages ? "not-allowed" : "pointer", fontSize: "13px", opacity: currentPage === totalPages ? 0.5 : 1 }}
-                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((prev) => Math.min(dashboardData?.pagination?.total_pages || 1, prev + 1))}
+                style={{
+                  padding: "6px 12px",
+                  border: "1px solid #ddd",
+                  borderRadius: "4px",
+                  backgroundColor: "white",
+                  cursor: currentPage === (dashboardData?.pagination?.total_pages || 1) ? "not-allowed" : "pointer",
+                  fontSize: "13px",
+                  opacity: currentPage === (dashboardData?.pagination?.total_pages || 1) ? 0.5 : 1
+                }}
+                disabled={currentPage === (dashboardData?.pagination?.total_pages || 1)}
               >
                 Next
               </button>
