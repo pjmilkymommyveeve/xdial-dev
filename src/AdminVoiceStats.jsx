@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Chart from "chart.js/auto";
 import api from "./api";
@@ -13,6 +13,9 @@ const AdminVoiceStats = () => {
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState("");
   const [expandedCampaignId, setExpandedCampaignId] = useState(null);
+  
+  // Sort state
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   
   // Filter states
   const [clientSearchTerm, setClientSearchTerm] = useState("");
@@ -211,6 +214,75 @@ const AdminVoiceStats = () => {
     
     return clientMatch && campaignMatch && serverMatch;
   }) || [];
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    
+    // Default direction logic
+    // Numeric stats and Time usually start Descending (Highest/Newest first)
+    if (sortConfig.key !== key) {
+        if (['total_calls', 'transferred', 'transfer_rate', 'client'].includes(key)) {
+            direction = 'desc'; 
+        }
+    } else {
+        // Toggle direction
+        direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+    }
+    
+    setSortConfig({ key, direction });
+  };
+
+  const sortedCampaigns = useMemo(() => {
+    let sortableItems = [...filteredCampaigns];
+    if (sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
+        let aValue, bValue;
+        
+        switch(sortConfig.key) {
+           case 'client':
+             // Sort by time/date proxy (campaign_id is usually chronological)
+             aValue = a.created_at || a.campaign_id;
+             bValue = b.created_at || b.campaign_id;
+             break;
+           case 'campaign':
+             aValue = a.campaign_name?.toLowerCase();
+             bValue = b.campaign_name?.toLowerCase();
+             break;
+           case 'model':
+             aValue = a.model_name?.toLowerCase();
+             bValue = b.model_name?.toLowerCase();
+             break;
+           case 'status':
+             aValue = a.is_active ? 1 : 0;
+             bValue = b.is_active ? 1 : 0;
+             break;
+           case 'total_calls':
+             aValue = a.total_calls || 0;
+             bValue = b.total_calls || 0;
+             break;
+           case 'transferred':
+             aValue = a.transferred_calls || 0;
+             bValue = b.transferred_calls || 0;
+             break;
+           case 'transfer_rate':
+             aValue = parseFloat(a.transfer_rate) || 0;
+             bValue = parseFloat(b.transfer_rate) || 0;
+             break;
+           default:
+             return 0;
+        }
+
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [filteredCampaigns, sortConfig]);
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#f9fafb" }}>
@@ -662,47 +734,117 @@ const AdminVoiceStats = () => {
                             textAlign: "left",
                             fontWeight: "600",
                             color: "#374151"
-                          }}>Campaign</th>
+                          }}>
+                            <div 
+                              onClick={() => handleSort('campaign')}
+                              style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
+                            >
+                              Campaign
+                              {sortConfig.key === 'campaign' && (
+                                <span>{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>
+                              )}
+                            </div>
+                          </th>
                           <th style={{
                             padding: "12px 16px",
                             textAlign: "left",
                             fontWeight: "600",
                             color: "#374151"
-                          }}>Client</th>
+                          }}>
+                            <div 
+                              onClick={() => handleSort('client')}
+                              style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
+                            >
+                              Client
+                              {sortConfig.key === 'client' && (
+                                <span>{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>
+                              )}
+                            </div>
+                          </th>
                           <th style={{
                             padding: "12px 16px",
                             textAlign: "center",
                             fontWeight: "600",
                             color: "#374151"
-                          }}>Model</th>
+                          }}>
+                            <div 
+                              onClick={() => handleSort('model')}
+                              style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", justifyContent: "center" }}
+                            >
+                              Model
+                              {sortConfig.key === 'model' && (
+                                <span>{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>
+                              )}
+                            </div>
+                          </th>
                           <th style={{
                             padding: "12px 16px",
                             textAlign: "center",
                             fontWeight: "600",
                             color: "#374151"
-                          }}>Status</th>
+                          }}>
+                            <div 
+                              onClick={() => handleSort('status')}
+                              style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", justifyContent: "center" }}
+                            >
+                              Status
+                              {sortConfig.key === 'status' && (
+                                <span>{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>
+                              )}
+                            </div>
+                          </th>
                           <th style={{
                             padding: "12px 16px",
                             textAlign: "center",
                             fontWeight: "600",
                             color: "#374151"
-                          }}>Total Calls</th>
+                          }}>
+                            <div 
+                              onClick={() => handleSort('total_calls')}
+                              style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", justifyContent: "center" }}
+                            >
+                              Total Calls
+                              {sortConfig.key === 'total_calls' && (
+                                <span>{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>
+                              )}
+                            </div>
+                          </th>
                           <th style={{
                             padding: "12px 16px",
                             textAlign: "center",
                             fontWeight: "600",
                             color: "#374151"
-                          }}>Transferred</th>
+                          }}>
+                             <div 
+                              onClick={() => handleSort('transferred')}
+                              style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", justifyContent: "center" }}
+                            >
+                              Transferred
+                              {sortConfig.key === 'transferred' && (
+                                <span>{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>
+                              )}
+                            </div>
+                          </th>
                           <th style={{
                             padding: "12px 16px",
                             textAlign: "center",
                             fontWeight: "600",
                             color: "#374151"
-                          }}>Transfer Rate</th>
+                          }}>
+                            <div 
+                              onClick={() => handleSort('transfer_rate')}
+                              style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", justifyContent: "center" }}
+                            >
+                              Transfer Rate
+                              {sortConfig.key === 'transfer_rate' && (
+                                <span>{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>
+                              )}
+                            </div>
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredCampaigns.map((campaign, idx) => (
+                        {sortedCampaigns.map((campaign, idx) => (
                           <React.Fragment key={campaign.campaign_id}>
                             <tr
                               style={{
