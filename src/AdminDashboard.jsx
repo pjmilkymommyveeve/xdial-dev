@@ -272,6 +272,35 @@ const AdminDashboard = () => {
     return dashboardData?.all_categories || [];
   };
 
+  // Get categories for a specific stage with percentage calculations
+  const getStageCategories = (stageNum) => {
+    const allCats = dashboardData?.all_categories || [];
+
+    // Build array of categories that have non-zero counts for this stage
+    const stageCats = [];
+    let totalForStage = 0;
+
+    allCats.forEach(cat => {
+      const stageData = cat.stage_counts?.find(sc => sc.stage === stageNum);
+      const count = stageData?.count || 0;
+      totalForStage += count;
+      if (count > 0) {
+        stageCats.push({
+          name: cat.name,
+          color: cat.color || "#6c757d",
+          count: count,
+          transferred_count: stageData?.transferred_count || 0
+        });
+      }
+    });
+
+    // Calculate percentages
+    return stageCats.map(cat => ({
+      ...cat,
+      percentage: totalForStage > 0 ? Math.round((cat.count / totalForStage) * 100) : 0
+    })).sort((a, b) => b.percentage - a.percentage); // Sort by percentage descending
+  };
+
   // No client-side filtered count
   const totalRecords = dashboardData?.pagination?.total_records || 0;
   // If we want to show "Showing X of Y", use pagination data
@@ -458,29 +487,124 @@ const AdminDashboard = () => {
           {availableStages.length > 0 && (
             <div className="filter-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "20px", marginBottom: "20px" }}>
               {availableStages.map(stageNum => {
-                const categories = getAllCategories();
+                const stageCategories = getStageCategories(stageNum);
                 const filterKey = `stage${stageNum}`;
 
+                if (stageCategories.length === 0) return null;
+
                 return (
-                  <div key={stageNum} className="filter-box" style={{ border: "1px solid #e5e5e5", borderRadius: "8px", padding: "16px", backgroundColor: "#fafafa" }}>
-                    <div className="filter-title" style={{ fontSize: "14px", fontWeight: 600, marginBottom: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
-                      <i className="bi bi-funnel-fill"></i> Stage {stageNum} Categories
+                  <div key={stageNum} className="filter-box" style={{
+                    backgroundColor: "white",
+                    borderRadius: "12px",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                    border: "1px solid #e5e7eb",
+                    overflow: "hidden"
+                  }}>
+                    {/* Card Header */}
+                    <div style={{
+                      padding: "14px 16px",
+                      borderBottom: "1px solid #e5e7eb",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between"
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span style={{
+                          width: "8px",
+                          height: "8px",
+                          backgroundColor: "#3b82f6",
+                          borderRadius: "50%",
+                          display: "inline-block"
+                        }}></span>
+                        <i className="bi bi-funnel" style={{ color: "#6b7280", fontSize: "14px" }}></i>
+                        <span style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}>
+                          Stage {stageNum} Categories
+                        </span>
+                      </div>
+                      <span style={{
+                        fontSize: "12px",
+                        color: "#6b7280",
+                        backgroundColor: "#f3f4f6",
+                        padding: "2px 8px",
+                        borderRadius: "10px"
+                      }}>
+                        {stageCategories.length} items
+                      </span>
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: '200px', overflowY: 'auto' }}>
-                      {categories.map(categoryData => (
-                        <label key={categoryData.name} className="checkbox-label" style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer" }}>
+
+                    {/* Category List */}
+                    <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+                      {stageCategories.map((categoryData, idx) => (
+                        <label
+                          key={categoryData.name}
+                          className="checkbox-label"
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            padding: "10px 16px",
+                            cursor: "pointer",
+                            backgroundColor: idx % 2 === 0 ? "#ffffff" : "#f0f0f0",
+                            borderBottom: idx < stageCategories.length - 1 ? "1px solid #f3f4f6" : "none",
+                            transition: "background-color 0.15s"
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f0f9ff"}
+                          onMouseOut={(e) => e.currentTarget.style.backgroundColor = idx % 2 === 0 ? "#ffffff" : "#f0f0f0"}
+                        >
+                          {/* Checkbox */}
                           <input
                             type="checkbox"
                             checked={stageFilters[filterKey]?.includes(categoryData.name) || false}
                             onChange={() => handleStageFilterToggle(stageNum, categoryData.name)}
-                            style={{ cursor: "pointer" }}
+                            style={{
+                              cursor: "pointer",
+                              width: "16px",
+                              height: "16px",
+                              marginRight: "12px",
+                              accentColor: categoryData.color
+                            }}
                           />
-                          <span style={{ color: categoryData.color, fontWeight: 500, flex: 1 }}>
+
+                          {/* Category Name */}
+                          <span style={{
+                            color: categoryData.color,
+                            fontWeight: 500,
+                            fontSize: "13px",
+                            flex: "0 0 140px",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap"
+                          }}>
                             {categoryData.name}
                           </span>
-                          <span style={{ fontSize: "12px", color: "#666", fontWeight: 600 }}>
-                            {/* Display global count since we don't have stage-specific counts without fetching all data */}
-                            {/* {categoryData.count} */}
+
+                          {/* Progress Bar */}
+                          <div style={{
+                            flex: 1,
+                            height: "4px",
+                            backgroundColor: idx % 2 === 0 ? "#e5e7eb" : "#ffffff",
+                            borderRadius: "2px",
+                            marginLeft: "12px",
+                            marginRight: "12px",
+                            overflow: "hidden"
+                          }}>
+                            <div style={{
+                              width: `${categoryData.percentage}%`,
+                              height: "100%",
+                              backgroundColor: categoryData.color,
+                              borderRadius: "2px",
+                              transition: "width 0.3s ease"
+                            }}></div>
+                          </div>
+
+                          {/* Percentage */}
+                          <span style={{
+                            fontSize: "13px",
+                            color: "#374151",
+                            fontWeight: 600,
+                            minWidth: "40px",
+                            textAlign: "right"
+                          }}>
+                            {categoryData.percentage < 1 ? "<1" : categoryData.percentage}%
                           </span>
                         </label>
                       ))}
@@ -490,6 +614,7 @@ const AdminDashboard = () => {
               })}
             </div>
           )}
+
 
           <div className="filter-actions" style={{ display: "flex", gap: "12px", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", gap: "12px" }}>
