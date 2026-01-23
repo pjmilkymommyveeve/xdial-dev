@@ -14,6 +14,9 @@ const AdminCampaigns = () => {
   const [campaignFilter, setCampaignFilter] = useState("");
   const [selectedFilters, setSelectedFilters] = useState([]);
 
+  // Sorting state
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+
   // Fetch campaign stats on mount
   useEffect(() => {
     const fetchCampaignStats = async () => {
@@ -79,6 +82,14 @@ const AdminCampaigns = () => {
     setSelectedFilters(selectedFilters.filter(f => f !== filterToRemove));
   };
 
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
   // Client-side filtering
   const filteredCampaigns = campaignData?.campaigns?.filter((campaign) => {
     const matchesClient =
@@ -121,6 +132,44 @@ const AdminCampaigns = () => {
 
     return matchesClient && matchesCampaign && matchesSelectedFilters;
   }) || [];
+
+  const sortedCampaigns = React.useMemo(() => {
+    let sortableItems = [...filteredCampaigns];
+    if (sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
+        let aValue = a[sortConfig.key];
+        let bValue = b[sortConfig.key];
+
+        // Special handling for specific columns
+        if (sortConfig.key === 'active_bots') {
+          aValue = a.is_active ? a.bot_count : 0;
+          bValue = b.is_active ? b.bot_count : 0;
+        } else if (sortConfig.key === 'total_bots') {
+          aValue = a.bot_count;
+          bValue = b.bot_count;
+        }
+
+        // Handle null/undefined
+        if (aValue === null || aValue === undefined) aValue = '';
+        if (bValue === null || bValue === undefined) bValue = '';
+
+        // String comparison
+        if (typeof aValue === 'string') {
+          aValue = aValue.toLowerCase();
+          bValue = bValue.toLowerCase();
+        }
+
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [filteredCampaigns, sortConfig]);
 
   const openClientDashboard = (campaignId) => {
     window.open(
@@ -600,7 +649,7 @@ const AdminCampaigns = () => {
                       color: "#111827",
                     }}
                   >
-                    Campaign Details ({filteredCampaigns.length})
+                    Campaign Details ({sortedCampaigns.length})
                   </h2>
                 </div>
                 <div style={{ overflowX: "auto" }}>
@@ -628,104 +677,134 @@ const AdminCampaigns = () => {
                           }}
                         ></th>
                         <th
+                          onClick={() => handleSort('client_campaign_model_id')}
                           style={{
                             padding: "12px 16px",
                             textAlign: "center",
                             fontWeight: "600",
                             color: "#374151",
+                            cursor: "pointer",
+                            userSelect: "none"
                           }}
                         >
-                          ID
+                          ID {sortConfig.key === 'client_campaign_model_id' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                         </th>
                         <th
+                          onClick={() => handleSort('client_name')}
                           style={{
                             padding: "12px 16px",
                             textAlign: "left",
                             fontWeight: "600",
                             color: "#374151",
+                            cursor: "pointer",
+                            userSelect: "none"
                           }}
                         >
-                          Client
+                          Client {sortConfig.key === 'client_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                         </th>
                         <th
+                          onClick={() => handleSort('campaign_name')}
                           style={{
                             padding: "12px 16px",
                             textAlign: "left",
                             fontWeight: "600",
                             color: "#374151",
+                            cursor: "pointer",
+                            userSelect: "none"
                           }}
                         >
-                          Campaign
+                          Campaign {sortConfig.key === 'campaign_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                         </th>
                         <th
+                          onClick={() => handleSort('model_name')}
                           style={{
                             padding: "12px 16px",
                             textAlign: "center",
                             fontWeight: "600",
                             color: "#374151",
+                            cursor: "pointer",
+                            userSelect: "none"
                           }}
                         >
-                          Model
+                          Model {sortConfig.key === 'model_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                         </th>
                         <th
+                          onClick={() => handleSort('current_status')}
                           style={{
                             padding: "12px 16px",
                             textAlign: "center",
                             fontWeight: "600",
                             color: "#374151",
+                            cursor: "pointer",
+                            userSelect: "none"
                           }}
                         >
-                          Status
+                          Status {sortConfig.key === 'current_status' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                         </th>
                         <th
+                          onClick={() => handleSort('is_active')}
                           style={{
                             padding: "12px 16px",
                             textAlign: "center",
                             fontWeight: "600",
                             color: "#374151",
+                            cursor: "pointer",
+                            userSelect: "none"
                           }}
                         >
-                          Active Status
+                          Active Status {sortConfig.key === 'is_active' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                         </th>
                         <th
+                          onClick={() => handleSort('transfer_setting')}
                           style={{
                             padding: "12px 16px",
                             textAlign: "center",
                             fontWeight: "600",
                             color: "#374151",
+                            cursor: "pointer",
+                            userSelect: "none"
                           }}
                         >
-                          Transfer Settings
+                          Transfer Settings {sortConfig.key === 'transfer_setting' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                         </th>
                         <th
+                          onClick={() => handleSort('end_date')}
                           style={{
                             padding: "12px 16px",
                             textAlign: "center",
                             fontWeight: "600",
                             color: "#374151",
+                            cursor: "pointer",
+                            userSelect: "none"
                           }}
                         >
-                          End Date
+                          End Date {sortConfig.key === 'end_date' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                         </th>
                         <th
+                          onClick={() => handleSort('active_bots')}
                           style={{
                             padding: "12px 16px",
                             textAlign: "center",
                             fontWeight: "600",
                             color: "#374151",
+                            cursor: "pointer",
+                            userSelect: "none"
                           }}
                         >
-                          Active Bots
+                          Active Bots {sortConfig.key === 'active_bots' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                         </th>
                         <th
+                          onClick={() => handleSort('total_bots')}
                           style={{
                             padding: "12px 16px",
                             textAlign: "center",
                             fontWeight: "600",
                             color: "#374151",
+                            cursor: "pointer",
+                            userSelect: "none"
                           }}
                         >
-                          Total Bots
+                          Total Bots {sortConfig.key === 'total_bots' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                         </th>
                         <th
                           style={{
@@ -750,7 +829,7 @@ const AdminCampaigns = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredCampaigns.map((campaign, idx) => (
+                      {sortedCampaigns.map((campaign, idx) => (
                         <React.Fragment key={campaign.client_campaign_model_id}>
                           <tr
                             style={{
