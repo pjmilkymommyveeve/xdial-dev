@@ -79,9 +79,9 @@ const ServerTable = React.memo(
           const isCritical = status === "critical";
           const statusColor = getStatusColor(status);
           const threshold = thresholds[agent.ip] || {
-            cpu: 80,
-            disk: 90,
-            load: 5,
+            cpu: 70,
+            disk: 60,
+            load: 4,
           };
           const primaryDisk = agent.disk[0] || {
             mount: "/",
