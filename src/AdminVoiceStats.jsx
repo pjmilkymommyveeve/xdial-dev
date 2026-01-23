@@ -992,9 +992,14 @@ const AdminVoiceStats = () => {
                                   ▶
                                 </span>
                               </td>
-                              <td style={{ padding: "12px 16px", color: "#6b7280" }}>
+                              <td style={{
+                                padding: "12px 16px",
+                                fontWeight: "600",
+                                color: "#111827"
+                              }}>
                                 {campaign.client_name}
                               </td>
+
                               <td style={{ padding: "12px 16px" }}>
                                 <div style={{ fontWeight: "600", color: "#111827" }}>
                                   {campaign.campaign_name}
