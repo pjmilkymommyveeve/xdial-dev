@@ -301,6 +301,24 @@ const AdminDashboard = () => {
     })).sort((a, b) => b.percentage - a.percentage); // Sort by percentage descending
   };
 
+  // Helper to convert hex to rgba for badge background
+  const hexToRgba = (hex, alpha) => {
+    let r = 0, g = 0, b = 0;
+    // Handle 3 digit hex
+    if (hex.length === 4) {
+      r = parseInt("0x" + hex[1] + hex[1]);
+      g = parseInt("0x" + hex[2] + hex[2]);
+      b = parseInt("0x" + hex[3] + hex[3]);
+    }
+    // Handle 6 digit hex
+    else if (hex.length === 7) {
+      r = parseInt("0x" + hex[1] + hex[2]);
+      g = parseInt("0x" + hex[3] + hex[4]);
+      b = parseInt("0x" + hex[5] + hex[6]);
+    }
+    return `rgba(${r},${g},${b},${alpha})`;
+  };
+
   // No client-side filtered count
   const totalRecords = dashboardData?.pagination?.total_records || 0;
   // If we want to show "Showing X of Y", use pagination data
@@ -495,18 +513,22 @@ const AdminDashboard = () => {
                 return (
                   <div key={stageNum} className="filter-box" style={{
                     backgroundColor: "white",
-                    borderRadius: "12px",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                    border: "1px solid #e5e7eb",
-                    overflow: "hidden"
+                    borderRadius: "16px",
+                    boxShadow: "0 2px 5px rgba(0,0,0,0.05)",
+                    border: "1px solid #f3f4f6",
+                    overflow: "hidden",
+                    display: "flex",
+                    flexDirection: "column",
+                    height: "100%"
                   }}>
                     {/* Card Header */}
                     <div style={{
-                      padding: "14px 16px",
+                      padding: "16px 20px",
                       borderBottom: "1px solid #e5e7eb",
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "space-between"
+                      justifyContent: "space-between",
+                      backgroundColor: "#fff"
                     }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                         <span style={{
@@ -517,7 +539,7 @@ const AdminDashboard = () => {
                           display: "inline-block"
                         }}></span>
                         <i className="bi bi-funnel" style={{ color: "#6b7280", fontSize: "14px" }}></i>
-                        <span style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}>
+                        <span style={{ fontSize: "15px", fontWeight: 700, color: "#111827" }}>
                           Stage {stageNum} Categories
                         </span>
                       </div>
@@ -525,15 +547,16 @@ const AdminDashboard = () => {
                         fontSize: "12px",
                         color: "#6b7280",
                         backgroundColor: "#f3f4f6",
-                        padding: "2px 8px",
-                        borderRadius: "10px"
+                        padding: "2px 10px",
+                        borderRadius: "12px",
+                        fontWeight: 600
                       }}>
                         {stageCategories.length} items
                       </span>
                     </div>
 
                     {/* Category List */}
-                    <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+                    <div style={{ display: "flex", flexDirection: "column", padding: "0 20px" }}>
                       {stageCategories.map((categoryData, idx) => (
                         <label
                           key={categoryData.name}
@@ -541,71 +564,51 @@ const AdminDashboard = () => {
                           style={{
                             display: "flex",
                             alignItems: "center",
-                            padding: "10px 16px",
+                            justifyContent: "space-between",
                             cursor: "pointer",
-                            backgroundColor: idx % 2 === 0 ? "#ffffff" : "#f0f0f0",
-                            borderBottom: idx < stageCategories.length - 1 ? "1px solid #f3f4f6" : "none",
-                            transition: "background-color 0.15s"
+                            padding: "16px 0",
+                            borderBottom: idx < stageCategories.length - 1 ? "1px solid #f3f4f6" : "none"
                           }}
-                          onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f0f9ff"}
-                          onMouseOut={(e) => e.currentTarget.style.backgroundColor = idx % 2 === 0 ? "#ffffff" : "#f0f0f0"}
                         >
-                          {/* Checkbox */}
-                          <input
-                            type="checkbox"
-                            checked={stageFilters[filterKey]?.includes(categoryData.name) || false}
-                            onChange={() => handleStageFilterToggle(stageNum, categoryData.name)}
-                            style={{
-                              cursor: "pointer",
-                              width: "16px",
-                              height: "16px",
-                              marginRight: "12px",
-                              accentColor: categoryData.color
-                            }}
-                          />
+                          <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1 }}>
+                            {/* Checkbox */}
+                            <input
+                              type="checkbox"
+                              checked={stageFilters[filterKey]?.includes(categoryData.name) || false}
+                              onChange={() => handleStageFilterToggle(stageNum, categoryData.name)}
+                              style={{
+                                cursor: "pointer",
+                                width: "18px",
+                                height: "18px",
+                                accentColor: categoryData.color,
+                                border: "1px solid #e5e7eb",
+                                borderRadius: "4px"
+                              }}
+                            />
 
-                          {/* Category Name */}
-                          <span style={{
-                            color: categoryData.color,
-                            fontWeight: 500,
-                            fontSize: "13px",
-                            flex: "0 0 140px",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap"
-                          }}>
-                            {categoryData.name}
-                          </span>
-
-                          {/* Progress Bar */}
-                          <div style={{
-                            flex: 1,
-                            height: "4px",
-                            backgroundColor: idx % 2 === 0 ? "#e5e7eb" : "#ffffff",
-                            borderRadius: "2px",
-                            marginLeft: "12px",
-                            marginRight: "12px",
-                            overflow: "hidden"
-                          }}>
-                            <div style={{
-                              width: `${categoryData.percentage}%`,
-                              height: "100%",
-                              backgroundColor: categoryData.color,
-                              borderRadius: "2px",
-                              transition: "width 0.3s ease"
-                            }}></div>
+                            {/* Category Name */}
+                            <span style={{
+                              color: categoryData.color,
+                              fontWeight: 600,
+                              fontSize: "14px",
+                            }}>
+                              {categoryData.name}
+                            </span>
                           </div>
 
-                          {/* Percentage */}
-                          <span style={{
-                            fontSize: "13px",
-                            color: "#374151",
-                            fontWeight: 600,
-                            minWidth: "40px",
-                            textAlign: "right"
+                          {/* Percentage Badge */}
+                          <div style={{
+                            backgroundColor: hexToRgba(categoryData.color, 0.1),
+                            color: categoryData.color,
+                            padding: "4px 12px",
+                            borderRadius: "20px",
+                            fontSize: "12px",
+                            fontWeight: "700",
+                            minWidth: "32px",
+                            textAlign: "center"
                           }}>
                             {categoryData.percentage < 1 ? "<1" : categoryData.percentage}%
-                          </span>
+                          </div>
                         </label>
                       ))}
                     </div>
@@ -678,10 +681,10 @@ const AdminDashboard = () => {
                   </th>
                   {availableStages.map(stageNum => (
                     <React.Fragment key={stageNum}>
-                      <th style={{ textAlign: "left", padding: "12px", fontWeight: 600, minWidth: "120px" }}>
+                      <th style={{ textAlign: "left", padding: "12px", fontWeight: 600, minWidth: "120px", backgroundColor: stageNum % 2 === 0 ? "#f5f5f5" : "#ffffff" }}>
                         Stage {stageNum}
                       </th>
-                      <th style={{ textAlign: "left", padding: "12px", fontWeight: 600, minWidth: "200px" }}>
+                      <th style={{ textAlign: "left", padding: "12px", fontWeight: 600, minWidth: "200px", backgroundColor: stageNum % 2 === 0 ? "#f5f5f5" : "#ffffff" }}>
                         Stage {stageNum} Transcript
                       </th>
                     </React.Fragment>
@@ -724,7 +727,7 @@ const AdminDashboard = () => {
                         if (stageData) {
                           return (
                             <React.Fragment key={stageNum}>
-                              <td style={{ padding: "12px" }}>
+                              <td style={{ padding: "12px", backgroundColor: stageNum % 2 === 0 ? "#f5f5f5" : "#ffffff" }}>
                                 <span className="category-badge" style={{
                                   padding: "4px 10px",
                                   borderRadius: "4px",
@@ -737,7 +740,7 @@ const AdminDashboard = () => {
                                   {stageData.category}
                                 </span>
                               </td>
-                              <td style={{ padding: "12px", maxWidth: "300px", lineHeight: "1.4" }}>
+                              <td style={{ padding: "12px", maxWidth: "300px", lineHeight: "1.4", backgroundColor: stageNum % 2 === 0 ? "#f5f5f5" : "#ffffff" }}>
                                 {stageData.transcription || "-"}
                               </td>
                             </React.Fragment>
@@ -745,8 +748,8 @@ const AdminDashboard = () => {
                         } else {
                           return (
                             <React.Fragment key={stageNum}>
-                              <td style={{ padding: "12px", textAlign: "center", color: "#ccc" }}>-</td>
-                              <td style={{ padding: "12px", textAlign: "center", color: "#ccc" }}>-</td>
+                              <td style={{ padding: "12px", textAlign: "center", color: "#ccc", backgroundColor: stageNum % 2 === 0 ? "#f5f5f5" : "#ffffff" }}>-</td>
+                              <td style={{ padding: "12px", textAlign: "center", color: "#ccc", backgroundColor: stageNum % 2 === 0 ? "#f5f5f5" : "#ffffff" }}>-</td>
                             </React.Fragment>
                           );
                         }
