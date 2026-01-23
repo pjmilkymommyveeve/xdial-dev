@@ -17,6 +17,8 @@ const AdminVoiceStats = () => {
   // Sort state
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
+  const [selectedFilters, setSelectedFilters] = useState([]);
+
   // Filter states
   const [clientSearchTerm, setClientSearchTerm] = useState("");
   const [campaignSearchTerm, setCampaignSearchTerm] = useState("");
@@ -209,6 +211,26 @@ const AdminVoiceStats = () => {
     );
   };
 
+  const getFilterDisplayName = (filterValue) => {
+    if (filterValue.startsWith("model-")) return filterValue.replace("model-", "");
+    if (filterValue.startsWith("status-")) return filterValue.replace("status-", "");
+    if (filterValue.startsWith("voice-")) return filterValue.replace("voice-", "");
+    return filterValue;
+  };
+
+  const handleFilterChange = (e) => {
+    const value = e.target.value;
+    if (value && !selectedFilters.includes(value)) {
+      setSelectedFilters([...selectedFilters, value]);
+    }
+    e.target.value = ""; // Reset dropdown
+  };
+
+  const removeFilter = (filterToRemove) => {
+    setSelectedFilters(selectedFilters.filter(f => f !== filterToRemove));
+  };
+
+
   // Filter campaigns
   const filteredCampaigns = campaignStats?.campaigns?.filter((campaign) => {
     const clientMatch = campaign.client_name?.toLowerCase().includes(clientSearchTerm.toLowerCase());
@@ -216,7 +238,25 @@ const AdminVoiceStats = () => {
     const serverMatch = serverSearchTerm === "" ||
       campaign.voice_stats?.some(v => v.voice_name?.toLowerCase().includes(serverSearchTerm.toLowerCase()));
 
-    return clientMatch && campaignMatch && serverMatch;
+    // Handle multiple selected filters
+    let matchesSelectedFilters = true;
+    if (selectedFilters.length > 0) {
+      matchesSelectedFilters = selectedFilters.every((filter) => {
+        if (filter.startsWith("model-")) {
+          return campaign.model_name === filter.replace("model-", "");
+        } else if (filter.startsWith("status-")) {
+          const status = filter.replace("status-", "");
+          if (status === "Active") return campaign.is_active === true;
+          if (status === "Inactive") return campaign.is_active === false;
+        } else if (filter.startsWith("voice-")) {
+          const voiceName = filter.replace("voice-", "");
+          return campaign.voice_stats?.some(v => v.voice_name === voiceName);
+        }
+        return true;
+      });
+    }
+
+    return clientMatch && campaignMatch && serverMatch && matchesSelectedFilters;
   }) || [];
 
   const handleSort = (key) => {
@@ -705,15 +745,97 @@ const AdminVoiceStats = () => {
                   boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
                   overflow: "hidden"
                 }}>
-                  <div style={{ padding: "20px", borderBottom: "1px solid #e5e7eb" }}>
-                    <h2 style={{
-                      margin: 0,
-                      fontSize: "18px",
-                      fontWeight: "700",
-                      color: "#111827"
-                    }}>
-                      Campaign Statistics ({filteredCampaigns.length} campaigns)
-                    </h2>
+                  <div style={{ padding: "20px", borderBottom: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+                      <h2 style={{
+                        margin: 0,
+                        fontSize: "18px",
+                        fontWeight: "700",
+                        color: "#111827"
+                      }}>
+                        Campaign Statistics ({filteredCampaigns.length} campaigns)
+                      </h2>
+                      {selectedFilters.length > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                          {selectedFilters.map((filter) => (
+                            <div
+                              key={filter}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                padding: "4px 10px",
+                                backgroundColor: "#e0e7ff",
+                                color: "#3730a3", // indigo-800
+                                borderRadius: "20px",
+                                fontSize: "12px",
+                                fontWeight: "600",
+                                border: "1px solid #c7d2fe"
+                              }}
+                            >
+                              <span>
+                                {filter.startsWith("model-") && <span style={{ opacity: 0.7 }}>Model: </span>}
+                                {filter.startsWith("status-") && <span style={{ opacity: 0.7 }}>Status: </span>}
+                                {filter.startsWith("voice-") && <span style={{ opacity: 0.7 }}>Voice: </span>}
+                                {getFilterDisplayName(filter)}
+                              </span>
+                              <button
+                                onClick={() => removeFilter(filter)}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  color: "#3730a3",
+                                  cursor: "pointer",
+                                  fontSize: "14px",
+                                  padding: "0",
+                                  lineHeight: "1",
+                                  fontWeight: "bold",
+                                  display: "flex",
+                                  alignItems: "center"
+                                }}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ minWidth: "200px" }}>
+                      <select
+                        onChange={handleFilterChange}
+                        style={{
+                          width: "100%",
+                          padding: "6px 12px",
+                          border: "1px solid #d1d5db",
+                          borderRadius: "6px",
+                          fontSize: "13px",
+                          backgroundColor: "white",
+                          cursor: "pointer",
+                          boxSizing: "border-box",
+                          color: "#374151",
+                          fontWeight: "500",
+                          height: "36px"
+                        }}
+                      >
+                        <option value="">Filter By...</option>
+                        <optgroup label="Model">
+                          {[...new Set(campaignStats?.campaigns?.map(c => c.model_name))].filter(Boolean).sort().map(model => (
+                            <option key={`model-${model}`} value={`model-${model}`}>{model}</option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="Status">
+                          <option value="status-Active">Active</option>
+                          <option value="status-Inactive">Inactive</option>
+                        </optgroup>
+                        <optgroup label="Voice">
+                          {[...new Set(campaignStats?.campaigns?.flatMap(c => c.voice_stats?.map(v => v.voice_name) || []))].filter(Boolean).sort().map(voice => (
+                            <option key={`voice-${voice}`} value={`voice-${voice}`}>{voice}</option>
+                          ))}
+                        </optgroup>
+                      </select>
+                    </div>
                   </div>
                   <div style={{ overflowX: "auto" }}>
                     <table style={{
