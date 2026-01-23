@@ -12,16 +12,16 @@ const AdminVoiceStats = () => {
   const [debugInfo, setDebugInfo] = useState(null);
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState("");
-  const [expandedCampaignId, setExpandedCampaignId] = useState(null);
-  
+  const [expandedCampaignIds, setExpandedCampaignIds] = useState([]);
+
   // Sort state
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
-  
+
   // Filter states
   const [clientSearchTerm, setClientSearchTerm] = useState("");
   const [campaignSearchTerm, setCampaignSearchTerm] = useState("");
   const [serverSearchTerm, setServerSearchTerm] = useState("");
-  
+
   const callsChartRef = useRef(null);
   const transfersChartRef = useRef(null);
   const callsChartInstance = useRef(null);
@@ -42,7 +42,7 @@ const AdminVoiceStats = () => {
       console.log("=== API Request Debug Info ===");
       console.log("Base URL:", api.defaults?.baseURL || "Not set");
       console.log("Token:", localStorage.getItem("token") ? "Present" : "Missing");
-      
+
       const params = {};
       if (startDate) params.start_date = startDate;
       if (endDate) params.end_date = endDate;
@@ -66,7 +66,7 @@ const AdminVoiceStats = () => {
       });
 
       console.log("✅ Campaign stats fetched successfully");
-      
+
       setStats(voiceResponse.data);
       setCampaignStats(campaignResponse.data);
       setError(null);
@@ -202,33 +202,37 @@ const AdminVoiceStats = () => {
   }, [stats]);
 
   const toggleCampaignExpand = (campaignId) => {
-    setExpandedCampaignId(expandedCampaignId === campaignId ? null : campaignId);
+    setExpandedCampaignIds(prev =>
+      prev.includes(campaignId)
+        ? prev.filter(id => id !== campaignId)
+        : [...prev, campaignId]
+    );
   };
 
   // Filter campaigns
   const filteredCampaigns = campaignStats?.campaigns?.filter((campaign) => {
     const clientMatch = campaign.client_name?.toLowerCase().includes(clientSearchTerm.toLowerCase());
     const campaignMatch = campaign.campaign_name?.toLowerCase().includes(campaignSearchTerm.toLowerCase());
-    const serverMatch = serverSearchTerm === "" || 
+    const serverMatch = serverSearchTerm === "" ||
       campaign.voice_stats?.some(v => v.voice_name?.toLowerCase().includes(serverSearchTerm.toLowerCase()));
-    
+
     return clientMatch && campaignMatch && serverMatch;
   }) || [];
 
   const handleSort = (key) => {
     let direction = 'asc';
-    
+
     // Default direction logic
     // Numeric stats and Time usually start Descending (Highest/Newest first)
     if (sortConfig.key !== key) {
-        if (['total_calls', 'transferred', 'transfer_rate', 'client'].includes(key)) {
-            direction = 'desc'; 
-        }
+      if (['total_calls', 'transferred', 'transfer_rate', 'client'].includes(key)) {
+        direction = 'desc';
+      }
     } else {
-        // Toggle direction
-        direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+      // Toggle direction
+      direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
     }
-    
+
     setSortConfig({ key, direction });
   };
 
@@ -237,39 +241,39 @@ const AdminVoiceStats = () => {
     if (sortConfig.key !== null) {
       sortableItems.sort((a, b) => {
         let aValue, bValue;
-        
-        switch(sortConfig.key) {
-           case 'client':
-             // Sort by time/date proxy (campaign_id is usually chronological)
-             aValue = a.created_at || a.campaign_id;
-             bValue = b.created_at || b.campaign_id;
-             break;
-           case 'campaign':
-             aValue = a.campaign_name?.toLowerCase();
-             bValue = b.campaign_name?.toLowerCase();
-             break;
-           case 'model':
-             aValue = a.model_name?.toLowerCase();
-             bValue = b.model_name?.toLowerCase();
-             break;
-           case 'status':
-             aValue = a.is_active ? 1 : 0;
-             bValue = b.is_active ? 1 : 0;
-             break;
-           case 'total_calls':
-             aValue = a.total_calls || 0;
-             bValue = b.total_calls || 0;
-             break;
-           case 'transferred':
-             aValue = a.transferred_calls || 0;
-             bValue = b.transferred_calls || 0;
-             break;
-           case 'transfer_rate':
-             aValue = parseFloat(a.transfer_rate) || 0;
-             bValue = parseFloat(b.transfer_rate) || 0;
-             break;
-           default:
-             return 0;
+
+        switch (sortConfig.key) {
+          case 'client':
+            // Sort by time/date proxy (campaign_id is usually chronological)
+            aValue = a.created_at || a.campaign_id;
+            bValue = b.created_at || b.campaign_id;
+            break;
+          case 'campaign':
+            aValue = a.campaign_name?.toLowerCase();
+            bValue = b.campaign_name?.toLowerCase();
+            break;
+          case 'model':
+            aValue = a.model_name?.toLowerCase();
+            bValue = b.model_name?.toLowerCase();
+            break;
+          case 'status':
+            aValue = a.is_active ? 1 : 0;
+            bValue = b.is_active ? 1 : 0;
+            break;
+          case 'total_calls':
+            aValue = a.total_calls || 0;
+            bValue = b.total_calls || 0;
+            break;
+          case 'transferred':
+            aValue = a.transferred_calls || 0;
+            bValue = b.transferred_calls || 0;
+            break;
+          case 'transfer_rate':
+            aValue = parseFloat(a.transfer_rate) || 0;
+            bValue = parseFloat(b.transfer_rate) || 0;
+            break;
+          default:
+            return 0;
         }
 
         if (aValue < bValue) {
@@ -735,23 +739,7 @@ const AdminVoiceStats = () => {
                             fontWeight: "600",
                             color: "#374151"
                           }}>
-                            <div 
-                              onClick={() => handleSort('campaign')}
-                              style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
-                            >
-                              Campaign
-                              {sortConfig.key === 'campaign' && (
-                                <span>{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>
-                              )}
-                            </div>
-                          </th>
-                          <th style={{
-                            padding: "12px 16px",
-                            textAlign: "left",
-                            fontWeight: "600",
-                            color: "#374151"
-                          }}>
-                            <div 
+                            <div
                               onClick={() => handleSort('client')}
                               style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
                             >
@@ -763,11 +751,27 @@ const AdminVoiceStats = () => {
                           </th>
                           <th style={{
                             padding: "12px 16px",
+                            textAlign: "left",
+                            fontWeight: "600",
+                            color: "#374151"
+                          }}>
+                            <div
+                              onClick={() => handleSort('campaign')}
+                              style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
+                            >
+                              Campaign
+                              {sortConfig.key === 'campaign' && (
+                                <span>{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>
+                              )}
+                            </div>
+                          </th>
+                          <th style={{
+                            padding: "12px 16px",
                             textAlign: "center",
                             fontWeight: "600",
                             color: "#374151"
                           }}>
-                            <div 
+                            <div
                               onClick={() => handleSort('model')}
                               style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", justifyContent: "center" }}
                             >
@@ -783,7 +787,7 @@ const AdminVoiceStats = () => {
                             fontWeight: "600",
                             color: "#374151"
                           }}>
-                            <div 
+                            <div
                               onClick={() => handleSort('status')}
                               style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", justifyContent: "center" }}
                             >
@@ -799,7 +803,7 @@ const AdminVoiceStats = () => {
                             fontWeight: "600",
                             color: "#374151"
                           }}>
-                            <div 
+                            <div
                               onClick={() => handleSort('total_calls')}
                               style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", justifyContent: "center" }}
                             >
@@ -815,7 +819,7 @@ const AdminVoiceStats = () => {
                             fontWeight: "600",
                             color: "#374151"
                           }}>
-                             <div 
+                            <div
                               onClick={() => handleSort('transferred')}
                               style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", justifyContent: "center" }}
                             >
@@ -831,7 +835,7 @@ const AdminVoiceStats = () => {
                             fontWeight: "600",
                             color: "#374151"
                           }}>
-                            <div 
+                            <div
                               onClick={() => handleSort('transfer_rate')}
                               style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", justifyContent: "center" }}
                             >
@@ -848,7 +852,7 @@ const AdminVoiceStats = () => {
                           <React.Fragment key={campaign.campaign_id}>
                             <tr
                               style={{
-                                borderBottom: expandedCampaignId === campaign.campaign_id ? "none" : "1px solid #e5e7eb",
+                                borderBottom: expandedCampaignIds.includes(campaign.campaign_id) ? "none" : "1px solid #e5e7eb",
                                 backgroundColor: idx % 2 === 0 ? "#ffffff" : "#f9fafb",
                                 cursor: "pointer",
                                 transition: "background-color 0.2s"
@@ -861,18 +865,18 @@ const AdminVoiceStats = () => {
                                 <span style={{
                                   display: "inline-block",
                                   transition: "transform 0.2s",
-                                  transform: expandedCampaignId === campaign.campaign_id ? "rotate(90deg)" : "rotate(0deg)"
+                                  transform: expandedCampaignIds.includes(campaign.campaign_id) ? "rotate(90deg)" : "rotate(0deg)"
                                 }}>
                                   ▶
                                 </span>
+                              </td>
+                              <td style={{ padding: "12px 16px", color: "#6b7280" }}>
+                                {campaign.client_name}
                               </td>
                               <td style={{ padding: "12px 16px" }}>
                                 <div style={{ fontWeight: "600", color: "#111827" }}>
                                   {campaign.campaign_name}
                                 </div>
-                              </td>
-                              <td style={{ padding: "12px 16px", color: "#6b7280" }}>
-                                {campaign.client_name}
                               </td>
                               <td style={{ padding: "12px 16px", textAlign: "center" }}>
                                 <span style={{
@@ -910,7 +914,7 @@ const AdminVoiceStats = () => {
                             </tr>
 
                             {/* Expanded Voice Details */}
-                            {expandedCampaignId === campaign.campaign_id && campaign.voice_stats && campaign.voice_stats.length > 0 && (
+                            {expandedCampaignIds.includes(campaign.campaign_id) && campaign.voice_stats && campaign.voice_stats.length > 0 && (
                               <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
                                 <td colSpan="8" style={{ padding: 0, backgroundColor: "#f9fafb" }}>
                                   <div style={{ padding: "16px 24px", animation: "slideDown 0.3s ease-out" }}>
