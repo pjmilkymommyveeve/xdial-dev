@@ -471,7 +471,7 @@ const AdminLanding = () => {
 
   const getServerStatus = useCallback(
     (agent) => {
-      const threshold = thresholds[agent.ip] || { cpu: 80, disk: 90, load: 5 };
+      const threshold = thresholds[agent.ip] || { cpu: 60, disk: 70, load: 4 };
 
       if (agent.cpu.total_percent > threshold.cpu) return "critical";
       if (agent.load && agent.load.load1 > threshold.load) return "critical";
