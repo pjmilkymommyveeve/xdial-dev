@@ -681,11 +681,11 @@ const AdminDashboard = () => {
                   </th>
                   {availableStages.map(stageNum => (
                     <React.Fragment key={stageNum}>
-                      <th style={{ textAlign: "left", padding: "12px", fontWeight: 600, minWidth: "120px", backgroundColor: stageNum % 2 === 0 ? "#f5f5f5" : "#ffffff" }}>
-                        Stage {stageNum}
-                      </th>
                       <th style={{ textAlign: "left", padding: "12px", fontWeight: 600, minWidth: "200px", backgroundColor: stageNum % 2 === 0 ? "#f5f5f5" : "#ffffff" }}>
                         Stage {stageNum} Transcript
+                      </th>
+                      <th style={{ textAlign: "left", padding: "12px", fontWeight: 600, minWidth: "120px", backgroundColor: stageNum % 2 === 0 ? "#f5f5f5" : "#ffffff" }}>
+                        Stage {stageNum}
                       </th>
                     </React.Fragment>
                   ))}
@@ -727,6 +727,9 @@ const AdminDashboard = () => {
                         if (stageData) {
                           return (
                             <React.Fragment key={stageNum}>
+                              <td style={{ padding: "12px", maxWidth: "300px", lineHeight: "1.4", backgroundColor: stageNum % 2 === 0 ? "#f5f5f5" : "#ffffff" }}>
+                                {stageData.transcription || "-"}
+                              </td>
                               <td style={{ padding: "12px", backgroundColor: stageNum % 2 === 0 ? "#f5f5f5" : "#ffffff" }}>
                                 <span className="category-badge" style={{
                                   padding: "4px 10px",
@@ -739,9 +742,6 @@ const AdminDashboard = () => {
                                 }}>
                                   {stageData.category}
                                 </span>
-                              </td>
-                              <td style={{ padding: "12px", maxWidth: "300px", lineHeight: "1.4", backgroundColor: stageNum % 2 === 0 ? "#f5f5f5" : "#ffffff" }}>
-                                {stageData.transcription || "-"}
                               </td>
                             </React.Fragment>
                           );
