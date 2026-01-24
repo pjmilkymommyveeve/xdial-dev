@@ -101,7 +101,7 @@ const AdminDataExport = () => {
 
     try {
       const token = localStorage.getItem("access_token");
-      
+
       if (!token) {
         setError("Not authenticated. Please login again.");
         setTimeout(() => {
@@ -119,9 +119,8 @@ const AdminDataExport = () => {
       if (endDate) queryParams.append("end_date", endDate);
 
       const queryString = queryParams.toString();
-      const url = `${API_URL}/api/v1/campaigns/stats/lookup-calls-json${
-        queryString ? `?${queryString}` : ""
-      }`;
+      const url = `${API_URL}/api/v1/campaigns/call-lookup/json${queryString ? `?${queryString}` : ""
+        }`;
 
       const response = await fetch(url, {
         method: "POST",
@@ -175,7 +174,7 @@ const AdminDataExport = () => {
 
     try {
       const token = localStorage.getItem("access_token");
-      
+
       if (!token) {
         setError("Not authenticated. Please login again.");
         setTimeout(() => {
@@ -193,9 +192,8 @@ const AdminDataExport = () => {
       if (endDate) queryParams.append("end_date", endDate);
 
       const queryString = queryParams.toString();
-      const url = `${API_URL}/api/v1/campaigns/stats/lookup-calls-csv${
-        queryString ? `?${queryString}` : ""
-      }`;
+      const url = `${API_URL}/api/v1/campaigns/call-lookup/csv${queryString ? `?${queryString}` : ""
+        }`;
 
       const response = await fetch(url, {
         method: "POST",
@@ -223,9 +221,8 @@ const AdminDataExport = () => {
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = downloadUrl;
-      a.download = `call-data-export-${
-        new Date().toISOString().split("T")[0]
-      }.csv`;
+      a.download = `call-data-export-${new Date().toISOString().split("T")[0]
+        }.csv`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(downloadUrl);
