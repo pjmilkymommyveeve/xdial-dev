@@ -706,7 +706,7 @@ const AdminDashboard = () => {
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
                 <i className="bi bi-telephone-fill" style={{ fontSize: "18px", color: "#666" }}></i>
                 <h2 className="section-title" style={{ margin: 0, fontSize: "16px", fontWeight: 600 }}>
-                  Call Records
+                  Call Records ({dashboardData?.total_calls || 0} total)
                 </h2>
                 {loading && <span style={{ fontSize: '12px', color: '#666', marginLeft: '10px' }}>(Updating...)</span>}
               </div>
