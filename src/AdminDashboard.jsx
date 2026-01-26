@@ -353,6 +353,24 @@ const AdminDashboard = () => {
 
   return (
     <div style={{ margin: 0, padding: 0, fontFamily: "Arial, sans-serif", backgroundColor: "#f5f5f5", minHeight: "100vh", zoom: "0.8" }}>
+      <style>
+        {`
+          .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+          }
+          .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+          }
+        `}
+      </style>
       <header
         style={{
           backgroundColor: "white",
@@ -577,7 +595,16 @@ const AdminDashboard = () => {
                     </div>
 
                     {/* Category List */}
-                    <div style={{ display: "flex", flexDirection: "column", padding: "0 20px" }}>
+                    <div
+                      className="custom-scrollbar"
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        padding: "0 20px",
+                        maxHeight: "300px",
+                        overflowY: "auto"
+                      }}
+                    >
                       {stageCategories.map((categoryData, idx) => (
                         <label
                           key={categoryData.name}
