@@ -53,7 +53,7 @@ const IntegrationForm = () => {
         method: 'GET',
         headers: {
           'accept': 'application/json',
-        },  
+        },
       });
 
       if (!response.ok) {
@@ -61,7 +61,7 @@ const IntegrationForm = () => {
       }
 
       const config = await response.json();
-      
+
       console.log('Form config loaded:', config);
 
       setCampaigns(config.campaigns || []);
@@ -81,7 +81,7 @@ const IntegrationForm = () => {
     if (formData.campaign && campaignConfig[formData.campaign]) {
       const models = Object.keys(campaignConfig[formData.campaign]);
       setAvailableModels(models);
-      
+
       if (!formData.model || !models.includes(formData.model)) {
         setFormData(prev => ({ ...prev, model: models[0] || '', transferSettingsId: '' }));
       }
@@ -96,15 +96,15 @@ const IntegrationForm = () => {
     if (formData.campaign && formData.model && campaignConfig[formData.campaign]?.[formData.model]) {
       const settings = campaignConfig[formData.campaign][formData.model];
       setAvailableTransferSettings(settings);
-      
+
       const recommended = settings.find(s => {
         const fullSetting = transferSettings.find(ts => ts.id === s.id);
         return fullSetting?.is_recommended;
       });
-      
+
       if (!formData.transferSettingsId || !settings.find(s => s.id === formData.transferSettingsId)) {
-        setFormData(prev => ({ 
-          ...prev, 
+        setFormData(prev => ({
+          ...prev,
           transferSettingsId: recommended ? recommended.id : (settings[0]?.id || '')
         }));
       }
@@ -141,7 +141,7 @@ const IntegrationForm = () => {
       ];
 
       const missingFields = requiredFields.filter(f => !formData[f.field] || formData[f.field] === '');
-      
+
       if (missingFields.length > 0) {
         const fieldNames = missingFields.map(f => f.label).join(', ');
         throw new Error(`Please fill in the following required fields: ${fieldNames}`);
@@ -186,25 +186,25 @@ const IntegrationForm = () => {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('API Error Response:', errorData);
-        
+
         // Check for existing client error
         if (errorData.detail && typeof errorData.detail === 'string') {
           // Check if the error is about existing client
-          if (errorData.detail.toLowerCase().includes('already exists') || 
-              errorData.detail.toLowerCase().includes('client already') ||
-              errorData.detail.toLowerCase().includes('duplicate')) {
+          if (errorData.detail.toLowerCase().includes('already exists') ||
+            errorData.detail.toLowerCase().includes('client already') ||
+            errorData.detail.toLowerCase().includes('duplicate')) {
             throw new Error('This company is already registered. Please log in and create campaigns from your landing page.');
           }
-          
+
           // Check for "client not found" or similar
           if (errorData.detail.toLowerCase().includes('not found')) {
             throw new Error('Unable to process your request. Please check all fields and try again.');
           }
-          
+
           // Other string errors
           throw new Error(errorData.detail);
         }
-        
+
         // Handle validation errors (422)
         if (response.status === 422 && errorData.detail) {
           if (Array.isArray(errorData.detail)) {
@@ -218,9 +218,9 @@ const IntegrationForm = () => {
                 .join(' ');
               return readableField;
             });
-            
+
             const uniqueFields = [...new Set(fieldErrors)];
-            
+
             if (uniqueFields.length === 1) {
               throw new Error(`Please fill in the ${uniqueFields[0]} field correctly.`);
             } else {
@@ -228,43 +228,43 @@ const IntegrationForm = () => {
             }
           }
         }
-        
+
         // Generic error messages based on status code
         if (response.status === 400) {
           throw new Error('Invalid form data. Please check all fields and try again.');
         } else if (response.status === 500) {
           throw new Error('Server error. Please try again later or contact support.');
         }
-        
+
         throw new Error('Unable to submit the form. Please check all fields and try again.');
       }
 
       const data = await response.json();
       console.log('Success response:', data);
-      
+
       // Check if this is a duplicate client (backend modified the name)
       if (data.success && data.data) {
         const submittedName = formData.companyName.toLowerCase().replace(/\s+/g, '');
         const returnedName = (data.data.client_name || '').toLowerCase().replace(/\s+/g, '');
         const returnedUsername = (data.data.username || '').toLowerCase();
-        
+
         // Check if the returned name/username has been modified with numbers
         const hasNumberPrefix = /^\d+/.test(returnedUsername) || /^\d+/.test(returnedName);
-        
+
         // Check if names don't match (indicating modification)
         const namesDontMatch = submittedName !== returnedName;
-        
+
         if (hasNumberPrefix || (namesDontMatch && returnedUsername.includes(submittedName))) {
           setSubmitMessage({
             type: 'error',
             text: 'This company is already registered. Please log in and create campaigns from your dashboard.'
           });
-          
+
           // Don't reset form for existing clients
           return;
         }
       }
-      
+
       setSubmitMessage({
         type: 'success',
         text: 'Integration request submitted successfully! Our team will contact you shortly.'
@@ -424,154 +424,154 @@ const IntegrationForm = () => {
             )}
 
             {formData.model && availableTransferSettings.length > 0 && (
-  <div className="form-group">
-    <label>
-      Transfer Quality Settings <span className="required">*</span>
-    </label>
-    
-    {availableTransferSettings.length === 1 ? (
-      // Show only the single option without slider
-      (() => {
-        const singleSetting = getTransferSettingDetails(availableTransferSettings[0].id);
-        if (!singleSetting) return null;
+              <div className="form-group">
+                <label>
+                  Transfer Quality Settings <span className="required">*</span>
+                </label>
 
-        // Auto-select if not already selected
-        if (formData.transferSettingsId !== availableTransferSettings[0].id) {
-          setTimeout(() => {
-            setFormData(prev => ({ ...prev, transferSettingsId: availableTransferSettings[0].id }));
-          }, 0);
-        }
+                {availableTransferSettings.length === 1 ? (
+                  // Show only the single option without slider
+                  (() => {
+                    const singleSetting = getTransferSettingDetails(availableTransferSettings[0].id);
+                    if (!singleSetting) return null;
 
-        return (
-          <div className="transfer-info-box">
-            <div className="info-header">
-              <strong>
-                {singleSetting.name}
-                {singleSetting.is_recommended && ' (Recommended)'}
-              </strong>
-            </div>
-            
-            <p>{singleSetting.description}</p>
+                    // Auto-select if not already selected
+                    if (formData.transferSettingsId !== availableTransferSettings[0].id) {
+                      setTimeout(() => {
+                        setFormData(prev => ({ ...prev, transferSettingsId: availableTransferSettings[0].id }));
+                      }, 0);
+                    }
 
-            <div className="metrics-grid">
-              <div className="metric-card">
-                <div className="metric-circle">
-                  <svg viewBox="0 0 36 36" className="circular-chart">
-                    <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                    <path 
-                      className="circle quality" 
-                      strokeDasharray={`${singleSetting.quality_score}, 100`} 
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
-                    />
-                  </svg>
-                  <div className="metric-number">{singleSetting.quality_score}</div>
-                </div>
-                <span className="metric-label">Quality</span>
-              </div>
-              <div className="metric-card">
-                <div className="metric-circle">
-                  <svg viewBox="0 0 36 36" className="circular-chart">
-                    <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                    <path 
-                      className="circle volume" 
-                      strokeDasharray={`${singleSetting.volume_score}, 100`} 
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
-                    />
-                  </svg>
-                  <div className="metric-number">{singleSetting.volume_score}</div>
-                </div>
-                <span className="metric-label">Volume</span>
-              </div>
-            </div>
-          </div>
-        );
-      })()
-    ) : (
-      // Show slider for multiple options
-      <>
-        <div className="slider-container">
-          <input
-            type="range"
-            className="quality-slider"
-            min="0"
-            max={availableTransferSettings.length - 1}
-            value={availableTransferSettings.findIndex(s => s.id === formData.transferSettingsId)}
-            onChange={(e) => {
-              const index = parseInt(e.target.value);
-              setFormData(prev => ({ ...prev, transferSettingsId: availableTransferSettings[index].id }));
-            }}
-            step="1"
-            required
-          />
-          <div className="slider-labels">
-            {availableTransferSettings.map(setting => {
-              const fullSetting = getTransferSettingDetails(setting.id);
-              if (!fullSetting) return null;
-              
-              return (
-                <span 
-                  key={setting.id}
-                  className={formData.transferSettingsId === setting.id ? 'active' : ''}
-                >
-                  {fullSetting.name}
-                </span>
-              );
-            })}
-          </div>
-        </div>
+                    return (
+                      <div className="transfer-info-box">
+                        <div className="info-header">
+                          <strong>
+                            {singleSetting.name}
+                            {singleSetting.is_recommended && ' (Recommended)'}
+                          </strong>
+                        </div>
 
-        {formData.transferSettingsId && (() => {
-          const selectedSetting = getTransferSettingDetails(formData.transferSettingsId);
-          if (!selectedSetting) return null;
+                        <p>{singleSetting.description}</p>
 
-          return (
-            <div className="transfer-info-box">
-              <div className="info-header">
-                <strong>
-                  {selectedSetting.name}
-                  {selectedSetting.is_recommended && ' (Recommended)'}
-                </strong>
-              </div>
-              
-              <p>{selectedSetting.description}</p>
-
-              <div className="metrics-grid">
-                <div className="metric-card">
-                  <div className="metric-circle">
-                    <svg viewBox="0 0 36 36" className="circular-chart">
-                      <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                      <path 
-                        className="circle quality" 
-                        strokeDasharray={`${selectedSetting.quality_score}, 100`} 
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
+                        <div className="metrics-grid">
+                          <div className="metric-card">
+                            <div className="metric-circle">
+                              <svg viewBox="0 0 36 36" className="circular-chart">
+                                <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <path
+                                  className="circle quality"
+                                  strokeDasharray={`${singleSetting.quality_score}, 100`}
+                                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                />
+                              </svg>
+                              <div className="metric-number">{singleSetting.quality_score}</div>
+                            </div>
+                            <span className="metric-label">Quality</span>
+                          </div>
+                          <div className="metric-card">
+                            <div className="metric-circle">
+                              <svg viewBox="0 0 36 36" className="circular-chart">
+                                <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <path
+                                  className="circle volume"
+                                  strokeDasharray={`${singleSetting.volume_score}, 100`}
+                                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                />
+                              </svg>
+                              <div className="metric-number">{singleSetting.volume_score}</div>
+                            </div>
+                            <span className="metric-label">Volume</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()
+                ) : (
+                  // Show slider for multiple options
+                  <>
+                    <div className="slider-container">
+                      <input
+                        type="range"
+                        className="quality-slider"
+                        min="0"
+                        max={availableTransferSettings.length - 1}
+                        value={availableTransferSettings.findIndex(s => s.id === formData.transferSettingsId)}
+                        onChange={(e) => {
+                          const index = parseInt(e.target.value);
+                          setFormData(prev => ({ ...prev, transferSettingsId: availableTransferSettings[index].id }));
+                        }}
+                        step="1"
+                        required
                       />
-                    </svg>
-                    <div className="metric-number">{selectedSetting.quality_score}</div>
-                  </div>
-                  <span className="metric-label">Quality</span>
-                </div>
-                <div className="metric-card">
-                  <div className="metric-circle">
-                    <svg viewBox="0 0 36 36" className="circular-chart">
-                      <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                      <path 
-                        className="circle volume" 
-                        strokeDasharray={`${selectedSetting.volume_score}, 100`} 
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
-                      />
-                    </svg>
-                    <div className="metric-number">{selectedSetting.volume_score}</div>
-                  </div>
-                  <span className="metric-label">Volume</span>
-                </div>
+                      <div className="slider-labels">
+                        {availableTransferSettings.map(setting => {
+                          const fullSetting = getTransferSettingDetails(setting.id);
+                          if (!fullSetting) return null;
+
+                          return (
+                            <span
+                              key={setting.id}
+                              className={formData.transferSettingsId === setting.id ? 'active' : ''}
+                            >
+                              {fullSetting.name}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {formData.transferSettingsId && (() => {
+                      const selectedSetting = getTransferSettingDetails(formData.transferSettingsId);
+                      if (!selectedSetting) return null;
+
+                      return (
+                        <div className="transfer-info-box">
+                          <div className="info-header">
+                            <strong>
+                              {selectedSetting.name}
+                              {selectedSetting.is_recommended && ' (Recommended)'}
+                            </strong>
+                          </div>
+
+                          <p>{selectedSetting.description}</p>
+
+                          <div className="metrics-grid">
+                            <div className="metric-card">
+                              <div className="metric-circle">
+                                <svg viewBox="0 0 36 36" className="circular-chart">
+                                  <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                  <path
+                                    className="circle quality"
+                                    strokeDasharray={`${selectedSetting.quality_score}, 100`}
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                  />
+                                </svg>
+                                <div className="metric-number">{selectedSetting.quality_score}</div>
+                              </div>
+                              <span className="metric-label">Quality</span>
+                            </div>
+                            <div className="metric-card">
+                              <div className="metric-circle">
+                                <svg viewBox="0 0 36 36" className="circular-chart">
+                                  <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                  <path
+                                    className="circle volume"
+                                    strokeDasharray={`${selectedSetting.volume_score}, 100`}
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                  />
+                                </svg>
+                                <div className="metric-number">{selectedSetting.volume_score}</div>
+                              </div>
+                              <span className="metric-label">Volume</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </>
+                )}
               </div>
-            </div>
-          );
-        })()}
-      </>
-    )}
-  </div>
-)}
+            )}
 
             <div className="form-group">
               <label htmlFor="numberOfBots">
@@ -872,7 +872,16 @@ const IntegrationForm = () => {
                 value={formData.customRequirements}
                 onChange={handleChange}
                 rows="6"
+                maxLength={500}
               />
+              <div className="character-count" style={{
+                textAlign: 'right',
+                fontSize: '12px',
+                color: formData.customRequirements.length >= 500 ? '#ef4444' : '#6b7280',
+                marginTop: '4px'
+              }}>
+                {formData.customRequirements.length}/500 characters
+              </div>
             </div>
           </section>
 
