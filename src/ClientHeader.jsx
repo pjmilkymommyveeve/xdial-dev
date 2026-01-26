@@ -5,6 +5,7 @@ export default function ClientHeader({
   clientName,
   campaignId,
   activePage, // "statistics" | "reports" | "recordings" | "data-export"
+  isAdminView = false,
 }) {
   const routerNavigate = useNavigate();
 
@@ -12,6 +13,10 @@ export default function ClientHeader({
     let url = `${path}?campaign_id=${campaignId}`;
     if (view) {
       url += `&view=${view}`;
+    }
+    // Maintain admin_view param if present
+    if (isAdminView) {
+      url += `&admin_view=true`;
     }
     routerNavigate(url);
   };
@@ -35,51 +40,67 @@ export default function ClientHeader({
             Welcome, <span className="company-name">{clientName || "Client"}</span>
             <span className="role-badge">Extension: {campaignId || "N/A"}</span>
             <span className="client-view-badge">
-              <i className="bi bi-person-circle"></i> Client View
+              <i className="bi bi-person-circle"></i> {isAdminView ? "Admin View" : "Client View"}
             </span>
           </h1>
         </div>
         <div className="header-buttons">
-          <button
-            className="nav-btn"
-            onClick={() => routerNavigate("/client-landing")}
-            title="Back to Campaigns"
-          >
-            <i className="bi bi-house-fill"></i>
-          </button>
-
-          <button
-            className={`nav-btn ${activePage === "statistics" ? "active" : ""}`}
-            onClick={() => navigateTo("/dashboard", "statistics")}
-          >
-            <i className="bi bi-graph-up"></i>
-            Statistics
-          </button>
-
-          <button
-            className={`nav-btn ${activePage === "reports" ? "active" : ""}`}
-            onClick={() => navigateTo("/dashboard", "dashboard")}
-          >
-            <i className="bi bi-bar-chart-fill"></i>
-            Reports
-          </button>
-
-          <button
-            className={`nav-btn ${activePage === "recordings" ? "active" : ""}`}
-            onClick={() => navigateTo("/dashboard", "recordings")}
-          >
-            <i className="bi bi-mic-fill"></i>
-            Recordings
-          </button>
-
-          {userRole !== "client_member" && (
+          {isAdminView ? (
+            // Admin View Buttons
             <button
-              className={`nav-btn ${activePage === "data-export" ? "active" : ""}`}
-              onClick={() => navigateTo("/dashboard", "data-export")}
+              className="nav-btn"
+              onClick={() => routerNavigate(`/admin-dashboard?campaign_id=${campaignId}`)}
+              title="Back to Admin Dashboard"
+              style={{ backgroundColor: "#4f46e5", color: "white", border: "none" }}
             >
-              <i className="bi bi-download"></i>
-              Data Export
+              <i className="bi bi-arrow-left"></i>
+              Back to Admin Dashboard
             </button>
+          ) : (
+            // Standard Client View Buttons
+            <>
+              <button
+                className="nav-btn"
+                onClick={() => routerNavigate("/client-landing")}
+                title="Back to Campaigns"
+              >
+                <i className="bi bi-house-fill"></i>
+              </button>
+
+              <button
+                className={`nav-btn ${activePage === "statistics" ? "active" : ""}`}
+                onClick={() => navigateTo("/dashboard", "statistics")}
+              >
+                <i className="bi bi-graph-up"></i>
+                Statistics
+              </button>
+
+              <button
+                className={`nav-btn ${activePage === "reports" ? "active" : ""}`}
+                onClick={() => navigateTo("/dashboard", "dashboard")}
+              >
+                <i className="bi bi-bar-chart-fill"></i>
+                Reports
+              </button>
+
+              <button
+                className={`nav-btn ${activePage === "recordings" ? "active" : ""}`}
+                onClick={() => navigateTo("/dashboard", "recordings")}
+              >
+                <i className="bi bi-mic-fill"></i>
+                Recordings
+              </button>
+
+              {userRole !== "client_member" && (
+                <button
+                  className={`nav-btn ${activePage === "data-export" ? "active" : ""}`}
+                  onClick={() => navigateTo("/dashboard", "data-export")}
+                >
+                  <i className="bi bi-download"></i>
+                  Data Export
+                </button>
+              )}
+            </>
           )}
 
           <button className="logout-btn" onClick={handleLogout}>

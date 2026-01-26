@@ -419,6 +419,27 @@ const AdminDashboard = () => {
             </button>
 
             <button
+              onClick={() => navigate(`/dashboard?campaign_id=${campaignId}&view=dashboard&admin_view=true`)}
+              style={{
+                padding: "10px 20px",
+                backgroundColor: "#4f46e5",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "14px",
+                fontWeight: "600",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                transition: "background-color 0.2s"
+              }}
+            >
+              <i className="bi bi-bar-chart-fill"></i>
+              Reports
+            </button>
+
+            <button
               onClick={() => navigate(`/recordings?campaign_id=${campaignId}`)}
               style={{
                 padding: "10px 20px",

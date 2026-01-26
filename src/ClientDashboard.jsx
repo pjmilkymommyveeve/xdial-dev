@@ -12,6 +12,7 @@ const MedicareDashboard = () => {
   const location = useLocation();
   const [currentView, setCurrentView] = useState("statistics");
   const [showSummaryGraph, setShowSummaryGraph] = useState(false);
+  const [isAdminView, setIsAdminView] = useState(false);
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -49,10 +50,17 @@ const MedicareDashboard = () => {
     const urlParams = new URLSearchParams(location.search);
     const id = urlParams.get("campaign_id");
     const view = urlParams.get("view"); // Check for view parameter
+    const adminViewParam = urlParams.get("admin_view");
+
     if (id) {
       setCampaignId(id);
       // Set view to statistics by default, or use view parameter if provided
       setCurrentView(view || "statistics");
+
+      if (adminViewParam === "true") {
+        setIsAdminView(true);
+      }
+
       // Set today's date as default if not set
       setStartDate((prev) => prev || new Date().toISOString().split("T")[0]);
     } else {
@@ -1432,11 +1440,11 @@ const MedicareDashboard = () => {
     );
   if (error)
     return (
-      <div style={{ 
-        padding: '40px', 
-        maxWidth: '600px', 
-        margin: '0 auto', 
-        textAlign: 'center' 
+      <div style={{
+        padding: '40px',
+        maxWidth: '600px',
+        margin: '0 auto',
+        textAlign: 'center'
       }}>
         <div style={{
           backgroundColor: '#FEE2E2',
@@ -1527,6 +1535,7 @@ const MedicareDashboard = () => {
                 ? "recordings"
                 : "data-export"
         }
+        isAdminView={isAdminView}
       />
       {currentView === "recordings" && <ClientRecordings isEmbedded={true} />}
       <div style={styles.container}>
@@ -1895,8 +1904,8 @@ const MedicareDashboard = () => {
                   {outcomes.map((outcome) => {
                     const isSelected = selectedOutcomes.includes(outcome.label);
                     // Override color for Qualified category on statistics page only
-                    const displayColor = currentView === "statistics" && outcome.label === "Qualified" 
-                      ? "#3B9AFF" 
+                    const displayColor = currentView === "statistics" && outcome.label === "Qualified"
+                      ? "#3B9AFF"
                       : outcome.color;
                     return (
                       <div
