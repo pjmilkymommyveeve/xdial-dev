@@ -806,7 +806,7 @@ const AdminCampaigns = () => {
                         >
                           Total Bots {sortConfig.key === 'total_bots' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                         </th>
-                        {localStorage.getItem('role') !== 'onboarding' && (
+                        {localStorage.getItem('role') !== 'onboarding' && localStorage.getItem('role') !== 'qa' && (
                           <th
                             style={{
                               padding: "12px 16px",
@@ -992,7 +992,7 @@ const AdminCampaigns = () => {
                             >
                               {campaign.bot_count}
                             </td>
-                            {localStorage.getItem('role') !== 'onboarding' && (
+                            {localStorage.getItem('role') !== 'onboarding' && localStorage.getItem('role') !== 'qa' && (
                               <td
                                 style={{
                                   padding: "12px 16px",

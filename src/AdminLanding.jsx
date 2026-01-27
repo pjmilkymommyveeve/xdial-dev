@@ -602,21 +602,23 @@ const AdminLanding = () => {
                 {agentList.length} Servers
               </span>
             </div>
-            <button
-              onClick={() => navigate("/admin-server-stats")}
-              style={{
-                padding: "10px 20px",
-                backgroundColor: "#8b5cf6",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "14px",
-                fontWeight: "600",
-                cursor: "pointer",
-              }}
-            >
-              Server Stats
-            </button>
+            {localStorage.getItem('role') !== 'qa' && (
+              <button
+                onClick={() => navigate("/admin-server-stats")}
+                style={{
+                  padding: "10px 20px",
+                  backgroundColor: "#8b5cf6",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                }}
+              >
+                Server Stats
+              </button>
+            )}
 
             <button
               onClick={() => navigate("/admin-campaigns")}
@@ -665,21 +667,23 @@ const AdminLanding = () => {
             >
               Data Export
             </button>
-            <button
-              onClick={() => navigate("/integration-form")}
-              style={{
-                padding: "10px 20px",
-                backgroundColor: "#4f46e5",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "14px",
-                fontWeight: "600",
-                cursor: "pointer",
-              }}
-            >
-              Add Client
-            </button>
+            {localStorage.getItem('role') !== 'qa' && (
+              <button
+                onClick={() => navigate("/integration-form")}
+                style={{
+                  padding: "10px 20px",
+                  backgroundColor: "#4f46e5",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                }}
+              >
+                Add Client
+              </button>
+            )}
             <button
               onClick={handleLogout}
               style={{

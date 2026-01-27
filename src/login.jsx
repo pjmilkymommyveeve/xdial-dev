@@ -114,7 +114,7 @@ const LoginPage = () => {
 
       setTimeout(() => {
         // Redirect based on user role
-        if (data.role === 'admin' || data.role === 'onboarding') {
+        if (data.role === 'admin' || data.role === 'onboarding' || data.role === 'qa') {
           window.location.href = '/admin-dashboard';
         } else {
           window.location.href = '/client-landing';
