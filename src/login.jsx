@@ -62,13 +62,13 @@ const LoginPage = () => {
         if (response.status === 401 || response.status === 403) {
           const errorMessage = data.detail || 'Invalid username or password. Please check your credentials and try again.';
           setError(errorMessage);
-          
+
           // Clear any existing tokens
           localStorage.removeItem('access_token');
           localStorage.removeItem('user_id');
           localStorage.removeItem('username');
           localStorage.removeItem('role');
-          
+
           // Reset form after a delay
           setTimeout(() => {
             setFormData({
@@ -76,25 +76,25 @@ const LoginPage = () => {
               password: ''
             });
           }, 2000);
-          
+
           setLoading(false);
           return;
         }
-        
+
         // Rate limiting (429)
         if (response.status === 429) {
           setError('Too many login attempts. Please wait a few minutes before trying again.');
           setLoading(false);
           return;
         }
-        
+
         // Server errors (5xx)
         if (response.status >= 500) {
           setError('Server error occurred. Please try again later or contact support if the problem persists.');
           setLoading(false);
           return;
         }
-        
+
         // Other errors
         throw new Error(data.detail || data.message || 'Login failed. Please try again.');
       }
@@ -114,7 +114,7 @@ const LoginPage = () => {
 
       setTimeout(() => {
         // Redirect based on user role
-        if (data.role === 'admin') {
+        if (data.role === 'admin' || data.role === 'onboarding') {
           window.location.href = '/admin-dashboard';
         } else {
           window.location.href = '/client-landing';

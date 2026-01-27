@@ -806,16 +806,18 @@ const AdminCampaigns = () => {
                         >
                           Total Bots {sortConfig.key === 'total_bots' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                         </th>
-                        <th
-                          style={{
-                            padding: "12px 16px",
-                            textAlign: "center",
-                            fontWeight: "600",
-                            color: "#374151",
-                          }}
-                        >
-                          Client Dashboard
-                        </th>
+                        {localStorage.getItem('role') !== 'onboarding' && (
+                          <th
+                            style={{
+                              padding: "12px 16px",
+                              textAlign: "center",
+                              fontWeight: "600",
+                              color: "#374151",
+                            }}
+                          >
+                            Client Dashboard
+                          </th>
+                        )}
                         <th
                           style={{
                             padding: "12px 16px",
@@ -990,38 +992,40 @@ const AdminCampaigns = () => {
                             >
                               {campaign.bot_count}
                             </td>
-                            <td
-                              style={{
-                                padding: "12px 16px",
-                                textAlign: "center",
-                              }}
-                            >
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openClientDashboard(campaign.client_campaign_model_id);
-                                }}
+                            {localStorage.getItem('role') !== 'onboarding' && (
+                              <td
                                 style={{
-                                  padding: "6px 12px",
-                                  backgroundColor: "#3b82f6",
-                                  color: "white",
-                                  border: "none",
-                                  borderRadius: "6px",
-                                  fontSize: "12px",
-                                  fontWeight: "600",
-                                  cursor: "pointer",
-                                  transition: "background-color 0.2s",
+                                  padding: "12px 16px",
+                                  textAlign: "center",
                                 }}
-                                onMouseOver={(e) =>
-                                  (e.target.style.backgroundColor = "#2563eb")
-                                }
-                                onMouseOut={(e) =>
-                                  (e.target.style.backgroundColor = "#3b82f6")
-                                }
                               >
-                                Open
-                              </button>
-                            </td>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openClientDashboard(campaign.client_campaign_model_id);
+                                  }}
+                                  style={{
+                                    padding: "6px 12px",
+                                    backgroundColor: "#3b82f6",
+                                    color: "white",
+                                    border: "none",
+                                    borderRadius: "6px",
+                                    fontSize: "12px",
+                                    fontWeight: "600",
+                                    cursor: "pointer",
+                                    transition: "background-color 0.2s",
+                                  }}
+                                  onMouseOver={(e) =>
+                                    (e.target.style.backgroundColor = "#2563eb")
+                                  }
+                                  onMouseOut={(e) =>
+                                    (e.target.style.backgroundColor = "#3b82f6")
+                                  }
+                                >
+                                  Open
+                                </button>
+                              </td>
+                            )}
                             <td
                               style={{
                                 padding: "12px 16px",
