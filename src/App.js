@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import PageTitleUpdater from './PageTitleUpdater';
 
 import ClientDashboard from './ClientDashboard';
 import Login from './login';
@@ -18,6 +19,7 @@ import AdminVoiceStats from './AdminVoiceStats';
 function App() {
     return (
         <Router>
+            <PageTitleUpdater />
             <Routes>
                 <Route path="/" element={<Login />} />
                 <Route path="/dashboard" element={<ClientDashboard />} />
