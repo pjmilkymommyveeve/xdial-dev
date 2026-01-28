@@ -187,7 +187,7 @@ const AdminDataExport = () => {
       formData.append("file", file);
 
       const queryParams = new URLSearchParams();
-      if (clientCampaignModelIDFilter) queryParams.append("client_id", clientCampaignModelIDFilter);
+      if (clientCampaignModelIDFilter) queryParams.append("client_campaign_model_id", clientCampaignModelIDFilter);
       if (startDate) queryParams.append("start_date", startDate);
       if (endDate) queryParams.append("end_date", endDate);
 
