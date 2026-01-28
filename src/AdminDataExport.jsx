@@ -18,7 +18,7 @@ const AdminDataExport = () => {
   const [copyFeedback, setCopyFeedback] = useState("");
 
   // Filters
-  const [clientIdFilter, setClientIdFilter] = useState("");
+  const [clientCampaignModelIDFilter, setclientCampaignModelIDFilter] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -114,7 +114,7 @@ const AdminDataExport = () => {
       formData.append("file", file);
 
       const queryParams = new URLSearchParams();
-      if (clientIdFilter) queryParams.append("client_id", clientIdFilter);
+      if (clientCampaignModelIDFilter) queryParams.append("client_campaign_model_id", clientCampaignModelIDFilter);
       if (startDate) queryParams.append("start_date", startDate);
       if (endDate) queryParams.append("end_date", endDate);
 
@@ -187,7 +187,7 @@ const AdminDataExport = () => {
       formData.append("file", file);
 
       const queryParams = new URLSearchParams();
-      if (clientIdFilter) queryParams.append("client_id", clientIdFilter);
+      if (clientCampaignModelIDFilter) queryParams.append("client_id", clientCampaignModelIDFilter);
       if (startDate) queryParams.append("start_date", startDate);
       if (endDate) queryParams.append("end_date", endDate);
 
@@ -395,8 +395,8 @@ const AdminDataExport = () => {
               </label>
               <input
                 type="number"
-                value={clientIdFilter}
-                onChange={(e) => setClientIdFilter(e.target.value)}
+                value={clientCampaignModelIDFilter}
+                onChange={(e) => setclientCampaignModelIDFilter(e.target.value)}
                 placeholder="Enter client ID"
                 style={{
                   width: "100%",
