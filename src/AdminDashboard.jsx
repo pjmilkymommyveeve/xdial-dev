@@ -458,7 +458,7 @@ const AdminDashboard = () => {
             </button>
 
             <button
-              onClick={() => navigate(`/recordings?campaign_id=${campaignId}`)}
+              onClick={() => window.open(`/recordings?campaign_id=${campaignId}`)}
               style={{
                 padding: "10px 20px",
                 backgroundColor: "#db2777",
