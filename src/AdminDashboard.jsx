@@ -453,8 +453,8 @@ const AdminDashboard = () => {
                 transition: "background-color 0.2s"
               }}
             >
-              <i className="bi bi-bar-chart-fill"></i>
-              Reports
+              <i className="bi bi-speedometer2"></i>
+              Client Dashboard
             </button>
 
             <button

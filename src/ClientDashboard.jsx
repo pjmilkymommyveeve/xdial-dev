@@ -68,7 +68,13 @@ const MedicareDashboard = () => {
     }
   }, [location.search]);
   useEffect(() => {
-    if (currentView === "data-export" && getUserRole() === "client_member") {
+    const role = getUserRole();
+    // Redirect logic for restricted roles
+    if ((role === "qa" || role === "onboarding") && (currentView === "recordings" || currentView === "data-export")) {
+      setCurrentView("statistics");
+    }
+    // Existing logic for client_member
+    if (currentView === "data-export" && role === "client_member") {
       setCurrentView("dashboard"); // Redirect to dashboard if they try to access
     }
   }, [currentView]);
