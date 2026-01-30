@@ -200,8 +200,8 @@ const AdminDashboard = () => {
     }
 
     const stagesArray = [];
-    if (maxStage >= 0) {
-      for (let i = 0; i <= maxStage; i++) {
+    if (maxStage >= 1) {
+      for (let i = 1; i <= maxStage; i++) {
         stagesArray.push(i);
       }
     }
