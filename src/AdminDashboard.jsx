@@ -633,10 +633,11 @@ const AdminDashboard = () => {
                             borderRadius: "20px",
                             fontSize: "12px",
                             fontWeight: "700",
-                            minWidth: "32px",
+                            minWidth: "48px",
                             textAlign: "center"
                           }}>
-                            {categoryData.percentage < 1 ? "<1" : categoryData.percentage}%
+                            <span style={{ marginRight: "4px" }}>{categoryData.count}</span>
+                            <span style={{ opacity: 0.8 }}>({categoryData.percentage < 1 ? "<1" : categoryData.percentage}%)</span>
                           </div>
                         </label>
                       ))}
