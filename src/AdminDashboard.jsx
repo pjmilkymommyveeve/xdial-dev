@@ -415,26 +415,7 @@ const AdminDashboard = () => {
 
           {/* Right Side: Buttons */}
           <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-            <button
-              onClick={handleLogout}
-              style={{
-                padding: "10px 20px",
-                backgroundColor: "#ef4444",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "14px",
-                fontWeight: "600",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                transition: "background-color 0.2s"
-              }}
-            >
-              <i className="bi bi-box-arrow-right"></i>
-              Client Management
-            </button>
+
 
             <button
               onClick={() => window.open(`/dashboard?campaign_id=${campaignId}&view=dashboard&admin_view=true`, "_blank")}
