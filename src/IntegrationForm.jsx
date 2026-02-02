@@ -121,9 +121,12 @@ const IntegrationForm = () => {
     }));
   };
 
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  // ... (existing useEffects)
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
     setSubmitMessage({ type: '', text: '' });
 
     try {
@@ -147,6 +150,25 @@ const IntegrationForm = () => {
         throw new Error(`Please fill in the following required fields: ${fieldNames}`);
       }
 
+      // If validation passes, show confirmation modal
+      setShowConfirmModal(true);
+
+    } catch (error) {
+      console.error('Error validating form:', error);
+      setSubmitMessage({
+        type: 'error',
+        text: error.message || 'Please check all fields.'
+      });
+      // Scroll to error message or top of form if needed
+    }
+  };
+
+  const confirmSubmit = async () => {
+    setShowConfirmModal(false);
+    setIsSubmitting(true);
+    setSubmitMessage({ type: '', text: '' });
+
+    try {
       const apiPayload = {
         company_name: formData.companyName,
         campaign: formData.campaign,
@@ -346,6 +368,26 @@ const IntegrationForm = () => {
             <h1 className="form-title">Remote Agent Integration Request</h1>
             <p className="form-subtitle">Configure your Remote Agent campaign and integration settings</p>
           </div>
+        </div>
+
+        {/* Important Note */}
+        <div className="form-note" style={{
+          background: 'rgba(59, 130, 246, 0.05)',
+          borderLeft: '4px solid #3b82f6',
+          padding: '16px',
+          margin: '20px',
+          borderRadius: '4px',
+          color: '#1e293b'
+        }}>
+          <h4 style={{ margin: '0 0 8px 0', color: '#1e40af', fontSize: '15px' }}>We require the following access:</h4>
+          <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '14px', lineHeight: '1.6' }}>
+            <li>Modify Level 8 users</li>
+            <li>Add a new carrier</li>
+            <li>Add a new inbound DID</li>
+            <li>Add remote agents</li>
+            <li>Monitoring access</li>
+            <li>Emergency logout</li>
+          </ul>
         </div>
 
         {/* Form - use div with onClick handlers instead of form element */}
@@ -913,8 +955,73 @@ const IntegrationForm = () => {
           )}
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="modal-overlay" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div className="modal-content" style={{
+            backgroundColor: 'white',
+            padding: '2rem',
+            borderRadius: '8px',
+            maxWidth: '500px',
+            width: '90%',
+            textAlign: 'center',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+          }}>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <i className="bi bi-exclamation-circle" style={{ fontSize: '3rem', color: '#f59e0b' }}></i>
+            </div>
+            <h3 style={{ marginBottom: '1rem', color: '#1f2937' }}>Existing Customer?</h3>
+            <p style={{ marginBottom: '2rem', color: '#4b5563', lineHeight: '1.5' }}>
+              If you have already registered with us then please login to your dashboard and request a campaign from there.
+            </p>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '6px',
+                  border: '1px solid #d1d5db',
+                  backgroundColor: 'white',
+                  color: '#374151',
+                  cursor: 'pointer',
+                  fontWeight: '500'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmSubmit}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontWeight: '500'
+                }}
+              >
+                Confirm Submission
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
 
 export default IntegrationForm;
