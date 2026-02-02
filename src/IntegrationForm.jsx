@@ -370,25 +370,6 @@ const IntegrationForm = () => {
           </div>
         </div>
 
-        {/* Important Note */}
-        <div className="form-note" style={{
-          background: 'rgba(59, 130, 246, 0.05)',
-          borderLeft: '4px solid #3b82f6',
-          padding: '16px',
-          margin: '20px',
-          borderRadius: '4px',
-          color: '#1e293b'
-        }}>
-          <h4 style={{ margin: '0 0 8px 0', color: '#1e40af', fontSize: '15px' }}>We require the following access:</h4>
-          <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '14px', lineHeight: '1.6' }}>
-            <li>Modify Level 8 users</li>
-            <li>Add a new carrier</li>
-            <li>Add a new inbound DID</li>
-            <li>Add remote agents</li>
-            <li>Monitoring access</li>
-            <li>Emergency logout</li>
-          </ul>
-        </div>
 
         {/* Form - use div with onClick handlers instead of form element */}
         <div className="integration-form">
@@ -897,33 +878,29 @@ const IntegrationForm = () => {
             )}
           </section>
 
-          {/* Custom Requirements */}
+          {/* Important Note */}
           <section className="form-section">
             <div className="section-header">
-              <i className="bi bi-chat-square-text"></i>
-              <h2>Current Remote Agents</h2>
+              <i className="bi bi-info-circle-fill"></i>
+              <h2>Required Access</h2>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="customRequirements">
-                What company's remote agents are you currently using? (Optional)
-              </label>
-              <textarea
-                id="customRequirements"
-                name="customRequirements"
-                value={formData.customRequirements}
-                onChange={handleChange}
-                rows="6"
-                maxLength={500}
-              />
-              <div className="character-count" style={{
-                textAlign: 'right',
-                fontSize: '12px',
-                color: formData.customRequirements.length >= 500 ? '#ef4444' : '#6b7280',
-                marginTop: '4px'
-              }}>
-                {formData.customRequirements.length}/500 characters
-              </div>
+            <div className="form-note" style={{
+              background: 'rgba(59, 130, 246, 0.05)',
+              borderLeft: '4px solid #3b82f6',
+              padding: '16px',
+              borderRadius: '4px',
+              color: '#1e293b'
+            }}>
+              <h4 style={{ margin: '0 0 8px 0', color: '#1e40af', fontSize: '15px' }}>We require the following access:</h4>
+              <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '14px', lineHeight: '1.6' }}>
+                <li>Modify Level 8 users</li>
+                <li>Add a new carrier</li>
+                <li>Add a new inbound DID</li>
+                <li>Add remote agents</li>
+                <li>Monitoring access</li>
+                <li>Emergency logout</li>
+              </ul>
             </div>
           </section>
 
