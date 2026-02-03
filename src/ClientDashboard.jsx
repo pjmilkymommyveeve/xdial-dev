@@ -44,6 +44,10 @@ const MedicareDashboard = () => {
 
   // Trend comparison state for reports page
   const [showTrendComparison, setShowTrendComparison] = useState(false);
+  
+  // Trend timeseries data from API
+  const [trendTimeseriesData, setTrendTimeseriesData] = useState(null);
+  const [trendTimeseriesLoading, setTrendTimeseriesLoading] = useState(false);
 
   // KEY FIX: Get campaign ID and force reload on mount or URL change
   useEffect(() => {
@@ -310,6 +314,106 @@ const MedicareDashboard = () => {
       fetchTimeseriesData();
     }
   }, [campaignId, startDate, startTime, endDate, endTime]);
+
+  // Fetch trend timeseries data for the reports section
+  useEffect(() => {
+    const fetchTrendTimeseriesData = async () => {
+      if (!campaignId || !timeRange) {
+        setTrendTimeseriesData(null);
+        return;
+      }
+
+      setTrendTimeseriesLoading(true);
+      try {
+        const token = localStorage.getItem("access_token");
+        if (!token) return;
+
+        // Calculate interval_minutes and date range based on timeRange
+        let intervalMinutes = 5;
+        let totalMinutesBack = 5; // Default to single interval
+
+        switch (timeRange) {
+          case "Last 5 Minutes":
+            intervalMinutes = 5;
+            // When showing trends, double the time to get 2 intervals for comparison
+            totalMinutesBack = showTrendComparison ? 10 : 5;
+            break;
+          case "Last 15 Minutes":
+            intervalMinutes = 15;
+            totalMinutesBack = showTrendComparison ? 30 : 15;
+            break;
+          case "Last 1 Hour":
+            intervalMinutes = 60;
+            totalMinutesBack = showTrendComparison ? 120 : 60;
+            break;
+          case "Today":
+            intervalMinutes = 1440; // 24 hours
+            totalMinutesBack = showTrendComparison ? 2880 : 1440; // 48 hours for comparison, 24 for single
+            break;
+          default:
+            return;
+        }
+
+        // Calculate start and end dates/times
+        const now = new Date();
+        const startDateTime = new Date(now.getTime() - totalMinutesBack * 60000);
+        
+        const formatDate = (d) => {
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, "0");
+          const day = String(d.getDate()).padStart(2, "0");
+          return `${year}-${month}-${day}`;
+        };
+        
+        const formatTime = (d) => {
+          const hours = String(d.getHours()).padStart(2, "0");
+          const minutes = String(d.getMinutes()).padStart(2, "0");
+          return `${hours}:${minutes}`;
+        };
+
+        // Build query parameters
+        const params = new URLSearchParams();
+        params.append("start_date", formatDate(startDateTime));
+        params.append("start_time", formatTime(startDateTime));
+        params.append("end_date", formatDate(now));
+        params.append("end_time", formatTime(now));
+        params.append("interval_minutes", intervalMinutes.toString());
+
+        const apiUrl = `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/${campaignId}/category-timeseries?${params.toString()}`;
+
+        const response = await fetch(apiUrl, {
+          headers: {
+            accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.status === 401) {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('user_id');
+          localStorage.removeItem('username');
+          localStorage.removeItem('role');
+          window.location.href = '/';
+          return;
+        }
+
+        if (response.ok) {
+          const data = await response.json();
+          setTrendTimeseriesData(data);
+        } else {
+          console.warn('Trend timeseries data unavailable - server returned status:', response.status);
+          setTrendTimeseriesData(null);
+        }
+      } catch (err) {
+        console.error("Error fetching trend timeseries data:", err);
+        setTrendTimeseriesData(null);
+      } finally {
+        setTrendTimeseriesLoading(false);
+      }
+    };
+
+    fetchTrendTimeseriesData();
+  }, [campaignId, showTrendComparison, timeRange]);
 
   // Fetch transfer metrics from API
   useEffect(() => {
@@ -813,44 +917,115 @@ const MedicareDashboard = () => {
 
   const previousPeriodRecords = getPreviousPeriodRecords();
 
-  const timeFilteredOutcomes = allCategories.map((cat) => {
-    const catName = cat.name;
-    // Current period counts
-    const countInTimeFiltered = timeFilteredRecords.filter(
-      (r) => r.category === catName,
-    ).length;
-    const currentPercentage = timeFilteredRecords.length
-      ? Math.round((countInTimeFiltered / timeFilteredRecords.length) * 100)
-      : 0;
+  // Calculate outcomes using API timeseries data when available (for trends)
+  const getTimeFilteredOutcomesFromAPI = () => {
+    // Check if we have valid timeseries data from API
+    if (trendTimeseriesData?.intervals && trendTimeseriesData.intervals.length >= 1) {
+      const intervals = trendTimeseriesData.intervals;
+      // Current period is the last interval (most recent)
+      const currentInterval = intervals[intervals.length - 1];
+      
+      // Calculate total counts for current interval
+      const currentTotalCount = currentInterval.categories.reduce((sum, cat) => sum + cat.count, 0);
 
-    // Previous period counts
-    const countInPreviousPeriod = previousPeriodRecords.filter(
-      (r) => r.category === catName,
-    ).length;
-    const previousPercentage = previousPeriodRecords.length
-      ? Math.round((countInPreviousPeriod / previousPeriodRecords.length) * 100)
-      : 0;
+      // Check if we have 2 intervals for trend comparison
+      const hasTrendData = intervals.length >= 2 && showTrendComparison;
+      const previousInterval = hasTrendData ? intervals[intervals.length - 2] : null;
+      const previousTotalCount = previousInterval 
+        ? previousInterval.categories.reduce((sum, cat) => sum + cat.count, 0) 
+        : 0;
 
-    // Trend calculation
-    const diff = currentPercentage - previousPercentage;
-    let trend = "neutral";
-    if (diff > 0) trend = "up";
-    if (diff < 0) trend = "down";
+      // Map categories to outcomes
+      return currentInterval.categories.map((apiCat) => {
+        const catName = apiCat.name;
+        const currentCount = apiCat.count;
+        const currentPercentage = currentTotalCount > 0
+          ? Math.round((currentCount / currentTotalCount) * 100)
+          : 0;
 
-    return {
-      id: catName.toLowerCase().replace(/\s/g, "-"),
-      label: catName,
-      icon: getCategoryIcon(catName),
-      count: countInTimeFiltered,
-      percentage: currentPercentage,
-      previousCount: countInPreviousPeriod,
-      previousPercentage: previousPercentage,
-      trend: trend,
-      trendDiff: Math.abs(diff),
-      color: cat.color || "#818589",
-      bgColor: "#fff",
-    };
-  });
+        // Find the same category in previous interval (only if trends are shown)
+        let previousCount = 0;
+        let previousPercentage = 0;
+        let trend = "neutral";
+        let diff = 0;
+
+        if (hasTrendData && previousInterval) {
+          const prevCat = previousInterval.categories.find(c => c.name === catName);
+          previousCount = prevCat ? prevCat.count : 0;
+          previousPercentage = previousTotalCount > 0
+            ? Math.round((previousCount / previousTotalCount) * 100)
+            : 0;
+
+          // Trend calculation
+          diff = currentPercentage - previousPercentage;
+          if (diff > 0) trend = "up";
+          if (diff < 0) trend = "down";
+        }
+
+        return {
+          id: catName.toLowerCase().replace(/\s/g, "-"),
+          label: catName,
+          icon: getCategoryIcon(catName),
+          count: currentCount,
+          percentage: currentPercentage,
+          previousCount: previousCount,
+          previousPercentage: previousPercentage,
+          trend: trend,
+          trendDiff: Math.abs(diff),
+          color: apiCat.color || "#818589",
+          bgColor: "#fff",
+        };
+      });
+    }
+
+    // Fallback to client-side calculation if API data is not available
+    return allCategories.map((cat) => {
+      const catName = cat.name;
+      // Current period counts
+      const countInTimeFiltered = timeFilteredRecords.filter(
+        (r) => r.category === catName,
+      ).length;
+      const currentPercentage = timeFilteredRecords.length
+        ? Math.round((countInTimeFiltered / timeFilteredRecords.length) * 100)
+        : 0;
+
+      // Previous period counts (only if trends are shown)
+      let previousCount = 0;
+      let previousPercentage = 0;
+      let trend = "neutral";
+      let diff = 0;
+
+      if (showTrendComparison) {
+        previousCount = previousPeriodRecords.filter(
+          (r) => r.category === catName,
+        ).length;
+        previousPercentage = previousPeriodRecords.length
+          ? Math.round((previousCount / previousPeriodRecords.length) * 100)
+          : 0;
+
+        // Trend calculation
+        diff = currentPercentage - previousPercentage;
+        if (diff > 0) trend = "up";
+        if (diff < 0) trend = "down";
+      }
+
+      return {
+        id: catName.toLowerCase().replace(/\s/g, "-"),
+        label: catName,
+        icon: getCategoryIcon(catName),
+        count: countInTimeFiltered,
+        percentage: currentPercentage,
+        previousCount: previousCount,
+        previousPercentage: previousPercentage,
+        trend: trend,
+        trendDiff: Math.abs(diff),
+        color: cat.color || "#818589",
+        bgColor: "#fff",
+      };
+    });
+  };
+
+  const timeFilteredOutcomes = getTimeFilteredOutcomesFromAPI();
 
   // Calculate totals for statistics view
   const qualifiedCount = filteredCallRecords.filter(
