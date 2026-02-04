@@ -16,6 +16,7 @@ import AdminLanding from './AdminLanding';
 import AdminServerStats from './AdminServerStats';
 import AdminCampaigns from './AdminCampaigns';
 import AdminVoiceStats from './AdminVoiceStats';
+import AdminVoiceManagement from './AdminVoiceManagement';
 function App() {
     return (
         <Router>
@@ -34,6 +35,7 @@ function App() {
                 <Route path="/admin-server-stats" element={<AdminServerStats />} />
                 <Route path="/admin-campaigns" element={<AdminCampaigns />} />
                 <Route path="/admin-voice-stats" element={<AdminVoiceStats />} />
+                <Route path="/admin-voice-management" element={<AdminVoiceManagement />} />
                 <Route path="/request-campaign" element={<RequestCampaign />} />
             </Routes>
         </Router>
