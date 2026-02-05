@@ -55,10 +55,10 @@ const ClientLanding = () => {
 
         const employerData = await employerResponse.json();
         console.log("Employer data:", employerData);
-        
+
         // Store member info for display
         setMemberInfo(employerData);
-        
+
         // Extract client_id from employer response
         clientId = employerData.client_id;
 
@@ -261,9 +261,9 @@ const ClientLanding = () => {
   // Get user role for display
   const userRole = getUserRole();
   const isClientMember = userRole === "client_member";
-  
+
   // Determine the display name
-  const displayName = isClientMember 
+  const displayName = isClientMember
     ? (memberInfo?.full_name || memberInfo?.username || localStorage.getItem("username") || "Team Member")
     : (data?.client_name || "Client");
 
@@ -284,7 +284,7 @@ const ClientLanding = () => {
           </h1>
           <div className="header-buttons">
             {userRole === "client" && (
-              <button 
+              <button
                 className="request-campaign-btn"
                 onClick={() => window.location.href = '/request-campaign'}
               >
@@ -293,7 +293,7 @@ const ClientLanding = () => {
               </button>
             )}
             {!isClientMember && (
-              <button 
+              <button
                 className="manage-team-btn"
                 onClick={() => window.location.href = '/manage-team'}
               >
@@ -308,7 +308,7 @@ const ClientLanding = () => {
           </div>
         </div>
 
-        
+
 
         {/* Stats Cards */}
         <div className="stats-grid">
@@ -374,11 +374,10 @@ const ClientLanding = () => {
                     <span className="bot-count">{item.bot_count || 0}</span>
                   </div>
                   <span
-                    className={`status-badge-large ${
-                      item.status?.status_name === "Enabled"
+                    className={`status-badge-large ${item.status?.status_name === "Enabled"
                         ? "active"
                         : "paused"
-                    }`}
+                      }`}
                   >
                     <i className="bi bi-circle-fill"></i>
                     {item.status?.status_name || "Unknown"}
@@ -436,9 +435,9 @@ const ClientLanding = () => {
                   </div>
                 </div>
 
-                <button 
+                <button
                   className="view-dashboard-btn"
-                  onClick={() => window.location.href = `/dashboard?campaign_id=${item.id}&view=statistics`}
+                  onClick={() => window.location.href = `/dashboard?campaign_id=${item.id}&view=dashboard`}
                 >
                   View Dashboard
                   <i className="bi bi-grid-3x3-gap-fill"></i>
