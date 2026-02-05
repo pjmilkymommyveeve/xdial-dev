@@ -59,7 +59,7 @@ export default function ClientHeader({
               </button>
             )}
 
-            {!isAdminView && (
+            {(!isAdminView || userRole === 'admin') && (
               <button
                 className="nav-btn"
                 onClick={() => routerNavigate("/client-landing")}

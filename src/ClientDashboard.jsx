@@ -44,7 +44,7 @@ const MedicareDashboard = () => {
 
   // Trend comparison state for reports page
   const [showTrendComparison, setShowTrendComparison] = useState(false);
-  
+
   // Trend timeseries data from API
   const [trendTimeseriesData, setTrendTimeseriesData] = useState(null);
   const [trendTimeseriesLoading, setTrendTimeseriesLoading] = useState(false);
@@ -357,14 +357,14 @@ const MedicareDashboard = () => {
         // Calculate start and end dates/times
         const now = new Date();
         const startDateTime = new Date(now.getTime() - totalMinutesBack * 60000);
-        
+
         const formatDate = (d) => {
           const year = d.getFullYear();
           const month = String(d.getMonth() + 1).padStart(2, "0");
           const day = String(d.getDate()).padStart(2, "0");
           return `${year}-${month}-${day}`;
         };
-        
+
         const formatTime = (d) => {
           const hours = String(d.getHours()).padStart(2, "0");
           const minutes = String(d.getMinutes()).padStart(2, "0");
@@ -924,15 +924,15 @@ const MedicareDashboard = () => {
       const intervals = trendTimeseriesData.intervals;
       // Current period is the last interval (most recent)
       const currentInterval = intervals[intervals.length - 1];
-      
+
       // Calculate total counts for current interval
       const currentTotalCount = currentInterval.categories.reduce((sum, cat) => sum + cat.count, 0);
 
       // Check if we have 2 intervals for trend comparison
       const hasTrendData = intervals.length >= 2 && showTrendComparison;
       const previousInterval = hasTrendData ? intervals[intervals.length - 2] : null;
-      const previousTotalCount = previousInterval 
-        ? previousInterval.categories.reduce((sum, cat) => sum + cat.count, 0) 
+      const previousTotalCount = previousInterval
+        ? previousInterval.categories.reduce((sum, cat) => sum + cat.count, 0)
         : 0;
 
       // Map categories to outcomes

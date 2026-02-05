@@ -375,8 +375,8 @@ const ClientLanding = () => {
                   </div>
                   <span
                     className={`status-badge-large ${item.status?.status_name === "Enabled"
-                        ? "active"
-                        : "paused"
+                      ? "active"
+                      : "paused"
                       }`}
                   >
                     <i className="bi bi-circle-fill"></i>
