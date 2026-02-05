@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api from "./api"; // Use the configured axios instance
 
-const TrendTest = () => {
-    const [campaignId, setCampaignId] = useState("10");
+const CategoryTrends = ({ campaignId, isEmbedded }) => {
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState(null);
     const [error, setError] = useState(null);
@@ -11,7 +10,7 @@ const TrendTest = () => {
 
     const ENGAGED_CATEGORIES = ["Unclear Response", "Qualified", "Neutral"];
 
-    // Mapping for UI: colors and icons (using simple text/emojis for now to match style without external icons)
+    // Mapping for UI: colors and icons
     const CATEGORY_STYLES = {
         "Neutral": { color: "#9ca3af", icon: "●" }, // Grey dot
         "Qualified": { color: "#16a34a", icon: "★" }, // Green Star
@@ -29,6 +28,8 @@ const TrendTest = () => {
     };
 
     const fetchTrendData = async () => {
+        if (!campaignId) return;
+
         setLoading(true);
         setError(null);
         try {
@@ -74,20 +75,9 @@ const TrendTest = () => {
                 endTime = formatTime(end);
             }
 
-            console.log("Fetching Trend Data:", {
-                campaignId,
-                startDate,
-                startTime,
-                endDate,
-                endTime,
-                intervalMinutes
-            });
-
             const response = await api.get(`/campaigns/${campaignId}/category-timeseries`, {
                 params: { start_date: startDate, start_time: startTime, end_date: endDate, end_time: endTime, interval_minutes: intervalMinutes }
             });
-
-            console.log("API Response:", response.data);
 
             processData(response.data);
         } catch (err) {
@@ -173,23 +163,11 @@ const TrendTest = () => {
     const renderCategoryRow = (item) => {
         const style = CATEGORY_STYLES[item.name] || { color: "#6b7280", icon: "●" };
         const showDiff = showTrends && Math.abs(item.diff) >= 0; // Show diff if active
-        const isPositive = item.diff > 0;
-        const isNegative = item.diff < 0;
+        // Only show non-zero small decimal diffs if user requested? 
+        // User asked "can you explain...". I offered to change it but user didn't explicitly say "yes change it".
+        // Code is following previous approved logic.
 
-        // Color logic for trend: 
-        // For Engaged: Increase is Green (Good), Decrease is Red (Bad)
-        // For Drop-off: Increase is Red (Bad), Decrease is Green (Good) is standard logic?
-        // Wait, screenshots show "Qualified" with Red down arrow meaning decrease.
-        // "DNC" with Red down arrow 1%. "DNQ" Green up arrow 3%.
-        // So Green = Up, Red = Down, or Green = Good, Red = Bad?
-        // Screenshot: DNQ (Drop off) has Green Up Arrow 3%. Usually DNQ going up is bad?
-        // But maybe it's just literally Green = Increase, Red = Decrease...
-        // Wait, Qualified (Engaged) has Red Down Arrow 3%. So Red = Decrease.
-        // User Hangup (Drop off) has Green Up Arrow 3%. So Green = Increase.
-        // DNC (Drop off) has Red Down Arrow 1%.
-        // Conclusion: Green is Increase, Red is Decrease regardless of good/bad. 
-        // Exception: Answering Machine has Red Down Arrow 1%.
-        // Let's stick to Green = Up, Red = Down.
+        const isPositive = item.diff > 0;
 
         const arrowColor = isPositive ? "#16a34a" : "#dc2626";
         const arrow = isPositive ? "↑" : "↓";
@@ -202,7 +180,6 @@ const TrendTest = () => {
                 borderBottom: "1px solid #f3f4f6",
                 fontSize: "14px"
             }}>
-                {/* Icon */}
                 <span style={{
                     color: style.color,
                     marginRight: "12px",
@@ -213,10 +190,8 @@ const TrendTest = () => {
                     {style.icon}
                 </span>
 
-                {/* Name */}
                 <span style={{ flex: 1, color: "#374151" }}>{item.name}</span>
 
-                {/* Trend */}
                 {showTrends && item.diff !== 0 && (
                     <span style={{
                         marginRight: "16px",
@@ -234,7 +209,6 @@ const TrendTest = () => {
                     <span style={{ marginRight: "16px", fontSize: "12px", color: "#9ca3af" }}>-</span>
                 )}
 
-                {/* Value */}
                 <span style={{ fontWeight: "600", color: "#111827", minWidth: "40px", textAlign: "right" }}>
                     {item.currPct.toFixed(0)}%
                 </span>
@@ -242,95 +216,83 @@ const TrendTest = () => {
         );
     };
 
+    const containerStyle = isEmbedded ? {} : { backgroundColor: "white", borderRadius: "12px", padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", marginBottom: "24px" };
+
     return (
-        <div style={{ padding: "24px", fontFamily: "'Inter', sans-serif", backgroundColor: "#f9fafb", minHeight: "100vh" }}>
-            <div style={{ maxWidth: "1200px", margin: "0 auto", backgroundColor: "white", borderRadius: "12px", padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-                {/* Header */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "32px" }}>
-                    <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                        <div style={{ display: "flex", flexDirection: "column" }}>
-                            <label style={{ fontSize: "12px", fontWeight: "600", color: "#374151" }}>Campaign ID</label>
-                            <input
-                                type="text"
-                                value={campaignId}
-                                onChange={(e) => setCampaignId(e.target.value)}
-                                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #e5e7eb", width: "80px", fontSize: "14px" }}
-                            />
-                        </div>
-
-                        <div style={{ display: "flex", flexDirection: "column" }}>
-                            <label style={{ fontSize: "12px", fontWeight: "600", color: "#374151" }}>Range</label>
-                            <select
-                                value={selectedRange}
-                                onChange={(e) => setSelectedRange(e.target.value)}
-                                style={{
-                                    padding: "8px 12px",
-                                    borderRadius: "6px",
-                                    border: "1px solid #e5e7eb",
-                                    fontSize: "14px",
-                                    color: "#374151",
-                                    outline: "none",
-                                    minWidth: "140px"
-                                }}
-                            >
-                                <option value="today">Today</option>
-                                <option value="1h">Past 1 Hour</option>
-                                <option value="15m">Past 15 Minutes</option>
-                                <option value="5m">Past 5 Minutes</option>
-                            </select>
-                        </div>
-
-                        <button
-                            onClick={() => setShowTrends(!showTrends)}
+        <div style={containerStyle}>
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "32px" }}>
+                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                        <select
+                            value={selectedRange}
+                            onChange={(e) => setSelectedRange(e.target.value)}
                             style={{
-                                marginTop: "18px",
-                                padding: "8px 16px",
+                                padding: "8px 12px",
                                 borderRadius: "6px",
-                                border: "none",
-                                backgroundColor: showTrends ? "#2563eb" : "#e5e7eb",
-                                color: showTrends ? "white" : "#374151",
+                                border: "1px solid #e5e7eb",
                                 fontSize: "14px",
-                                fontWeight: "500",
-                                cursor: "pointer",
-                                transition: "all 0.2s"
+                                color: "#374151",
+                                outline: "none",
+                                minWidth: "140px"
                             }}
                         >
-                            Show Trends
-                        </button>
+                            <option value="today">Today</option>
+                            <option value="1h">Past 1 Hour</option>
+                            <option value="15m">Past 15 Minutes</option>
+                            <option value="5m">Past 5 Minutes</option>
+                        </select>
                     </div>
 
-                    {data && (
-                        <div style={{ padding: "8px 16px", backgroundColor: "#f3f4f6", borderRadius: "8px", fontSize: "18px", fontWeight: "700", color: "#111827" }}>
-                            {data.overallEngagedRate.toFixed(1)}%
-                        </div>
-                    )}
+                    <button
+                        onClick={() => setShowTrends(!showTrends)}
+                        style={{
+                            padding: "8px 16px",
+                            borderRadius: "6px",
+                            border: "none",
+                            backgroundColor: showTrends ? "#2563eb" : "#e5e7eb",
+                            color: showTrends ? "white" : "#374151",
+                            fontSize: "14px",
+                            fontWeight: "500",
+                            cursor: "pointer",
+                            transition: "all 0.2s"
+                        }}
+                    >
+                        Show Trends
+                    </button>
                 </div>
 
-                {/* Content */}
-                {loading && <div style={{ textAlign: "center", padding: "40px", color: "#6b7280" }}>Loading...</div>}
-
-                {data && !loading && (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px" }}>
-                        {/* Left Column: Engaged */}
-                        <div>
-                            <h3 style={{ fontSize: "14px", fontWeight: "600", color: "#111827", marginBottom: "16px" }}>Engaged Outcomes</h3>
-                            <div style={{ border: "1px solid #f3f4f6", borderRadius: "8px", padding: "0 16px", backgroundColor: "white" }}>
-                                {data.engagedList.map(renderCategoryRow)}
-                            </div>
-                        </div>
-
-                        {/* Right Column: Drop Off */}
-                        <div>
-                            <h3 style={{ fontSize: "14px", fontWeight: "600", color: "#111827", marginBottom: "16px" }}>Drop-Off Outcomes</h3>
-                            <div style={{ border: "1px solid #f3f4f6", borderRadius: "8px", padding: "0 16px", backgroundColor: "white" }}>
-                                {data.dropOffList.map(renderCategoryRow)}
-                            </div>
-                        </div>
+                {data && (
+                    <div style={{ padding: "8px 16px", backgroundColor: "#f3f4f6", borderRadius: "8px", fontSize: "18px", fontWeight: "700", color: "#111827" }}>
+                        {data.overallEngagedRate.toFixed(1)}%
                     </div>
                 )}
             </div>
+
+            {/* Content */}
+            {loading && <div style={{ textAlign: "center", padding: "40px", color: "#6b7280" }}>Loading...</div>}
+
+            {data && !loading && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px" }}>
+                    {/* Left Column: Engaged */}
+                    <div>
+                        <h3 style={{ fontSize: "14px", fontWeight: "600", color: "#111827", marginBottom: "16px" }}>Engaged Outcomes</h3>
+                        <div style={{ border: "1px solid #f3f4f6", borderRadius: "8px", padding: "0 16px", backgroundColor: "white" }}>
+                            {data.engagedList.map(renderCategoryRow)}
+                        </div>
+                    </div>
+
+                    {/* Right Column: Drop Off */}
+                    <div>
+                        <h3 style={{ fontSize: "14px", fontWeight: "600", color: "#111827", marginBottom: "16px" }}>Drop-Off Outcomes</h3>
+                        <div style={{ border: "1px solid #f3f4f6", borderRadius: "8px", padding: "0 16px", backgroundColor: "white" }}>
+                            {data.dropOffList.map(renderCategoryRow)}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
 
-export default TrendTest;
+export default CategoryTrends;

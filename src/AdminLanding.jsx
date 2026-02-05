@@ -700,21 +700,7 @@ const AdminLanding = () => {
                 Add Client
               </button>
             )}
-            <button
-              onClick={() => navigate("/trend-test")}
-              style={{
-                padding: "10px 20px",
-                backgroundColor: "#7c3aed",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "14px",
-                fontWeight: "600",
-                cursor: "pointer",
-              }}
-            >
-              Trend Test
-            </button>
+
             <button
               onClick={handleLogout}
               style={{
