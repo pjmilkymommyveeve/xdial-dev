@@ -59,6 +59,7 @@ const AdminVoiceManagement = () => {
     const [isLoadingCMV, setIsLoadingCMV] = useState(false);
     const [uploadingCell, setUploadingCell] = useState(null);
     const [voiceRecordings, setVoiceRecordings] = useState({}); // { cmvId: [recordings] }
+    const [recordingCategoryAssignments, setRecordingCategoryAssignments] = useState({}); // { recordingId: [categoryAssignments] }
 
     // Fetch initial data
     useEffect(() => {
@@ -91,11 +92,14 @@ const AdminVoiceManagement = () => {
             }
 
             const recordingsMap = {};
+            const allRecordingIds = [];
             for (const cmv of assignedVoicesList) {
                 try {
                     const response = await api.get(`/voice-recordings/campaign-model-voices/${cmv.id}`);
                     console.log(`Recordings for CMV ${cmv.id}:`, response.data);
-                    recordingsMap[cmv.id] = response.data || [];
+                    const recordings = response.data || [];
+                    recordingsMap[cmv.id] = recordings;
+                    recordings.forEach(rec => allRecordingIds.push(rec.id));
                 } catch (err) {
                     console.error(`Error fetching recordings for CMV ${cmv.id}:`, err);
                     recordingsMap[cmv.id] = [];
@@ -103,6 +107,21 @@ const AdminVoiceManagement = () => {
             }
             console.log("All Voice Recordings:", recordingsMap);
             setVoiceRecordings(recordingsMap);
+
+            // Fetch category assignments for all recordings
+            const categoryAssignmentsMap = {};
+            for (const recordingId of allRecordingIds) {
+                try {
+                    const response = await api.get(`/voice-categories/recordings/${recordingId}/categories`);
+                    console.log(`Categories for Recording ${recordingId}:`, response.data);
+                    categoryAssignmentsMap[recordingId] = response.data || [];
+                } catch (err) {
+                    console.error(`Error fetching categories for recording ${recordingId}:`, err);
+                    categoryAssignmentsMap[recordingId] = [];
+                }
+            }
+            console.log("All Recording Category Assignments:", categoryAssignmentsMap);
+            setRecordingCategoryAssignments(categoryAssignmentsMap);
         };
 
         fetchRecordingsForAllVoices();
@@ -492,9 +511,81 @@ const AdminVoiceManagement = () => {
     const getRecordingsForCell = (cmv, categoryId) => {
         // First check the voiceRecordings state (fetched from API)
         const recordings = voiceRecordings[cmv.id] || cmv.recordings || cmv.voice_recordings || [];
-        // For now, return all recordings for the voice (no category filter needed if API returns all)
-        // Later can filter by category if needed
-        return recordings;
+        // Filter recordings by category assignment
+        return recordings.filter(rec => {
+            const assignments = recordingCategoryAssignments[rec.id] || [];
+            // Check if this recording is assigned to the specified category
+            return assignments.some(assignment => assignment.voice_category_id === categoryId);
+        });
+    };
+
+    // Get recordings that are NOT assigned to any category (for display in "unassigned" section)
+    const getUnassignedRecordings = (cmv) => {
+        const recordings = voiceRecordings[cmv.id] || cmv.recordings || cmv.voice_recordings || [];
+        return recordings.filter(rec => {
+            const assignments = recordingCategoryAssignments[rec.id] || [];
+            return assignments.length === 0;
+        });
+    };
+
+    // Assign category to recording
+    const handleAssignCategoryToRecording = async (recordingId, categoryId) => {
+        try {
+            const payload = {
+                assignments: [{
+                    voice_recording_id: recordingId,
+                    voice_category_id: categoryId
+                }]
+            };
+            console.log("Assign Category Payload:", payload);
+            const response = await api.post("/voice-categories/recordings/categories/bulk", payload);
+            console.log("Assign Category Response:", response.data);
+            if (response.data.success || response.data.created_count > 0) {
+                setCmvActionMessage({ type: "success", text: "Category assigned!" });
+                // Refresh category assignments
+                await refreshCategoryAssignments();
+            } else {
+                setCmvActionMessage({ type: "error", text: formatErrorMessage(response.data.errors) || "Failed to assign" });
+            }
+        } catch (err) {
+            console.error("Error assigning category:", err);
+            setCmvActionMessage({ type: "error", text: formatErrorMessage(err.response?.data?.detail) || "Failed to assign" });
+        }
+    };
+
+    // Remove category assignment from recording
+    const handleRemoveCategoryFromRecording = async (assignmentId) => {
+        if (!window.confirm("Remove this category assignment?")) return;
+        try {
+            const response = await api.post("/voice-categories/recordings/categories/bulk-delete", [assignmentId]);
+            console.log("Remove Category Response:", response.data);
+            if (response.data.success || response.data.deleted_count > 0) {
+                setCmvActionMessage({ type: "success", text: "Category removed!" });
+                await refreshCategoryAssignments();
+            }
+        } catch (err) {
+            console.error("Error removing category:", err);
+            setCmvActionMessage({ type: "error", text: formatErrorMessage(err.response?.data?.detail) || "Failed to remove" });
+        }
+    };
+
+    // Refresh category assignments for all recordings
+    const refreshCategoryAssignments = async () => {
+        const allRecordingIds = [];
+        Object.values(voiceRecordings).forEach(recordings => {
+            recordings.forEach(rec => allRecordingIds.push(rec.id));
+        });
+
+        const categoryAssignmentsMap = {};
+        for (const recordingId of allRecordingIds) {
+            try {
+                const response = await api.get(`/voice-categories/recordings/${recordingId}/categories`);
+                categoryAssignmentsMap[recordingId] = response.data || [];
+            } catch (err) {
+                categoryAssignmentsMap[recordingId] = [];
+            }
+        }
+        setRecordingCategoryAssignments(categoryAssignmentsMap);
     };
 
     // ==================== STYLES ====================
@@ -813,6 +904,7 @@ const AdminVoiceManagement = () => {
                                                 {/* Voice Cells */}
                                                 {assignedVoices.map((cmv) => {
                                                     const cellRecordings = getRecordingsForCell(cmv, category.id);
+                                                    const unassignedRecs = getUnassignedRecordings(cmv);
                                                     const isUploading = uploadingCell?.cmvId === cmv.id && uploadingCell?.categoryId === category.id;
                                                     const cellKey = `${cmv.id}-${category.id}`;
 
@@ -830,22 +922,65 @@ const AdminVoiceManagement = () => {
                                                                 </div>
                                                             ) : (
                                                                 <>
+                                                                    {/* Recordings assigned to this category */}
                                                                     {cellRecordings.length > 0 && (
                                                                         <div style={{ marginBottom: "8px" }}>
-                                                                            {cellRecordings.map((rec) => (
-                                                                                <div key={rec.id} style={{
-                                                                                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                                                                                    padding: "6px 8px", backgroundColor: "#1e293b", borderRadius: "6px", marginBottom: "4px"
-                                                                                }}>
-                                                                                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                                                                        <span style={{ color: "#3b82f6", fontSize: "14px" }}>▶</span>
-                                                                                        <span style={{ fontSize: "11px", color: "#e2e8f0", maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                                                                            {rec.name || rec.filename || `rec_${rec.id}`}
-                                                                                        </span>
+                                                                            {cellRecordings.map((rec) => {
+                                                                                const assignments = recordingCategoryAssignments[rec.id] || [];
+                                                                                const thisAssignment = assignments.find(a => a.voice_category_id === category.id);
+                                                                                return (
+                                                                                    <div key={rec.id} style={{
+                                                                                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                                                                                        padding: "6px 8px", backgroundColor: "#1e293b", borderRadius: "6px", marginBottom: "4px"
+                                                                                    }}>
+                                                                                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                                                                            <span style={{ color: "#3b82f6", fontSize: "14px" }}>▶</span>
+                                                                                            <span style={{ fontSize: "11px", color: "#e2e8f0", maxWidth: "100px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                                                                {rec.name || rec.filename || `rec_${rec.id}`}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                        <div style={{ display: "flex", gap: "4px" }}>
+                                                                                            {thisAssignment && (
+                                                                                                <button
+                                                                                                    onClick={() => handleRemoveCategoryFromRecording(thisAssignment.id)}
+                                                                                                    title="Remove from category"
+                                                                                                    style={{ background: "none", border: "none", color: "#f59e0b", cursor: "pointer", fontSize: "10px", padding: "2px" }}
+                                                                                                >
+                                                                                                    ✂️
+                                                                                                </button>
+                                                                                            )}
+                                                                                            <button onClick={() => handleDeleteRecording(rec.id)} title="Delete recording" style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: "12px", padding: "2px" }}>🗑️</button>
+                                                                                        </div>
                                                                                     </div>
-                                                                                    <button onClick={() => handleDeleteRecording(rec.id)} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: "12px", padding: "2px 4px" }}>🗑️</button>
-                                                                                </div>
-                                                                            ))}
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Assign unassigned recording dropdown */}
+                                                                    {unassignedRecs.length > 0 && (
+                                                                        <div style={{ marginBottom: "8px" }}>
+                                                                            <select
+                                                                                defaultValue=""
+                                                                                onChange={(e) => {
+                                                                                    if (e.target.value) {
+                                                                                        handleAssignCategoryToRecording(parseInt(e.target.value), category.id);
+                                                                                        e.target.value = "";
+                                                                                    }
+                                                                                }}
+                                                                                style={{
+                                                                                    width: "100%", padding: "6px 8px", backgroundColor: "#1e293b",
+                                                                                    border: "1px solid #3b82f6", borderRadius: "4px",
+                                                                                    color: "#94a3b8", fontSize: "10px", cursor: "pointer"
+                                                                                }}
+                                                                            >
+                                                                                <option value="">+ Assign recording...</option>
+                                                                                {unassignedRecs.map(rec => (
+                                                                                    <option key={rec.id} value={rec.id}>
+                                                                                        {rec.name || rec.filename || `Recording ${rec.id}`}
+                                                                                    </option>
+                                                                                ))}
+                                                                            </select>
                                                                         </div>
                                                                     )}
 
@@ -895,6 +1030,67 @@ const AdminVoiceManagement = () => {
                                                 })}
                                             </div>
                                         ))}
+
+                                        {/* Unassigned Recordings Row */}
+                                        <div style={{ display: "grid", gridTemplateColumns: `160px repeat(${assignedVoices.length}, 1fr)`, borderBottom: "1px solid #334155", backgroundColor: "#1a1f2e" }}>
+                                            <div style={{ padding: "16px 20px", backgroundColor: "#1a1f2e", borderRight: "1px solid #334155" }}>
+                                                <div style={{ fontWeight: "600", color: "#f59e0b", fontSize: "13px", marginBottom: "2px" }}>📁 Unassigned</div>
+                                                <div style={{ fontSize: "10px", color: "#64748b" }}>Recordings without category</div>
+                                            </div>
+                                            {assignedVoices.map((cmv) => {
+                                                const unassignedRecs = getUnassignedRecordings(cmv);
+                                                return (
+                                                    <div key={`unassigned-${cmv.id}`} style={{
+                                                        padding: "12px",
+                                                        backgroundColor: "#1a1f2e",
+                                                        borderLeft: "1px solid #334155",
+                                                        minHeight: "80px",
+                                                    }}>
+                                                        {unassignedRecs.length === 0 ? (
+                                                            <div style={{ color: "#475569", fontSize: "11px", textAlign: "center", padding: "8px" }}>
+                                                                No unassigned recordings
+                                                            </div>
+                                                        ) : (
+                                                            unassignedRecs.map(rec => (
+                                                                <div key={rec.id} style={{
+                                                                    display: "flex", flexDirection: "column", gap: "4px",
+                                                                    padding: "8px", backgroundColor: "#0f172a", borderRadius: "6px", marginBottom: "6px"
+                                                                }}>
+                                                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                                                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                                                            <span style={{ color: "#f59e0b", fontSize: "14px" }}>▶</span>
+                                                                            <span style={{ fontSize: "11px", color: "#e2e8f0", maxWidth: "100px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                                                {rec.name || rec.filename || `rec_${rec.id}`}
+                                                                            </span>
+                                                                        </div>
+                                                                        <button onClick={() => handleDeleteRecording(rec.id)} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: "12px", padding: "2px" }}>🗑️</button>
+                                                                    </div>
+                                                                    <select
+                                                                        defaultValue=""
+                                                                        onChange={(e) => {
+                                                                            if (e.target.value) {
+                                                                                handleAssignCategoryToRecording(rec.id, parseInt(e.target.value));
+                                                                                e.target.value = "";
+                                                                            }
+                                                                        }}
+                                                                        style={{
+                                                                            width: "100%", padding: "4px 6px", backgroundColor: "#1e293b",
+                                                                            border: "1px solid #f59e0b", borderRadius: "4px",
+                                                                            color: "#94a3b8", fontSize: "10px", cursor: "pointer"
+                                                                        }}
+                                                                    >
+                                                                        <option value="">Assign to category...</option>
+                                                                        {voiceCategories.map(cat => (
+                                                                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                                                        ))}
+                                                                    </select>
+                                                                </div>
+                                                            ))
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
                                 </div>
                             )}

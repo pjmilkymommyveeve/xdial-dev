@@ -857,6 +857,13 @@ const AdminVoiceStats = () => {
                           }}></th>
                           <th style={{
                             padding: "12px 16px",
+                            textAlign: "center",
+                            fontWeight: "600",
+                            color: "#374151",
+                            width: "60px"
+                          }}>S.No</th>
+                          <th style={{
+                            padding: "12px 16px",
                             textAlign: "left",
                             fontWeight: "600",
                             color: "#374151"
@@ -991,6 +998,14 @@ const AdminVoiceStats = () => {
                                 }}>
                                   ▶
                                 </span>
+                              </td>
+                              <td style={{
+                                padding: "12px 16px",
+                                textAlign: "center",
+                                fontWeight: "500",
+                                color: "#6b7280"
+                              }}>
+                                {idx + 1}
                               </td>
                               <td style={{
                                 padding: "12px 16px",
