@@ -175,13 +175,16 @@ const AdminDashboard = () => {
     // If no calls, we can't really guess, so empty.
 
     let maxStage = -1;
+    let hasStageZero = false;
+
     if (data.calls && data.calls.length > 0) {
       data.calls.forEach(call => {
         // Only consider actual stage data present in the response
         if (call.stages) {
           call.stages.forEach(s => {
-            if (s.stage !== undefined && s.stage > maxStage) {
-              maxStage = s.stage;
+            if (s.stage !== undefined) {
+              if (s.stage > maxStage) maxStage = s.stage;
+              if (s.stage === 0) hasStageZero = true;
             }
           });
         }
@@ -197,11 +200,13 @@ const AdminDashboard = () => {
     if (filteredStages.length > 0) {
       const maxFiltered = Math.max(...filteredStages);
       if (maxFiltered > maxStage) maxStage = maxFiltered;
+      if (filteredStages.includes(0)) hasStageZero = true;
     }
 
+    const startStage = hasStageZero ? 0 : 1;
     const stagesArray = [];
-    if (maxStage >= 1) {
-      for (let i = 1; i <= maxStage; i++) {
+    if (maxStage >= startStage) {
+      for (let i = startStage; i <= maxStage; i++) {
         stagesArray.push(i);
       }
     }

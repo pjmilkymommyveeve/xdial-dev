@@ -17,6 +17,7 @@ import AdminServerStats from './AdminServerStats';
 import AdminCampaigns from './AdminCampaigns';
 import AdminVoiceStats from './AdminVoiceStats';
 import AdminVoiceManagement from './AdminVoiceManagement';
+import TrendTest from './TrendTest';
 function App() {
     return (
         <Router>
@@ -37,6 +38,7 @@ function App() {
                 <Route path="/admin-voice-stats" element={<AdminVoiceStats />} />
                 <Route path="/admin-voice-management" element={<AdminVoiceManagement />} />
                 <Route path="/request-campaign" element={<RequestCampaign />} />
+                <Route path="/trend-test" element={<TrendTest />} />
             </Routes>
         </Router>
     );
