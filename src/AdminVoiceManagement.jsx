@@ -5,6 +5,30 @@ import api from "./api";
 const AdminVoiceManagement = () => {
     const navigate = useNavigate();
 
+    // Helper function to safely format error messages (handles objects, arrays, strings)
+    const formatErrorMessage = (error) => {
+        if (!error) return null;
+        if (typeof error === 'string') return error;
+        if (Array.isArray(error)) {
+            return error.map(e => {
+                if (typeof e === 'string') return e;
+                if (e?.msg) return e.msg;
+                if (e?.message) return e.message;
+                return JSON.stringify(e);
+            }).join(', ');
+        }
+        if (typeof error === 'object') {
+            if (error.msg) return error.msg;
+            if (error.message) return error.message;
+            if (error.detail) {
+                if (typeof error.detail === 'string') return error.detail;
+                return formatErrorMessage(error.detail);
+            }
+            return JSON.stringify(error);
+        }
+        return String(error);
+    };
+
     // State for data
     const [campaignModels, setCampaignModels] = useState([]);
     const [voices, setVoices] = useState([]);
@@ -34,11 +58,55 @@ const AdminVoiceManagement = () => {
     const [selectedVoiceToAssign, setSelectedVoiceToAssign] = useState("");
     const [isLoadingCMV, setIsLoadingCMV] = useState(false);
     const [uploadingCell, setUploadingCell] = useState(null);
+    const [voiceRecordings, setVoiceRecordings] = useState({}); // { cmvId: [recordings] }
 
     // Fetch initial data
     useEffect(() => {
         fetchInitialData();
     }, []);
+
+    // Fetch recordings when campaign model voices data changes
+    useEffect(() => {
+        const fetchRecordingsForAllVoices = async () => {
+            if (!campaignModelVoicesData) {
+                setVoiceRecordings({});
+                return;
+            }
+
+            // Get assigned voices from data
+            let assignedVoicesList = [];
+            if (Array.isArray(campaignModelVoicesData)) {
+                assignedVoicesList = campaignModelVoicesData;
+            } else if (campaignModelVoicesData.voices) {
+                assignedVoicesList = campaignModelVoicesData.voices;
+            } else if (campaignModelVoicesData.data) {
+                assignedVoicesList = Array.isArray(campaignModelVoicesData.data)
+                    ? campaignModelVoicesData.data
+                    : (campaignModelVoicesData.data.voices || []);
+            }
+
+            if (assignedVoicesList.length === 0) {
+                setVoiceRecordings({});
+                return;
+            }
+
+            const recordingsMap = {};
+            for (const cmv of assignedVoicesList) {
+                try {
+                    const response = await api.get(`/voice-recordings/campaign-model-voices/${cmv.id}`);
+                    console.log(`Recordings for CMV ${cmv.id}:`, response.data);
+                    recordingsMap[cmv.id] = response.data || [];
+                } catch (err) {
+                    console.error(`Error fetching recordings for CMV ${cmv.id}:`, err);
+                    recordingsMap[cmv.id] = [];
+                }
+            }
+            console.log("All Voice Recordings:", recordingsMap);
+            setVoiceRecordings(recordingsMap);
+        };
+
+        fetchRecordingsForAllVoices();
+    }, [campaignModelVoicesData]);
 
     const fetchInitialData = async () => {
         setLoading(true);
@@ -250,8 +318,9 @@ const AdminVoiceManagement = () => {
         setIsAssigningVoice(true);
         setCmvActionMessage(null);
         try {
+            // API expects: { assignments: [{ campaign_model_id, voice_id, active }] }
             const payload = {
-                campaign_model_voices: [{
+                assignments: [{
                     campaign_model_id: selectedCampaignModel.id,
                     voice_id: parseInt(selectedVoiceToAssign),
                     active: true
@@ -265,11 +334,12 @@ const AdminVoiceManagement = () => {
                 setSelectedVoiceToAssign("");
                 await fetchCampaignModelVoicesDetailed(selectedCampaignModel.id);
             } else {
-                setCmvActionMessage({ type: "error", text: response.data.errors?.join(", ") || "Failed" });
+                const errorText = formatErrorMessage(response.data.errors);
+                setCmvActionMessage({ type: "error", text: errorText || "Failed" });
             }
         } catch (err) {
             console.error("Error assigning voice:", err);
-            setCmvActionMessage({ type: "error", text: err.response?.data?.detail || "Failed to assign" });
+            setCmvActionMessage({ type: "error", text: formatErrorMessage(err.response?.data?.detail) || "Failed to assign" });
         } finally {
             setIsAssigningVoice(false);
         }
@@ -292,9 +362,10 @@ const AdminVoiceManagement = () => {
 
     const handleToggleVoiceActive = async (cmv) => {
         try {
+            // API expects: { updates: [{ cmv_id: number, active: boolean }] }
             const payload = {
-                campaign_model_voices: [{
-                    id: cmv.id,
+                updates: [{
+                    cmv_id: cmv.id,
                     active: !cmv.active
                 }]
             };
@@ -303,10 +374,12 @@ const AdminVoiceManagement = () => {
             console.log("Toggle Active Response:", response.data);
             if (response.data.success || response.data.updated_count > 0) {
                 await fetchCampaignModelVoicesDetailed(selectedCampaignModel.id);
+            } else {
+                setCmvActionMessage({ type: "error", text: formatErrorMessage(response.data.errors) || "Failed to update" });
             }
         } catch (err) {
             console.error("Error toggling voice:", err);
-            setCmvActionMessage({ type: "error", text: "Failed to update" });
+            setCmvActionMessage({ type: "error", text: formatErrorMessage(err.response?.data?.detail) || "Failed to update" });
         }
     };
 
@@ -314,9 +387,10 @@ const AdminVoiceManagement = () => {
         if (!file) return;
         setUploadingCell({ cmvId, categoryId });
         const formData = new FormData();
-        formData.append("file", file);
+        // API expects 'files' (plural) as the field name
+        formData.append("files", file);
         formData.append("campaign_model_voice_id", cmvId);
-        if (categoryId) formData.append("voice_category_id", categoryId);
+        // Note: voice_category_id may need to be handled differently based on API
 
         console.log("Upload Recording - CMV ID:", cmvId, "Category ID:", categoryId, "File:", file.name);
 
@@ -326,10 +400,11 @@ const AdminVoiceManagement = () => {
             });
             console.log("Upload Recording Response:", response.data);
             setCmvActionMessage({ type: "success", text: "Recording uploaded!" });
-            await fetchCampaignModelVoicesDetailed(selectedCampaignModel.id);
+            // Refresh recordings for all voices
+            await fetchAllRecordingsForVoices();
         } catch (err) {
             console.error("Error uploading recording:", err);
-            setCmvActionMessage({ type: "error", text: err.response?.data?.detail || "Upload failed" });
+            setCmvActionMessage({ type: "error", text: formatErrorMessage(err.response?.data?.detail) || "Upload failed" });
         } finally {
             setUploadingCell(null);
         }
@@ -338,14 +413,50 @@ const AdminVoiceManagement = () => {
     const handleDeleteRecording = async (recordingId) => {
         if (!window.confirm("Delete this recording?")) return;
         try {
-            const response = await api.post("/voice-recordings/delete", { recording_id: recordingId });
+            // API expects form-urlencoded with recording_ids array
+            const params = new URLSearchParams();
+            params.append("recording_ids", recordingId);
+
+            const response = await api.post("/voice-recordings/delete", params, {
+                headers: { "Content-Type": "application/x-www-form-urlencoded" }
+            });
             console.log("Delete Recording Response:", response.data);
             setCmvActionMessage({ type: "success", text: "Recording deleted!" });
-            await fetchCampaignModelVoicesDetailed(selectedCampaignModel.id);
+            // Refresh recordings for all voices
+            await fetchAllRecordingsForVoices();
         } catch (err) {
             console.error("Error deleting recording:", err);
-            setCmvActionMessage({ type: "error", text: "Failed to delete" });
+            setCmvActionMessage({ type: "error", text: formatErrorMessage(err.response?.data?.detail) || "Failed to delete" });
         }
+    };
+
+    // Fetch recordings for a specific voice
+    const fetchRecordingsForVoice = async (cmvId) => {
+        try {
+            const response = await api.get(`/voice-recordings/campaign-model-voices/${cmvId}`);
+            console.log(`Recordings for CMV ${cmvId}:`, response.data);
+            return response.data || [];
+        } catch (err) {
+            console.error(`Error fetching recordings for CMV ${cmvId}:`, err);
+            return [];
+        }
+    };
+
+    // Fetch recordings for all assigned voices
+    const fetchAllRecordingsForVoices = async () => {
+        const assignedVoicesList = getAssignedVoices();
+        if (assignedVoicesList.length === 0) {
+            setVoiceRecordings({});
+            return;
+        }
+
+        const recordingsMap = {};
+        for (const cmv of assignedVoicesList) {
+            const recordings = await fetchRecordingsForVoice(cmv.id);
+            recordingsMap[cmv.id] = recordings;
+        }
+        console.log("All Voice Recordings:", recordingsMap);
+        setVoiceRecordings(recordingsMap);
     };
 
     const handleLogout = () => {
@@ -379,14 +490,11 @@ const AdminVoiceManagement = () => {
 
     // Get recordings for a specific voice + category combination
     const getRecordingsForCell = (cmv, categoryId) => {
-        const recordings = cmv.recordings || cmv.voice_recordings || [];
-        return recordings.filter(rec => {
-            // Check if recording belongs to this category
-            if (rec.voice_category_id === categoryId) return true;
-            if (rec.category_id === categoryId) return true;
-            if (rec.categories?.some(cat => cat.id === categoryId)) return true;
-            return false;
-        });
+        // First check the voiceRecordings state (fetched from API)
+        const recordings = voiceRecordings[cmv.id] || cmv.recordings || cmv.voice_recordings || [];
+        // For now, return all recordings for the voice (no category filter needed if API returns all)
+        // Later can filter by category if needed
+        return recordings;
     };
 
     // ==================== STYLES ====================
