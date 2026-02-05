@@ -17,6 +17,58 @@ const AdminCampaigns = () => {
   // Sorting state
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
+  // Helper function to check if expiry is within 1 week
+  const isExpiringSoon = (endDate) => {
+    if (!endDate) return false;
+    const today = new Date();
+    const expiryDate = new Date(endDate);
+    const oneWeekFromNow = new Date();
+    oneWeekFromNow.setDate(today.getDate() + 7);
+    return expiryDate <= oneWeekFromNow && expiryDate >= today;
+  };
+
+  // Helper function to check if already expired
+  const isExpired = (endDate) => {
+    if (!endDate) return false;
+    const today = new Date();
+    const expiryDate = new Date(endDate);
+    return expiryDate < today;
+  };
+
+  // Get expiry style based on date
+  const getExpiryStyle = (endDate) => {
+    if (isExpired(endDate)) {
+      return {
+        backgroundColor: "#fee2e2",
+        color: "#991b1b",
+        padding: "4px 10px",
+        borderRadius: "12px",
+        fontSize: "12px",
+        fontWeight: "600",
+      };
+    }
+    if (isExpiringSoon(endDate)) {
+      return {
+        backgroundColor: "#fef3c7",
+        color: "#92400e",
+        padding: "4px 10px",
+        borderRadius: "12px",
+        fontSize: "12px",
+        fontWeight: "600",
+        animation: "pulse 2s infinite",
+      };
+    }
+    return {
+      color: "#6b7280",
+      fontSize: "13px",
+    };
+  };
+
+  // Get campaigns expiring soon (within 7 days)
+  const expiringSoonCampaigns = campaignData?.campaigns?.filter((campaign) => {
+    return isExpiringSoon(campaign.end_date) && campaign.current_status !== 'Archived';
+  }) || [];
+
   // Fetch campaign stats on mount
   useEffect(() => {
     const fetchCampaignStats = async () => {
@@ -628,6 +680,87 @@ const AdminCampaigns = () => {
               </div>
             </div>
 
+            {/* Expiring Soon Alert Section */}
+            {expiringSoonCampaigns.length > 0 && (
+              <div
+                style={{
+                  backgroundColor: "#fffbeb",
+                  borderRadius: "12px",
+                  padding: "16px 20px",
+                  marginBottom: "24px",
+                  border: "1px solid #fcd34d",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    marginBottom: "12px",
+                  }}
+                >
+                  <span style={{ fontSize: "20px" }}>⚠️</span>
+                  <h3
+                    style={{
+                      margin: 0,
+                      fontSize: "16px",
+                      fontWeight: "700",
+                      color: "#92400e",
+                    }}
+                  >
+                    Expiring Soon ({expiringSoonCampaigns.length})
+                  </h3>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "12px",
+                  }}
+                >
+                  {expiringSoonCampaigns.map((campaign) => (
+                    <div
+                      key={`expiring-${campaign.client_campaign_model_id}`}
+                      style={{
+                        backgroundColor: "white",
+                        borderRadius: "8px",
+                        padding: "12px 16px",
+                        border: "1px solid #fcd34d",
+                        minWidth: "200px",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => toggleCampaignExpand(campaign.client_campaign_model_id)}
+                    >
+                      <div style={{ fontWeight: "600", color: "#111827", marginBottom: "4px" }}>
+                        {campaign.client_name}
+                      </div>
+                      <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "8px" }}>
+                        {campaign.campaign_name} (ID: {campaign.client_campaign_model_id})
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          fontSize: "13px",
+                          fontWeight: "600",
+                          color: "#92400e",
+                        }}
+                      >
+                        <span>📅</span>
+                        Expires: {new Date(campaign.end_date).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Campaign Statistics Table */}
             {filteredCampaigns.length > 0 ? (
               <div
@@ -657,7 +790,8 @@ const AdminCampaigns = () => {
                     style={{
                       width: "100%",
                       borderCollapse: "collapse",
-                      fontSize: "14px",
+                      fontSize: "13px",
+                      tableLayout: "fixed",
                     }}
                   >
                     <thead>
@@ -669,74 +803,90 @@ const AdminCampaigns = () => {
                       >
                         <th
                           style={{
-                            padding: "12px 16px",
-                            textAlign: "left",
-                            fontWeight: "600",
-                            color: "#374151",
-                            width: "30px",
-                          }}
-                        ></th>
-                        <th
-                          onClick={() => handleSort('client_campaign_model_id')}
-                          style={{
-                            padding: "12px 16px",
+                            padding: "10px 8px",
                             textAlign: "center",
                             fontWeight: "600",
                             color: "#374151",
-                            cursor: "pointer",
-                            userSelect: "none"
+                            width: "35px",
+                          }}
+                        ></th>
+                        <th
+                          style={{
+                            padding: "10px 8px",
+                            textAlign: "center",
+                            fontWeight: "600",
+                            color: "#374151",
+                            width: "50px",
                           }}
                         >
-                          ID {sortConfig.key === 'client_campaign_model_id' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                          SR No
                         </th>
                         <th
                           onClick={() => handleSort('client_name')}
                           style={{
-                            padding: "12px 16px",
+                            padding: "10px 8px",
                             textAlign: "left",
                             fontWeight: "600",
                             color: "#374151",
                             cursor: "pointer",
-                            userSelect: "none"
+                            userSelect: "none",
+                            width: "14%",
                           }}
                         >
                           Client {sortConfig.key === 'client_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                         </th>
                         <th
-                          onClick={() => handleSort('campaign_name')}
+                          onClick={() => handleSort('client_campaign_model_id')}
                           style={{
-                            padding: "12px 16px",
-                            textAlign: "left",
-                            fontWeight: "600",
-                            color: "#374151",
-                            cursor: "pointer",
-                            userSelect: "none"
-                          }}
-                        >
-                          Campaign {sortConfig.key === 'campaign_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                        </th>
-                        <th
-                          onClick={() => handleSort('model_name')}
-                          style={{
-                            padding: "12px 16px",
+                            padding: "10px 8px",
                             textAlign: "center",
                             fontWeight: "600",
                             color: "#374151",
                             cursor: "pointer",
-                            userSelect: "none"
+                            userSelect: "none",
+                            width: "50px",
+                          }}
+                        >
+                          ID {sortConfig.key === 'client_campaign_model_id' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                        </th>
+                        <th
+                          onClick={() => handleSort('model_name')}
+                          style={{
+                            padding: "10px 8px",
+                            textAlign: "center",
+                            fontWeight: "600",
+                            color: "#374151",
+                            cursor: "pointer",
+                            userSelect: "none",
+                            width: "8%",
                           }}
                         >
                           Model {sortConfig.key === 'model_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                         </th>
                         <th
-                          onClick={() => handleSort('current_status')}
+                          onClick={() => handleSort('transfer_setting')}
                           style={{
-                            padding: "12px 16px",
+                            padding: "10px 8px",
                             textAlign: "center",
                             fontWeight: "600",
                             color: "#374151",
                             cursor: "pointer",
-                            userSelect: "none"
+                            userSelect: "none",
+                            width: "9%",
+                          }}
+                        >
+                          Transfer {sortConfig.key === 'transfer_setting' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                        </th>
+                        <th
+                          onClick={() => handleSort('current_status')}
+                          style={{
+                            padding: "10px 8px",
+                            textAlign: "center",
+                            fontWeight: "600",
+                            color: "#374151",
+                            cursor: "pointer",
+                            userSelect: "none",
+                            width: "8%",
                           }}
                         >
                           Status {sortConfig.key === 'current_status' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
@@ -744,89 +894,82 @@ const AdminCampaigns = () => {
                         <th
                           onClick={() => handleSort('is_active')}
                           style={{
-                            padding: "12px 16px",
+                            padding: "10px 8px",
                             textAlign: "center",
                             fontWeight: "600",
                             color: "#374151",
                             cursor: "pointer",
-                            userSelect: "none"
+                            userSelect: "none",
+                            width: "8%",
                           }}
                         >
-                          Active Status {sortConfig.key === 'is_active' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                        </th>
-                        <th
-                          onClick={() => handleSort('transfer_setting')}
-                          style={{
-                            padding: "12px 16px",
-                            textAlign: "center",
-                            fontWeight: "600",
-                            color: "#374151",
-                            cursor: "pointer",
-                            userSelect: "none"
-                          }}
-                        >
-                          Transfer Settings {sortConfig.key === 'transfer_setting' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                          Active {sortConfig.key === 'is_active' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                         </th>
                         <th
                           onClick={() => handleSort('end_date')}
                           style={{
-                            padding: "12px 16px",
+                            padding: "10px 8px",
                             textAlign: "center",
                             fontWeight: "600",
                             color: "#374151",
                             cursor: "pointer",
-                            userSelect: "none"
+                            userSelect: "none",
+                            width: "9%",
                           }}
                         >
-                          End Date {sortConfig.key === 'end_date' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                          Expiry {sortConfig.key === 'end_date' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                         </th>
                         <th
                           onClick={() => handleSort('active_bots')}
                           style={{
-                            padding: "12px 16px",
+                            padding: "10px 8px",
                             textAlign: "center",
                             fontWeight: "600",
                             color: "#374151",
                             cursor: "pointer",
-                            userSelect: "none"
+                            userSelect: "none",
+                            width: "6%",
                           }}
                         >
-                          Active Bots {sortConfig.key === 'active_bots' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                          Active {sortConfig.key === 'active_bots' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                         </th>
                         <th
                           onClick={() => handleSort('total_bots')}
                           style={{
-                            padding: "12px 16px",
+                            padding: "10px 8px",
                             textAlign: "center",
                             fontWeight: "600",
                             color: "#374151",
                             cursor: "pointer",
-                            userSelect: "none"
+                            userSelect: "none",
+                            width: "6%",
                           }}
                         >
-                          Total Bots {sortConfig.key === 'total_bots' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                          Total {sortConfig.key === 'total_bots' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                         </th>
                         {localStorage.getItem('role') !== 'onboarding' && localStorage.getItem('role') !== 'qa' && (
                           <th
                             style={{
-                              padding: "12px 16px",
+                              padding: "10px 8px",
                               textAlign: "center",
                               fontWeight: "600",
                               color: "#374151",
+                              width: "7%",
                             }}
                           >
-                            Client Dashboard
+                            Client
                           </th>
                         )}
                         <th
                           style={{
-                            padding: "12px 16px",
+                            padding: "10px 8px",
                             textAlign: "center",
                             fontWeight: "600",
                             color: "#374151",
+                            width: "7%",
                           }}
                         >
-                          Admin Dashboard
+                          Admin
                         </th>
                       </tr>
                     </thead>
@@ -856,7 +999,7 @@ const AdminCampaigns = () => {
                           >
                             <td
                               style={{
-                                padding: "12px 16px",
+                                padding: "10px 8px",
                                 textAlign: "center",
                               }}
                             >
@@ -873,9 +1016,32 @@ const AdminCampaigns = () => {
                                 ▶
                               </span>
                             </td>
+                            {/* SR No */}
                             <td
                               style={{
-                                padding: "12px 16px",
+                                padding: "10px 8px",
+                                textAlign: "center",
+                                color: "#6b7280",
+                                fontWeight: "600",
+                              }}
+                            >
+                              {idx + 1}
+                            </td>
+                            {/* Client */}
+                            <td style={{ padding: "10px 8px" }}>
+                              <div>
+                                <div style={{ fontWeight: "600", color: "#111827", fontSize: "13px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                  {campaign.client_name}
+                                </div>
+                                <div style={{ fontSize: "11px", color: "#9ca3af", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                  {campaign.client_username}
+                                </div>
+                              </div>
+                            </td>
+                            {/* ID */}
+                            <td
+                              style={{
+                                padding: "10px 8px",
                                 textAlign: "center",
                                 color: "#6b7280",
                                 fontWeight: "600",
@@ -884,98 +1050,91 @@ const AdminCampaigns = () => {
                             >
                               {campaign.client_campaign_model_id}
                             </td>
-                            <td style={{ padding: "12px 16px" }}>
-                              <div>
-                                <div style={{ fontWeight: "600", color: "#111827" }}>
-                                  {campaign.client_name}
-                                </div>
-                                <div style={{ fontSize: "12px", color: "#9ca3af" }}>
-                                  {campaign.client_username}
-                                </div>
-                              </div>
-                            </td>
-                            <td style={{ padding: "12px 16px" }}>
-                              <div style={{ fontWeight: "600", color: "#111827" }}>
-                                {campaign.campaign_name}
-                              </div>
-                            </td>
+                            {/* Model */}
                             <td
                               style={{
-                                padding: "12px 16px",
+                                padding: "10px 8px",
                                 textAlign: "center",
                                 color: "#6b7280",
+                                fontSize: "12px",
                               }}
                             >
                               {campaign.model_name}
                             </td>
+                            {/* Transfer Settings */}
                             <td
                               style={{
-                                padding: "12px 16px",
+                                padding: "10px 8px",
+                                textAlign: "center",
+                                color: "#6b7280",
+                                fontSize: "12px",
+                              }}
+                            >
+                              {campaign.transfer_setting || "-"}
+                            </td>
+                            {/* Status */}
+                            <td
+                              style={{
+                                padding: "10px 8px",
                                 textAlign: "center",
                               }}
                             >
                               <span
                                 style={{
-                                  padding: "4px 10px",
+                                  padding: "3px 8px",
                                   backgroundColor: "#f3f4f6",
                                   color: "#6b7280",
-                                  borderRadius: "12px",
-                                  fontSize: "12px",
+                                  borderRadius: "10px",
+                                  fontSize: "11px",
                                   fontWeight: "600",
                                 }}
                               >
                                 {campaign.current_status || "Unknown"}
                               </span>
                             </td>
+                            {/* Active Status */}
                             <td
                               style={{
-                                padding: "12px 16px",
+                                padding: "10px 8px",
                                 textAlign: "center",
                               }}
                             >
                               <span
                                 style={{
-                                  padding: "4px 10px",
+                                  padding: "3px 8px",
                                   backgroundColor: campaign.is_active
                                     ? "#d1fae5"
                                     : "#fee2e2",
                                   color: campaign.is_active ? "#065f46" : "#991b1b",
-                                  borderRadius: "12px",
-                                  fontSize: "12px",
+                                  borderRadius: "10px",
+                                  fontSize: "11px",
                                   fontWeight: "600",
                                 }}
                               >
                                 {campaign.is_active ? "Active" : "Inactive"}
                               </span>
                             </td>
+                            {/* Expiry - with highlighting */}
                             <td
                               style={{
-                                padding: "12px 16px",
+                                padding: "10px 12px",
                                 textAlign: "center",
-                                color: "#6b7280",
                               }}
                             >
-                              {campaign.transfer_setting || "-"}
+                              <span style={getExpiryStyle(campaign.end_date)}>
+                                {campaign.end_date
+                                  ? new Date(campaign.end_date).toLocaleDateString("en-US", {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                  })
+                                  : "-"}
+                              </span>
                             </td>
+                            {/* Active Agents */}
                             <td
                               style={{
-                                padding: "12px 16px",
-                                textAlign: "center",
-                                color: "#6b7280",
-                                fontSize: "13px",
-                              }}
-                            >
-                              {campaign.end_date
-                                ? new Date(campaign.end_date).toLocaleDateString("en-US", {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                })
-                                : "-"}
-                            </td>
-                            <td
-                              style={{
-                                padding: "12px 16px",
+                                padding: "10px 8px",
                                 textAlign: "center",
                                 fontWeight: "600",
                                 color: campaign.is_active ? "#10b981" : "#f59e0b",
@@ -983,9 +1142,10 @@ const AdminCampaigns = () => {
                             >
                               {campaign.is_active ? campaign.bot_count : 0}
                             </td>
+                            {/* Total Agents */}
                             <td
                               style={{
-                                padding: "12px 16px",
+                                padding: "10px 8px",
                                 textAlign: "center",
                                 color: "#6b7280",
                               }}
@@ -995,7 +1155,7 @@ const AdminCampaigns = () => {
                             {localStorage.getItem('role') !== 'onboarding' && localStorage.getItem('role') !== 'qa' && (
                               <td
                                 style={{
-                                  padding: "12px 16px",
+                                  padding: "10px 8px",
                                   textAlign: "center",
                                 }}
                               >
@@ -1005,12 +1165,12 @@ const AdminCampaigns = () => {
                                     openClientDashboard(campaign.client_campaign_model_id);
                                   }}
                                   style={{
-                                    padding: "6px 12px",
+                                    padding: "5px 10px",
                                     backgroundColor: "#3b82f6",
                                     color: "white",
                                     border: "none",
-                                    borderRadius: "6px",
-                                    fontSize: "12px",
+                                    borderRadius: "5px",
+                                    fontSize: "11px",
                                     fontWeight: "600",
                                     cursor: "pointer",
                                     transition: "background-color 0.2s",
@@ -1028,7 +1188,7 @@ const AdminCampaigns = () => {
                             )}
                             <td
                               style={{
-                                padding: "12px 16px",
+                                padding: "10px 8px",
                                 textAlign: "center",
                               }}
                             >
@@ -1038,12 +1198,12 @@ const AdminCampaigns = () => {
                                   openAdminDashboard(campaign.client_campaign_model_id);
                                 }}
                                 style={{
-                                  padding: "6px 12px",
+                                  padding: "5px 10px",
                                   backgroundColor: "#8b5cf6",
                                   color: "white",
                                   border: "none",
-                                  borderRadius: "6px",
-                                  fontSize: "12px",
+                                  borderRadius: "5px",
+                                  fontSize: "11px",
                                   fontWeight: "600",
                                   cursor: "pointer",
                                   transition: "background-color 0.2s",
@@ -1061,9 +1221,7 @@ const AdminCampaigns = () => {
                           </tr>
 
                           {/* Expanded Server Extension Groups */}
-                          {expandedCampaignId === campaign.client_campaign_model_id &&
-                            campaign.server_extension_groups &&
-                            campaign.server_extension_groups.length > 0 && (
+                          {expandedCampaignId === campaign.client_campaign_model_id && (
                               <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
                                 <td
                                   colSpan="13"
@@ -1078,6 +1236,50 @@ const AdminCampaigns = () => {
                                       animation: "slideDown 0.3s ease-out",
                                     }}
                                   >
+                                    {/* Last Active Info */}
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "16px",
+                                        marginBottom: "16px",
+                                        padding: "12px 16px",
+                                        backgroundColor: "white",
+                                        borderRadius: "8px",
+                                        border: "1px solid #e5e7eb",
+                                      }}
+                                    >
+                                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                        <span style={{ fontSize: "18px" }}>🕐</span>
+                                        <span style={{ fontSize: "13px", fontWeight: "600", color: "#374151" }}>
+                                          Last Active:
+                                        </span>
+                                        <span style={{ fontSize: "13px", color: campaign.last_active ? "#10b981" : "#6b7280" }}>
+                                          {campaign.last_active
+                                            ? new Date(campaign.last_active).toLocaleString("en-US", {
+                                                year: "numeric",
+                                                month: "short",
+                                                day: "numeric",
+                                                hour: "2-digit",
+                                                minute: "2-digit",
+                                              })
+                                            : "Never"}
+                                        </span>
+                                      </div>
+                                      {campaign.campaign_name && (
+                                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "auto" }}>
+                                          <span style={{ fontSize: "13px", fontWeight: "600", color: "#374151" }}>
+                                            Campaign:
+                                          </span>
+                                          <span style={{ fontSize: "13px", color: "#4f46e5", fontWeight: "500" }}>
+                                            {campaign.campaign_name}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {campaign.server_extension_groups && campaign.server_extension_groups.length > 0 && (
+                                    <>
                                     <div
                                       style={{
                                         fontSize: "13px",
@@ -1225,6 +1427,8 @@ const AdminCampaigns = () => {
                                         )}
                                       </tbody>
                                     </table>
+                                    </>
+                                    )}
                                   </div>
                                 </td>
                               </tr>
@@ -1292,6 +1496,14 @@ const AdminCampaigns = () => {
           to {
             opacity: 1;
             transform: translateY(0);
+          }
+        }
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.7;
           }
         }
       `}</style>
