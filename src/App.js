@@ -17,6 +17,7 @@ import AdminServerStats from './AdminServerStats';
 import AdminCampaigns from './AdminCampaigns';
 import AdminVoiceStats from './AdminVoiceStats';
 import AdminVoiceManagement from './AdminVoiceManagement';
+import AdminCampaignKeywords from './AdminCampaignKeywords';
 
 function App() {
     return (
@@ -37,6 +38,7 @@ function App() {
                 <Route path="/admin-campaigns" element={<AdminCampaigns />} />
                 <Route path="/admin-voice-stats" element={<AdminVoiceStats />} />
                 <Route path="/admin-voice-management" element={<AdminVoiceManagement />} />
+                <Route path="/admin-campaign-keywords" element={<AdminCampaignKeywords />} />
                 <Route path="/request-campaign" element={<RequestCampaign />} />
 
             </Routes>

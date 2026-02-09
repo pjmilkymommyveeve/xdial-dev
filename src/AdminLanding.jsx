@@ -637,6 +637,22 @@ const AdminLanding = () => {
             </button>
 
             <button
+              onClick={() => navigate("/admin-campaign-keywords")}
+              style={{
+                padding: "10px 20px",
+                backgroundColor: "#8b5cf6", // Using purple/violet to distinguish
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "14px",
+                fontWeight: "600",
+                cursor: "pointer",
+              }}
+            >
+              Keywords
+            </button>
+
+            <button
               onClick={() => navigate("/admin-voice-management")}
               style={{
                 padding: "10px 20px",
