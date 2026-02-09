@@ -5,7 +5,7 @@ const CategoryTrends = ({ campaignId, isEmbedded }) => {
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState(null);
     const [error, setError] = useState(null);
-    const [selectedRange, setSelectedRange] = useState("today");
+    const [selectedRange, setSelectedRange] = useState("15m");
     const [showTrends, setShowTrends] = useState(false);
 
     const ENGAGED_CATEGORIES = ["Unclear Response", "Qualified", "Neutral"];
