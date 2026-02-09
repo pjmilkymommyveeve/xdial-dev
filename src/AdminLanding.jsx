@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import AdminSidebar from "./components/AdminSidebar";
 
 const formatBytes = (bytes) => {
   if (bytes === 0) return "0 B";
@@ -305,6 +306,7 @@ const ServerTable = React.memo(
 
 const AdminLanding = () => {
   const navigate = useNavigate();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [agents, setAgents] = useState({});
   const [connected, setConnected] = useState(false);
   const [showThresholdModal, setShowThresholdModal] = useState(false);
@@ -515,313 +517,107 @@ const AdminLanding = () => {
   return (
     <div
       style={{
+        display: "flex",
         minHeight: "100vh",
         backgroundColor: "#f9fafb",
         fontFamily: "Arial, sans-serif",
       }}
     >
-      <header
-        style={{
-          backgroundColor: "white",
-          borderBottom: "1px solid #e5e7eb",
-          padding: "20px 0",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: "1600px",
-            margin: "0 auto",
-            padding: "0 24px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "16px",
-          }}
-        >
-          <div>
-            <h1
+      <AdminSidebar
+        isOpen={isSidebarOpen}
+        toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        connected={connected}
+        agentCount={agentList.length}
+      />
+
+      <div style={{ flex: 1, height: "100vh", overflowY: "auto" }}>
+        <div style={{ maxWidth: "1600px", margin: "0 auto", padding: "24px" }}>
+          {/* Search Bar */}
+          <div style={{ marginBottom: "24px" }}>
+            <input
+              type="text"
+              placeholder="Search servers by IP address..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               style={{
-                margin: "0 0 8px 0",
-                fontSize: "28px",
-                fontWeight: "700",
-                color: "#111827",
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-              }}
-            >
-              Xdial Networks Admin Panel
-            </h1>
-          </div>
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "10px 16px",
-                backgroundColor: "white",
+                width: "100%",
+                padding: "12px 16px",
+                fontSize: "14px",
                 border: "1px solid #e5e7eb",
                 borderRadius: "8px",
+                backgroundColor: "white",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                boxSizing: "border-box",
               }}
-            >
-              <span
-                style={{
-                  width: "10px",
-                  height: "10px",
-                  borderRadius: "50%",
-                  background: connected ? "#10b981" : "#ef4444",
-                  boxShadow: connected
-                    ? "0 0 8px rgba(16, 185, 129, 0.5)"
-                    : "none",
-                  animation: connected ? "pulse 2s infinite" : "none",
-                }}
-              ></span>
-              <span
-                style={{
-                  fontSize: "14px",
-                  color: "#6b7280",
-                  fontWeight: "500",
-                }}
-              >
-                {connected ? "Connected" : "Disconnected"}
-              </span>
-              <span
-                style={{
-                  padding: "2px 8px",
-                  background: "#4f46e5",
-                  color: "white",
-                  borderRadius: "10px",
-                  fontSize: "12px",
-                  fontWeight: "600",
-                  marginLeft: "8px",
-                }}
-              >
-                {agentList.length} Servers
-              </span>
-            </div>
-            {localStorage.getItem('role') !== 'qa' && (
-              <button
-                onClick={() => navigate("/admin-server-stats")}
-                style={{
-                  padding: "10px 20px",
-                  backgroundColor: "#8b5cf6",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "8px",
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                }}
-              >
-                Server Stats
-              </button>
-            )}
-
-            <button
-              onClick={() => navigate("/admin-campaigns")}
-              style={{
-                padding: "10px 20px",
-                backgroundColor: "#06b6d4",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "14px",
-                fontWeight: "600",
-                cursor: "pointer",
-              }}
-            >
-              Campaigns
-            </button>
-
-            <button
-              onClick={() => navigate("/admin-campaign-keywords")}
-              style={{
-                padding: "10px 20px",
-                backgroundColor: "#8b5cf6", // Using purple/violet to distinguish
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "14px",
-                fontWeight: "600",
-                cursor: "pointer",
-              }}
-            >
-              Keywords
-            </button>
-
-            <button
-              onClick={() => navigate("/admin-voice-management")}
-              style={{
-                padding: "10px 20px",
-                backgroundColor: "#ec4899",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "14px",
-                fontWeight: "600",
-                cursor: "pointer",
-              }}
-            >
-              Voice Management
-            </button>
-
-            <button
-              onClick={() => navigate("/admin-voice-stats")}
-              style={{
-                padding: "10px 20px",
-                backgroundColor: "#f59e0b",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "14px",
-                fontWeight: "600",
-                cursor: "pointer",
-              }}
-            >
-              Voice Stats
-            </button>
-
-            <button
-              onClick={() => navigate("/admin-data-export")}
-              style={{
-                padding: "10px 20px",
-                backgroundColor: "#10b981",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "14px",
-                fontWeight: "600",
-                cursor: "pointer",
-              }}
-            >
-              Data Export
-            </button>
-            {localStorage.getItem('role') !== 'qa' && (
-              <button
-                onClick={() => navigate("/integration-form")}
-                style={{
-                  padding: "10px 20px",
-                  backgroundColor: "#4f46e5",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "8px",
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                }}
-              >
-                Add Client
-              </button>
-            )}
-
-            <button
-              onClick={handleLogout}
-              style={{
-                padding: "10px 20px",
-                backgroundColor: "#ef4444",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "14px",
-                fontWeight: "600",
-                cursor: "pointer",
-              }}
-            >
-              Logout
-            </button>
+            />
           </div>
-        </div>
-      </header>
 
-      <div style={{ maxWidth: "1600px", margin: "0 auto", padding: "24px" }}>
-        {/* Search Bar */}
-        <div style={{ marginBottom: "24px" }}>
-          <input
-            type="text"
-            placeholder="Search servers by IP address..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "12px 16px",
-              fontSize: "14px",
-              border: "1px solid #e5e7eb",
-              borderRadius: "8px",
-              backgroundColor: "white",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-              boxSizing: "border-box",
-            }}
-          />
-        </div>
-
-        {agentList.length === 0 ? (
-          <div
-            style={{
-              backgroundColor: "white",
-              borderRadius: "12px",
-              padding: "80px 24px",
-              textAlign: "center",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-            }}
-          >
+          {agentList.length === 0 ? (
             <div
               style={{
-                fontSize: "64px",
-                color: "#d1d5db",
-                marginBottom: "16px",
+                backgroundColor: "white",
+                borderRadius: "12px",
+                padding: "80px 24px",
+                textAlign: "center",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
               }}
             >
-              🖥️
+              <div
+                style={{
+                  fontSize: "64px",
+                  color: "#d1d5db",
+                  marginBottom: "16px",
+                }}
+              >
+                🖥️
+              </div>
+              <h3
+                style={{
+                  margin: "0 0 8px 0",
+                  fontSize: "20px",
+                  fontWeight: "600",
+                  color: "#111827",
+                }}
+              >
+                {searchQuery
+                  ? "No servers match your search"
+                  : "No servers connected"}
+              </h3>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "14px",
+                  color: "#6b7280",
+                }}
+              >
+                {searchQuery
+                  ? "Try a different search term"
+                  : "Waiting for monitoring agents to connect..."}
+              </p>
             </div>
-            <h3
+          ) : (
+            <div
               style={{
-                margin: "0 0 8px 0",
-                fontSize: "20px",
-                fontWeight: "600",
-                color: "#111827",
+                display: "grid",
+                gridTemplateColumns: `repeat(${columns.length}, 1fr)`,
+                gap: "24px",
               }}
             >
-              {searchQuery
-                ? "No servers match your search"
-                : "No servers connected"}
-            </h3>
-            <p
-              style={{
-                margin: 0,
-                fontSize: "14px",
-                color: "#6b7280",
-              }}
-            >
-              {searchQuery
-                ? "Try a different search term"
-                : "Waiting for monitoring agents to connect..."}
-            </p>
-          </div>
-        ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: `repeat(${columns.length}, 1fr)`,
-              gap: "24px",
-            }}
-          >
-            {columns.map((columnServers, idx) => (
-              <ServerTable
-                key={idx}
-                servers={columnServers}
-                columnIndex={idx}
-                showProgressBars={showProgressBars}
-                thresholds={thresholds}
-                openThresholdModal={openThresholdModal}
-                getServerStatus={getServerStatus}
-                getStatusColor={getStatusColor}
-              />
-            ))}
-          </div>
-        )}
+              {columns.map((columnServers, idx) => (
+                <ServerTable
+                  key={idx}
+                  servers={columnServers}
+                  columnIndex={idx}
+                  showProgressBars={showProgressBars}
+                  thresholds={thresholds}
+                  openThresholdModal={openThresholdModal}
+                  getServerStatus={getServerStatus}
+                  getStatusColor={getStatusColor}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Threshold Modal */}
