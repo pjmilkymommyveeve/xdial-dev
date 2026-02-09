@@ -22,6 +22,7 @@ jobs:
           script: | 
             cd /root/xdial-dev
             GIT_SSH_COMMAND="ssh -i /root/.ssh/remoterepo -o StrictHostKeyChecking=no" git pull origin master
+            npm install
             npm run build
             sudo rm -rf /var/www/xdial-dashboard/*
             sudo mv build/* /var/www/xdial-dashboard/
