@@ -1335,6 +1335,13 @@ const MedicareDashboard = () => {
     }
   }, [dashboardData]);
 
+  // Update document title when dashboard data changes
+  useEffect(() => {
+    if (dashboardData?.client_name) {
+      document.title = `${dashboardData.client_name} - Client Dashboard`;
+    }
+  }, [dashboardData]);
+
   // Only show loading on initial page load, not on filter refresh
   // This prevents the chart canvas from being unmounted during filter updates
   if (loading && !dashboardData)

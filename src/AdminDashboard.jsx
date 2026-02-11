@@ -169,6 +169,13 @@ const AdminDashboard = () => {
     };
   }, [campaignId, fetchTrigger, currentPage, sortDirection]);
 
+  // Update document title when dashboard data changes
+  useEffect(() => {
+    if (dashboardData?.client_name) {
+      document.title = `${dashboardData.client_name} - Admin Dashboard`;
+    }
+  }, [dashboardData]);
+
   const processAndSetData = (data) => {
     // Determine available stages from the current page of calls
     // We want columns 0 to N where N is the max stage found.
