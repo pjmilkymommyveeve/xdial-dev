@@ -360,6 +360,22 @@ const AdminDashboard = () => {
     <div style={{ margin: 0, padding: 0, fontFamily: "Arial, sans-serif", backgroundColor: "#f5f5f5", minHeight: "100vh", zoom: "0.8" }}>
       <style>
         {`
+          .admin-data-row {
+            transition: background-color 0.2s;
+          }
+          .admin-data-row:hover {
+            background-color: #fafafa !important;
+          }
+          .admin-data-row:hover td {
+            background-color: transparent !important;
+          }
+          .stage-bg-even {
+            background-color: #f5f5f5;
+          }
+          .stage-bg-odd {
+            background-color: #ffffff;
+          }
+
           .custom-scrollbar::-webkit-scrollbar {
             width: 8px;
           }
@@ -746,9 +762,8 @@ const AdminDashboard = () => {
                   dashboardData.calls.map((record) => (
                     <tr
                       key={record.id}
+                      className="admin-data-row"
                       style={{ borderBottom: "1px solid #f0f0f0" }}
-                      onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#fafafa")}
-                      onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                     >
                       <td style={{ padding: "12px", fontWeight: 500 }}>{record.id}</td>
                       <td style={{ padding: "12px" }}>{record.number}</td>
@@ -762,10 +777,16 @@ const AdminDashboard = () => {
                         if (stageData) {
                           return (
                             <React.Fragment key={stageNum}>
-                              <td style={{ padding: "12px", maxWidth: "300px", lineHeight: "1.4", backgroundColor: stageNum % 2 === 0 ? "#f5f5f5" : "#ffffff" }}>
+                              <td
+                                className={stageNum % 2 === 0 ? "stage-bg-even" : "stage-bg-odd"}
+                                style={{ padding: "12px", maxWidth: "300px", lineHeight: "1.4" }}
+                              >
                                 {stageData.transcription || "-"}
                               </td>
-                              <td style={{ padding: "12px", backgroundColor: stageNum % 2 === 0 ? "#f5f5f5" : "#ffffff" }}>
+                              <td
+                                className={stageNum % 2 === 0 ? "stage-bg-even" : "stage-bg-odd"}
+                                style={{ padding: "12px" }}
+                              >
                                 <span className="category-badge" style={{
                                   padding: "4px 10px",
                                   borderRadius: "4px",
@@ -783,8 +804,8 @@ const AdminDashboard = () => {
                         } else {
                           return (
                             <React.Fragment key={stageNum}>
-                              <td style={{ padding: "12px", textAlign: "center", color: "#ccc", backgroundColor: stageNum % 2 === 0 ? "#f5f5f5" : "#ffffff" }}>-</td>
-                              <td style={{ padding: "12px", textAlign: "center", color: "#ccc", backgroundColor: stageNum % 2 === 0 ? "#f5f5f5" : "#ffffff" }}>-</td>
+                              <td className={stageNum % 2 === 0 ? "stage-bg-even" : "stage-bg-odd"} style={{ padding: "12px", textAlign: "center", color: "#ccc" }}>-</td>
+                              <td className={stageNum % 2 === 0 ? "stage-bg-even" : "stage-bg-odd"} style={{ padding: "12px", textAlign: "center", color: "#ccc" }}>-</td>
                             </React.Fragment>
                           );
                         }
