@@ -445,19 +445,30 @@ const AdminVoiceManagement = () => {
         if (!file) return;
         setUploadingCell({ cmvId, cmvcId });
         const formData = new FormData();
-        // API expects 'files' (plural) as the field name
         formData.append("files", file);
-        formData.append("campaign_model_voice_id", cmvId);
-        formData.append("campaign_model_voice_category_id", cmvcId);
 
-        console.log("Upload Recording - CMV ID:", cmvId, "CMVC ID:", cmvcId, "File:", file.name);
+        // New API format: mappings as JSON string
+        const mappings = [{
+            filename: file.name,
+            campaign_model_voice_id: cmvId,
+            campaign_model_voice_category_id: cmvcId
+        }];
+        formData.append("mappings", JSON.stringify(mappings));
+
+        console.log("Upload Recording - Mappings:", mappings);
 
         try {
             const response = await api.post("/voice-recordings/upload", formData, {
                 headers: { "Content-Type": "multipart/form-data" }
             });
             console.log("Upload Recording Response:", response.data);
-            setCmvActionMessage({ type: "success", text: "Recording uploaded!" });
+
+            // Show specific message as requested: DB saved -> Deploying
+            setCmvActionMessage({
+                type: "success",
+                text: "Recording saved to database. Deploying to servers in background..."
+            });
+
             // Refresh recordings for all voices
             await fetchAllRecordingsForVoices();
         } catch (err) {
@@ -471,8 +482,9 @@ const AdminVoiceManagement = () => {
     const handleDeleteRecording = async (recordingId) => {
         if (!window.confirm("Delete this recording?")) return;
         try {
-            // API expects form-urlencoded with recording_ids array
             const params = new URLSearchParams();
+            // API expects recording_ids as array/list. 
+            // In x-www-form-urlencoded, this is usually repeated keys or just one if it's a list of one.
             params.append("recording_ids", recordingId);
 
             const response = await api.post("/voice-recordings/delete", params, {
