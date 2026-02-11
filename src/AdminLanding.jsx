@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import AdminSidebar from "./components/AdminSidebar";
+import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate, useOutletContext } from "react-router-dom";
+import { useAdminContext } from "./components/AdminLayout";
 
 const formatBytes = (bytes) => {
   if (bytes === 0) return "0 B";
@@ -15,30 +15,14 @@ const LOAD_METRICS_API_BASE = "https://loadmetrics.xdialnetworks.com";
 const ServerTable = React.memo(
   ({
     servers,
-    columnIndex,
     showProgressBars,
     thresholds,
     openThresholdModal,
     getServerStatus,
     getStatusColor,
   }) => {
-    const tableRef = useRef(null);
-    const scrollPositionRef = useRef(0);
-
-    const handleScroll = useCallback((e) => {
-      scrollPositionRef.current = e.target.scrollLeft;
-    }, []);
-
-    useEffect(() => {
-      if (tableRef.current) {
-        tableRef.current.scrollLeft = scrollPositionRef.current;
-      }
-    });
-
     return (
       <div
-        ref={tableRef}
-        onScroll={handleScroll}
         style={{
           backgroundColor: "white",
           borderRadius: "12px",
@@ -78,7 +62,6 @@ const ServerTable = React.memo(
         {servers.map((agent) => {
           const status = getServerStatus(agent);
           const isCritical = status === "critical";
-          const statusColor = getStatusColor(status);
           const threshold = thresholds[agent.ip] || {
             cpu: 70,
             disk: 60,
@@ -305,10 +288,9 @@ const ServerTable = React.memo(
 );
 
 const AdminLanding = () => {
-  const navigate = useNavigate();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [agents, setAgents] = useState({});
-  const [connected, setConnected] = useState(false);
+  // Use context for data
+  const { agents } = useAdminContext();
+
   const [showThresholdModal, setShowThresholdModal] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [thresholds, setThresholds] = useState({});
@@ -320,9 +302,6 @@ const AdminLanding = () => {
   const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
   const [showProgressBars, setShowProgressBars] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-
-  const wsRef = useRef(null);
-  const reconnectTimeoutRef = useRef(null);
 
   useEffect(() => {
     fetchThresholds();
@@ -351,85 +330,6 @@ const AdminLanding = () => {
 
     return () => window.removeEventListener("resize", handleResize);
   }, []);
-
-  useEffect(() => {
-    connectWebSocket();
-
-    return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-    };
-  }, []);
-
-  const connectWebSocket = () => {
-    const ws = new WebSocket(
-      "wss://loadmetrics.xdialnetworks.com/ws/dashboard",
-    );
-
-    ws.onopen = () => {
-      console.log("Connected to monitoring server");
-      setConnected(true);
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const metrics = JSON.parse(event.data);
-        setAgents((prev) => ({
-          ...prev,
-          [metrics.ip]: {
-            ...metrics,
-            lastUpdate: Date.now(),
-          },
-        }));
-      } catch (err) {
-        console.error("Failed to parse metrics:", err);
-      }
-    };
-
-    ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
-    };
-
-    ws.onclose = () => {
-      console.log("Disconnected from monitoring server");
-      setConnected(false);
-      wsRef.current = null;
-
-      reconnectTimeoutRef.current = setTimeout(() => {
-        console.log("Attempting to reconnect...");
-        connectWebSocket();
-      }, 5000);
-    };
-
-    wsRef.current = ws;
-  };
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      setAgents((prev) => {
-        const updated = { ...prev };
-        Object.keys(updated).forEach((key) => {
-          if (now - updated[key].lastUpdate > 30000) {
-            delete updated[key];
-          }
-        });
-        return updated;
-      });
-    }, 10000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    navigate("/");
-  };
 
   const openThresholdModal = useCallback(
     (ip) => {
@@ -492,7 +392,7 @@ const AdminLanding = () => {
     return status === "critical" ? "#ef4444" : "#10b981";
   }, []);
 
-  const agentList = Object.values(agents)
+  const agentList = Object.values(agents || {})
     .filter((agent) =>
       agent.ip.toLowerCase().includes(searchQuery.toLowerCase()),
     )
@@ -503,122 +403,105 @@ const AdminLanding = () => {
   const tableHeaderHeight = 50;
   const padding = 48;
   const availableHeight = viewportHeight - headerHeight - padding;
-  const maxServersPerColumn = Math.floor(
+  // Fallback to 1 column if calculation fails or is small
+  const maxServersPerColumn = Math.max(1, Math.floor(
     (availableHeight - tableHeaderHeight) / rowHeight,
-  );
+  ));
 
   const columns = [];
-  if (maxServersPerColumn > 0) {
+  if (agentList.length > 0) {
     for (let i = 0; i < agentList.length; i += maxServersPerColumn) {
       columns.push(agentList.slice(i, i + maxServersPerColumn));
     }
   }
 
   return (
-    <div
-      style={{
-        display: "flex",
-        minHeight: "100vh",
-        backgroundColor: "#f9fafb",
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
-      <AdminSidebar
-        isOpen={isSidebarOpen}
-        toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-        connected={connected}
-        agentCount={agentList.length}
-      />
-
-      <div style={{ flex: 1, height: "100vh", overflowY: "auto" }}>
-        <div style={{ maxWidth: "1600px", margin: "0 auto", padding: "24px" }}>
-          {/* Search Bar */}
-          <div style={{ marginBottom: "24px" }}>
-            <input
-              type="text"
-              placeholder="Search servers by IP address..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "12px 16px",
-                fontSize: "14px",
-                border: "1px solid #e5e7eb",
-                borderRadius: "8px",
-                backgroundColor: "white",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
-
-          {agentList.length === 0 ? (
-            <div
-              style={{
-                backgroundColor: "white",
-                borderRadius: "12px",
-                padding: "80px 24px",
-                textAlign: "center",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "64px",
-                  color: "#d1d5db",
-                  marginBottom: "16px",
-                }}
-              >
-                🖥️
-              </div>
-              <h3
-                style={{
-                  margin: "0 0 8px 0",
-                  fontSize: "20px",
-                  fontWeight: "600",
-                  color: "#111827",
-                }}
-              >
-                {searchQuery
-                  ? "No servers match your search"
-                  : "No servers connected"}
-              </h3>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: "14px",
-                  color: "#6b7280",
-                }}
-              >
-                {searchQuery
-                  ? "Try a different search term"
-                  : "Waiting for monitoring agents to connect..."}
-              </p>
-            </div>
-          ) : (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: `repeat(${columns.length}, 1fr)`,
-                gap: "24px",
-              }}
-            >
-              {columns.map((columnServers, idx) => (
-                <ServerTable
-                  key={idx}
-                  servers={columnServers}
-                  columnIndex={idx}
-                  showProgressBars={showProgressBars}
-                  thresholds={thresholds}
-                  openThresholdModal={openThresholdModal}
-                  getServerStatus={getServerStatus}
-                  getStatusColor={getStatusColor}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+    <div style={{ maxWidth: "1600px", margin: "0 auto", padding: "24px" }}>
+      {/* Search Bar */}
+      <div style={{ marginBottom: "24px" }}>
+        <input
+          type="text"
+          placeholder="Search servers by IP address..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{
+            width: "100%",
+            padding: "12px 16px",
+            fontSize: "14px",
+            border: "1px solid #e5e7eb",
+            borderRadius: "8px",
+            backgroundColor: "white",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+            boxSizing: "border-box",
+          }}
+        />
       </div>
+
+      {agentList.length === 0 ? (
+        <div
+          style={{
+            backgroundColor: "white",
+            borderRadius: "12px",
+            padding: "80px 24px",
+            textAlign: "center",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+          }}
+        >
+          <div
+            style={{
+              fontSize: "64px",
+              color: "#d1d5db",
+              marginBottom: "16px",
+            }}
+          >
+            🖥️
+          </div>
+          <h3
+            style={{
+              margin: "0 0 8px 0",
+              fontSize: "20px",
+              fontWeight: "600",
+              color: "#111827",
+            }}
+          >
+            {searchQuery
+              ? "No servers match your search"
+              : "No servers connected"}
+          </h3>
+          <p
+            style={{
+              margin: 0,
+              fontSize: "14px",
+              color: "#6b7280",
+            }}
+          >
+            {searchQuery
+              ? "Try a different search term"
+              : "Waiting for monitoring agents to connect..."}
+          </p>
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${columns.length}, 1fr)`,
+            gap: "24px",
+          }}
+        >
+          {columns.map((columnServers, idx) => (
+            <ServerTable
+              key={idx}
+              servers={columnServers}
+              columnIndex={idx}
+              showProgressBars={showProgressBars}
+              thresholds={thresholds}
+              openThresholdModal={openThresholdModal}
+              getServerStatus={getServerStatus}
+              getStatusColor={getStatusColor}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Threshold Modal */}
       {showThresholdModal && (
@@ -637,6 +520,7 @@ const AdminLanding = () => {
           }}
           onClick={() => setShowThresholdModal(false)}
         >
+          {/* Modal Content - same as before */}
           <div
             style={{
               backgroundColor: "white",
@@ -683,26 +567,12 @@ const AdminLanding = () => {
               </button>
             </div>
 
-            <p
-              style={{
-                margin: "0 0 24px 0",
-                color: "#6b7280",
-                fontSize: "14px",
-              }}
-            >
+            <p style={{ margin: "0 0 24px 0", color: "#6b7280", fontSize: "14px" }}>
               Server: <strong>{selectedAgent}</strong>
             </p>
 
             <div style={{ marginBottom: "20px" }}>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  color: "#374151",
-                  marginBottom: "8px",
-                }}
-              >
+              <label style={{ display: "block", fontSize: "14px", fontWeight: "600", color: "#374151", marginBottom: "8px" }}>
                 Load Average Threshold
               </label>
               <input
@@ -710,33 +580,13 @@ const AdminLanding = () => {
                 min="0"
                 step="0.1"
                 value={tempThreshold.load}
-                onChange={(e) =>
-                  setTempThreshold({
-                    ...tempThreshold,
-                    load: Number(e.target.value),
-                  })
-                }
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "8px",
-                  fontSize: "14px",
-                  boxSizing: "border-box",
-                }}
+                onChange={(e) => setTempThreshold({ ...tempThreshold, load: Number(e.target.value) })}
+                style={{ width: "100%", padding: "10px 12px", border: "1px solid #d1d5db", borderRadius: "8px", fontSize: "14px", boxSizing: "border-box" }}
               />
             </div>
 
             <div style={{ marginBottom: "20px" }}>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  color: "#374151",
-                  marginBottom: "8px",
-                }}
-              >
+              <label style={{ display: "block", fontSize: "14px", fontWeight: "600", color: "#374151", marginBottom: "8px" }}>
                 CPU Threshold (%)
               </label>
               <input
@@ -744,33 +594,13 @@ const AdminLanding = () => {
                 min="0"
                 max="100"
                 value={tempThreshold.cpu}
-                onChange={(e) =>
-                  setTempThreshold({
-                    ...tempThreshold,
-                    cpu: Number(e.target.value),
-                  })
-                }
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "8px",
-                  fontSize: "14px",
-                  boxSizing: "border-box",
-                }}
+                onChange={(e) => setTempThreshold({ ...tempThreshold, cpu: Number(e.target.value) })}
+                style={{ width: "100%", padding: "10px 12px", border: "1px solid #d1d5db", borderRadius: "8px", fontSize: "14px", boxSizing: "border-box" }}
               />
             </div>
 
             <div style={{ marginBottom: "24px" }}>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  color: "#374151",
-                  marginBottom: "8px",
-                }}
-              >
+              <label style={{ display: "block", fontSize: "14px", fontWeight: "600", color: "#374151", marginBottom: "8px" }}>
                 Disk Threshold (%)
               </label>
               <input
@@ -778,57 +608,21 @@ const AdminLanding = () => {
                 min="0"
                 max="100"
                 value={tempThreshold.disk}
-                onChange={(e) =>
-                  setTempThreshold({
-                    ...tempThreshold,
-                    disk: Number(e.target.value),
-                  })
-                }
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "8px",
-                  fontSize: "14px",
-                  boxSizing: "border-box",
-                }}
+                onChange={(e) => setTempThreshold({ ...tempThreshold, disk: Number(e.target.value) })}
+                style={{ width: "100%", padding: "10px 12px", border: "1px solid #d1d5db", borderRadius: "8px", fontSize: "14px", boxSizing: "border-box" }}
               />
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                gap: "12px",
-                justifyContent: "flex-end",
-              }}
-            >
+            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
               <button
                 onClick={() => setShowThresholdModal(false)}
-                style={{
-                  padding: "10px 20px",
-                  backgroundColor: "#f3f4f6",
-                  color: "#374151",
-                  border: "none",
-                  borderRadius: "8px",
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                }}
+                style={{ padding: "10px 20px", backgroundColor: "#f3f4f6", color: "#374151", border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: "600", cursor: "pointer" }}
               >
                 Cancel
               </button>
               <button
                 onClick={saveThreshold}
-                style={{
-                  padding: "10px 20px",
-                  backgroundColor: "#4f46e5",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "8px",
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                }}
+                style={{ padding: "10px 20px", backgroundColor: "#4f46e5", color: "white", border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: "600", cursor: "pointer" }}
               >
                 Save Thresholds
               </button>

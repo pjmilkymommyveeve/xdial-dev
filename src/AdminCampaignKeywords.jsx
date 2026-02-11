@@ -340,24 +340,6 @@ const AdminCampaignKeywords = () => {
                         Manage keywords for AI campaign models and their categories.
                     </p>
                 </div>
-                <button
-                    onClick={() => navigate("/admin-dashboard")}
-                    style={{
-                        padding: "10px 20px",
-                        backgroundColor: "white",
-                        border: "1px solid #e5e7eb",
-                        borderRadius: "8px",
-                        color: "#374151",
-                        fontWeight: "600",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        transition: "all 0.2s",
-                    }}
-                >
-                    Back to Dashboard
-                </button>
             </div>
 
             <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
@@ -448,7 +430,6 @@ const AdminCampaignKeywords = () => {
                                         alignItems: "center",
                                         gap: "8px",
                                     }}
-                                    onClick={() => document.getElementById('new-category-input').focus()}
                                 >
                                     <FaPlus /> Add Category
                                 </button>

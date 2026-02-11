@@ -245,7 +245,6 @@ const AdminCampaigns = () => {
         fontFamily: "system-ui, -apple-system, sans-serif",
       }}
     >
-      {/* Header */}
       <header
         style={{
           backgroundColor: "white",
@@ -280,44 +279,6 @@ const AdminCampaigns = () => {
             <p style={{ margin: 0, fontSize: "13px", color: "#6b7280" }}>
               Overview of all client campaigns
             </p>
-          </div>
-          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-            <button
-              onClick={() => navigate("/admin-landing")}
-              style={{
-                padding: "9px 18px",
-                backgroundColor: "#4f46e5",
-                color: "white",
-                border: "none",
-                borderRadius: "6px",
-                fontSize: "14px",
-                fontWeight: "600",
-                cursor: "pointer",
-                transition: "background-color 0.2s",
-              }}
-              onMouseOver={(e) => (e.target.style.backgroundColor = "#4338ca")}
-              onMouseOut={(e) => (e.target.style.backgroundColor = "#4f46e5")}
-            >
-              ← Dashboard
-            </button>
-            <button
-              onClick={handleLogout}
-              style={{
-                padding: "9px 18px",
-                backgroundColor: "#ef4444",
-                color: "white",
-                border: "none",
-                borderRadius: "6px",
-                fontSize: "14px",
-                fontWeight: "600",
-                cursor: "pointer",
-                transition: "background-color 0.2s",
-              }}
-              onMouseOver={(e) => (e.target.style.backgroundColor = "#dc2626")}
-              onMouseOut={(e) => (e.target.style.backgroundColor = "#ef4444")}
-            >
-              Logout
-            </button>
           </div>
         </div>
       </header>
@@ -1222,217 +1183,217 @@ const AdminCampaigns = () => {
 
                           {/* Expanded Server Extension Groups */}
                           {expandedCampaignId === campaign.client_campaign_model_id && (
-                              <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
-                                <td
-                                  colSpan="13"
+                            <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
+                              <td
+                                colSpan="13"
+                                style={{
+                                  padding: 0,
+                                  backgroundColor: "#f9fafb",
+                                }}
+                              >
+                                <div
                                   style={{
-                                    padding: 0,
-                                    backgroundColor: "#f9fafb",
+                                    padding: "16px 24px",
+                                    animation: "slideDown 0.3s ease-out",
                                   }}
                                 >
+                                  {/* Last Active Info */}
                                   <div
                                     style={{
-                                      padding: "16px 24px",
-                                      animation: "slideDown 0.3s ease-out",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "16px",
+                                      marginBottom: "16px",
+                                      padding: "12px 16px",
+                                      backgroundColor: "white",
+                                      borderRadius: "8px",
+                                      border: "1px solid #e5e7eb",
                                     }}
                                   >
-                                    {/* Last Active Info */}
-                                    <div
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "16px",
-                                        marginBottom: "16px",
-                                        padding: "12px 16px",
-                                        backgroundColor: "white",
-                                        borderRadius: "8px",
-                                        border: "1px solid #e5e7eb",
-                                      }}
-                                    >
-                                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                        <span style={{ fontSize: "18px" }}>🕐</span>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                      <span style={{ fontSize: "18px" }}>🕐</span>
+                                      <span style={{ fontSize: "13px", fontWeight: "600", color: "#374151" }}>
+                                        Last Active:
+                                      </span>
+                                      <span style={{ fontSize: "13px", color: campaign.last_active ? "#10b981" : "#6b7280" }}>
+                                        {campaign.last_active
+                                          ? new Date(campaign.last_active).toLocaleString("en-US", {
+                                            year: "numeric",
+                                            month: "short",
+                                            day: "numeric",
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                          })
+                                          : "Never"}
+                                      </span>
+                                    </div>
+                                    {campaign.campaign_name && (
+                                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "auto" }}>
                                         <span style={{ fontSize: "13px", fontWeight: "600", color: "#374151" }}>
-                                          Last Active:
+                                          Campaign:
                                         </span>
-                                        <span style={{ fontSize: "13px", color: campaign.last_active ? "#10b981" : "#6b7280" }}>
-                                          {campaign.last_active
-                                            ? new Date(campaign.last_active).toLocaleString("en-US", {
-                                                year: "numeric",
-                                                month: "short",
-                                                day: "numeric",
-                                                hour: "2-digit",
-                                                minute: "2-digit",
-                                              })
-                                            : "Never"}
+                                        <span style={{ fontSize: "13px", color: "#4f46e5", fontWeight: "500" }}>
+                                          {campaign.campaign_name}
                                         </span>
                                       </div>
-                                      {campaign.campaign_name && (
-                                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "auto" }}>
-                                          <span style={{ fontSize: "13px", fontWeight: "600", color: "#374151" }}>
-                                            Campaign:
-                                          </span>
-                                          <span style={{ fontSize: "13px", color: "#4f46e5", fontWeight: "500" }}>
-                                            {campaign.campaign_name}
-                                          </span>
-                                        </div>
-                                      )}
-                                    </div>
-
-                                    {campaign.server_extension_groups && campaign.server_extension_groups.length > 0 && (
-                                    <>
-                                    <div
-                                      style={{
-                                        fontSize: "13px",
-                                        fontWeight: "600",
-                                        color: "#374151",
-                                        marginBottom: "12px",
-                                      }}
-                                    >
-                                      Server Extension Groups ({campaign.server_extension_groups.length})
-                                    </div>
-                                    <table
-                                      style={{
-                                        width: "100%",
-                                        borderCollapse: "collapse",
-                                        fontSize: "13px",
-                                        backgroundColor: "white",
-                                        borderRadius: "8px",
-                                        overflow: "hidden",
-                                      }}
-                                    >
-                                      <thead>
-                                        <tr
-                                          style={{
-                                            backgroundColor: "#f3f4f6",
-                                          }}
-                                        >
-                                          <th
-                                            style={{
-                                              padding: "10px 12px",
-                                              textAlign: "left",
-                                              fontWeight: "600",
-                                              color: "#4b5563",
-                                            }}
-                                          >
-                                            Server
-                                          </th>
-                                          <th
-                                            style={{
-                                              padding: "10px 12px",
-                                              textAlign: "left",
-                                              fontWeight: "600",
-                                              color: "#4b5563",
-                                            }}
-                                          >
-                                            IP Address
-                                          </th>
-                                          <th
-                                            style={{
-                                              padding: "10px 12px",
-                                              textAlign: "left",
-                                              fontWeight: "600",
-                                              color: "#4b5563",
-                                            }}
-                                          >
-                                            Domain
-                                          </th>
-                                          <th
-                                            style={{
-                                              padding: "10px 12px",
-                                              textAlign: "center",
-                                              fontWeight: "600",
-                                              color: "#4b5563",
-                                            }}
-                                          >
-                                            Extension
-                                          </th>
-                                          <th
-                                            style={{
-                                              padding: "10px 12px",
-                                              textAlign: "center",
-                                              fontWeight: "600",
-                                              color: "#4b5563",
-                                            }}
-                                          >
-                                            Bot Count
-                                          </th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {campaign.server_extension_groups.map(
-                                          (group, gidx) => (
-                                            <tr
-                                              key={`${group.server_id}-${group.extension_number}`}
-                                              style={{
-                                                borderBottom:
-                                                  gidx <
-                                                    campaign.server_extension_groups.length - 1
-                                                    ? "1px solid #e5e7eb"
-                                                    : "none",
-                                              }}
-                                            >
-                                              <td
-                                                style={{
-                                                  padding: "10px 12px",
-                                                }}
-                                              >
-                                                <div
-                                                  style={{
-                                                    fontWeight: "600",
-                                                    color: "#111827",
-                                                  }}
-                                                >
-                                                  {group.server_alias || `Server ${group.server_id}`}
-                                                </div>
-                                              </td>
-                                              <td
-                                                style={{
-                                                  padding: "10px 12px",
-                                                  color: "#6b7280",
-                                                  fontFamily: "monospace",
-                                                }}
-                                              >
-                                                {group.server_ip}
-                                              </td>
-                                              <td
-                                                style={{
-                                                  padding: "10px 12px",
-                                                  color: "#6b7280",
-                                                }}
-                                              >
-                                                {group.server_domain || "-"}
-                                              </td>
-                                              <td
-                                                style={{
-                                                  padding: "10px 12px",
-                                                  textAlign: "center",
-                                                  fontWeight: "600",
-                                                  color: "#4f46e5",
-                                                }}
-                                              >
-                                                {group.extension_number}
-                                              </td>
-                                              <td
-                                                style={{
-                                                  padding: "10px 12px",
-                                                  textAlign: "center",
-                                                  fontWeight: "600",
-                                                  color: "#10b981",
-                                                }}
-                                              >
-                                                {group.bot_count}
-                                              </td>
-                                            </tr>
-                                          )
-                                        )}
-                                      </tbody>
-                                    </table>
-                                    </>
                                     )}
                                   </div>
-                                </td>
-                              </tr>
-                            )}
+
+                                  {campaign.server_extension_groups && campaign.server_extension_groups.length > 0 && (
+                                    <>
+                                      <div
+                                        style={{
+                                          fontSize: "13px",
+                                          fontWeight: "600",
+                                          color: "#374151",
+                                          marginBottom: "12px",
+                                        }}
+                                      >
+                                        Server Extension Groups ({campaign.server_extension_groups.length})
+                                      </div>
+                                      <table
+                                        style={{
+                                          width: "100%",
+                                          borderCollapse: "collapse",
+                                          fontSize: "13px",
+                                          backgroundColor: "white",
+                                          borderRadius: "8px",
+                                          overflow: "hidden",
+                                        }}
+                                      >
+                                        <thead>
+                                          <tr
+                                            style={{
+                                              backgroundColor: "#f3f4f6",
+                                            }}
+                                          >
+                                            <th
+                                              style={{
+                                                padding: "10px 12px",
+                                                textAlign: "left",
+                                                fontWeight: "600",
+                                                color: "#4b5563",
+                                              }}
+                                            >
+                                              Server
+                                            </th>
+                                            <th
+                                              style={{
+                                                padding: "10px 12px",
+                                                textAlign: "left",
+                                                fontWeight: "600",
+                                                color: "#4b5563",
+                                              }}
+                                            >
+                                              IP Address
+                                            </th>
+                                            <th
+                                              style={{
+                                                padding: "10px 12px",
+                                                textAlign: "left",
+                                                fontWeight: "600",
+                                                color: "#4b5563",
+                                              }}
+                                            >
+                                              Domain
+                                            </th>
+                                            <th
+                                              style={{
+                                                padding: "10px 12px",
+                                                textAlign: "center",
+                                                fontWeight: "600",
+                                                color: "#4b5563",
+                                              }}
+                                            >
+                                              Extension
+                                            </th>
+                                            <th
+                                              style={{
+                                                padding: "10px 12px",
+                                                textAlign: "center",
+                                                fontWeight: "600",
+                                                color: "#4b5563",
+                                              }}
+                                            >
+                                              Bot Count
+                                            </th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {campaign.server_extension_groups.map(
+                                            (group, gidx) => (
+                                              <tr
+                                                key={`${group.server_id}-${group.extension_number}`}
+                                                style={{
+                                                  borderBottom:
+                                                    gidx <
+                                                      campaign.server_extension_groups.length - 1
+                                                      ? "1px solid #e5e7eb"
+                                                      : "none",
+                                                }}
+                                              >
+                                                <td
+                                                  style={{
+                                                    padding: "10px 12px",
+                                                  }}
+                                                >
+                                                  <div
+                                                    style={{
+                                                      fontWeight: "600",
+                                                      color: "#111827",
+                                                    }}
+                                                  >
+                                                    {group.server_alias || `Server ${group.server_id}`}
+                                                  </div>
+                                                </td>
+                                                <td
+                                                  style={{
+                                                    padding: "10px 12px",
+                                                    color: "#6b7280",
+                                                    fontFamily: "monospace",
+                                                  }}
+                                                >
+                                                  {group.server_ip}
+                                                </td>
+                                                <td
+                                                  style={{
+                                                    padding: "10px 12px",
+                                                    color: "#6b7280",
+                                                  }}
+                                                >
+                                                  {group.server_domain || "-"}
+                                                </td>
+                                                <td
+                                                  style={{
+                                                    padding: "10px 12px",
+                                                    textAlign: "center",
+                                                    fontWeight: "600",
+                                                    color: "#4f46e5",
+                                                  }}
+                                                >
+                                                  {group.extension_number}
+                                                </td>
+                                                <td
+                                                  style={{
+                                                    padding: "10px 12px",
+                                                    textAlign: "center",
+                                                    fontWeight: "600",
+                                                    color: "#10b981",
+                                                  }}
+                                                >
+                                                  {group.bot_count}
+                                                </td>
+                                              </tr>
+                                            )
+                                          )}
+                                        </tbody>
+                                      </table>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
                         </React.Fragment>
                       ))}
                     </tbody>

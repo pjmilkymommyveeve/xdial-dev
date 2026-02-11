@@ -19,28 +19,35 @@ import AdminVoiceStats from './AdminVoiceStats';
 import AdminVoiceManagement from './AdminVoiceManagement';
 import AdminCampaignKeywords from './AdminCampaignKeywords';
 
+import AdminLayout from './components/AdminLayout';
+
 function App() {
     return (
         <Router>
             <PageTitleUpdater />
             <Routes>
                 <Route path="/" element={<Login />} />
+
+                {/* Client Routes */}
                 <Route path="/dashboard" element={<ClientDashboard />} />
                 <Route path="/client-landing" element={<ClientLanding />} />
                 <Route path="/recordings" element={<ClientRecordings />} />
                 <Route path="/data-export" element={<DataExport />} />
-                <Route path="/integration-form" element={<IntegrationForm />} />
-                <Route path="/manage-team" element={<ManageTeam />} />
-                <Route path="/admin-dashboard" element={<AdminDashboard />} />
-                <Route path="/admin-data-export" element={<AdminDataExport />} />
-                <Route path="/admin-landing" element={<AdminLanding />} />
-                <Route path="/admin-server-stats" element={<AdminServerStats />} />
-                <Route path="/admin-campaigns" element={<AdminCampaigns />} />
-                <Route path="/admin-voice-stats" element={<AdminVoiceStats />} />
-                <Route path="/admin-voice-management" element={<AdminVoiceManagement />} />
-                <Route path="/admin-campaign-keywords" element={<AdminCampaignKeywords />} />
                 <Route path="/request-campaign" element={<RequestCampaign />} />
+                <Route path="/manage-team" element={<ManageTeam />} />
 
+                {/* Admin Routes with Sidebar Layout */}
+                <Route element={<AdminLayout />}>
+                    <Route path="/admin-landing" element={<AdminLanding />} />
+                    <Route path="/admin-dashboard" element={<AdminDashboard />} />
+                    <Route path="/admin-data-export" element={<AdminDataExport />} />
+                    <Route path="/admin-server-stats" element={<AdminServerStats />} />
+                    <Route path="/admin-campaigns" element={<AdminCampaigns />} />
+                    <Route path="/admin-voice-stats" element={<AdminVoiceStats />} />
+                    <Route path="/admin-voice-management" element={<AdminVoiceManagement />} />
+                    <Route path="/admin-campaign-keywords" element={<AdminCampaignKeywords />} />
+                    <Route path="/integration-form" element={<IntegrationForm />} />
+                </Route>
             </Routes>
         </Router>
     );

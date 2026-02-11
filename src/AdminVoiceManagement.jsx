@@ -671,18 +671,6 @@ const AdminVoiceManagement = () => {
                 alignItems: "center",
             }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                    <button onClick={() => navigate("/admin-landing")} style={{
-                        padding: "8px 16px",
-                        backgroundColor: "#334155",
-                        color: "#e2e8f0",
-                        border: "none",
-                        borderRadius: "6px",
-                        fontSize: "14px",
-                        fontWeight: "500",
-                        cursor: "pointer",
-                    }}>
-                        ← Back
-                    </button>
                     <h1 style={{ margin: 0, fontSize: "22px", fontWeight: "700", color: "#f1f5f9" }}>
                         Voice Management
                     </h1>
@@ -698,18 +686,6 @@ const AdminVoiceManagement = () => {
                     }}>
                         {loading ? "Loading..." : "Ready"}
                     </div>
-                    <button onClick={handleLogout} style={{
-                        padding: "8px 16px",
-                        backgroundColor: "#ef4444",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "6px",
-                        fontSize: "13px",
-                        fontWeight: "600",
-                        cursor: "pointer",
-                    }}>
-                        Logout
-                    </button>
                 </div>
             </header>
 

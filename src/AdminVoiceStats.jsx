@@ -348,26 +348,7 @@ const AdminVoiceStats = () => {
 
       <div style={{ maxWidth: "1600px", margin: "24px auto", padding: "0 24px" }}>
         {/* Filters */}
-        <div style={{ display: "flex", gap: "12px", marginBottom: "24px", alignItems: "flex-end", justifyContent: "space-between" }}>
-          <button
-            onClick={() => navigate("/admin-landing")}
-            style={{
-              padding: "8px 16px",
-              backgroundColor: "#4f46e5",
-              color: "white",
-              border: "none",
-              borderRadius: "6px",
-              fontSize: "14px",
-              fontWeight: "600",
-              cursor: "pointer",
-              transition: "background-color 0.2s",
-              height: "38px"
-            }}
-            onMouseOver={(e) => (e.target.style.backgroundColor = "#4338ca")}
-            onMouseOut={(e) => (e.target.style.backgroundColor = "#4f46e5")}
-          >
-            ← Dashboard
-          </button>
+        <div style={{ display: "flex", gap: "12px", marginBottom: "24px", alignItems: "flex-end", justifyContent: "flex-end" }}>
 
           <div style={{ display: "flex", gap: "12px", alignItems: "flex-end" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>

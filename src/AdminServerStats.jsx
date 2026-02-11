@@ -140,32 +140,6 @@ const AdminServerStats = () => {
     };
   }, [serverData]);
 
-  const handleLogout = () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    navigate("/");
-  };
-
-  // Filter clients based on search (local filtering)
-  const filteredClients = clients.filter(
-    (client) =>
-      client.client_name
-        .toLowerCase()
-        .includes(clientSearchTerm.toLowerCase()) ||
-      client.client_id.toString().includes(clientSearchTerm),
-  );
-
-  // Filter servers based on search (local filtering)
-  const filteredServers =
-    serverData?.servers?.filter((server) => {
-      const searchLower = serverSearchTerm.toLowerCase();
-      const aliasMatch = server.server_alias
-        ?.toLowerCase()
-        .includes(searchLower);
-      const ipMatch = server.server_ip?.toLowerCase().includes(searchLower);
-      return aliasMatch || ipMatch;
-    }) || [];
-
   // Calculate metrics
   const getMetrics = () => {
     if (!serverData || !serverData.servers) return null;
@@ -192,6 +166,27 @@ const AdminServerStats = () => {
 
   const metrics = getMetrics();
 
+  const filteredClients = clients.filter((client) =>
+    client.client_name.toLowerCase().includes(clientSearchTerm.toLowerCase())
+  );
+
+  const filteredServers = serverData?.servers
+    ? serverData.servers.filter((server) => {
+      const matchesSearch =
+        server.server_alias
+          ?.toLowerCase()
+          .includes(serverSearchTerm.toLowerCase()) ||
+        server.server_ip?.toLowerCase().includes(serverSearchTerm.toLowerCase());
+
+      // If a client is selected, check if this server has any campaigns for that client
+      const matchesClient = selectedClientId
+        ? server.campaigns && server.campaigns.some(c => c.client_id.toString() === selectedClientId)
+        : true;
+
+      return matchesSearch && matchesClient;
+    })
+    : [];
+
   const toggleServerExpand = (serverId) => {
     setExpandedServerId(expandedServerId === serverId ? null : serverId);
   };
@@ -204,82 +199,17 @@ const AdminServerStats = () => {
         fontFamily: "system-ui, -apple-system, sans-serif",
       }}
     >
-      {/* Header */}
-      <header
-        style={{
-          backgroundColor: "white",
-          borderBottom: "2px solid #e5e7eb",
-          padding: "16px 0",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: "1600px",
-            margin: "0 auto",
-            padding: "0 24px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "16px",
-          }}
-        >
-          <div>
-            <h1
-              style={{
-                margin: "0 0 4px 0",
-                fontSize: "24px",
-                fontWeight: "700",
-                color: "#111827",
-              }}
-            >
-              Server Statistics Dashboard
-            </h1>
-            <p style={{ margin: 0, fontSize: "13px", color: "#6b7280" }}>
-              Real-time monitoring and analytics
-            </p>
-          </div>
-          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-            <button
-              onClick={() => navigate("/admin-landing")}
-              style={{
-                padding: "9px 18px",
-                backgroundColor: "#4f46e5",
-                color: "white",
-                border: "none",
-                borderRadius: "6px",
-                fontSize: "14px",
-                fontWeight: "600",
-                cursor: "pointer",
-                transition: "background-color 0.2s",
-              }}
-              onMouseOver={(e) => (e.target.style.backgroundColor = "#4338ca")}
-              onMouseOut={(e) => (e.target.style.backgroundColor = "#4f46e5")}
-            >
-              ← Dashboard
-            </button>
-            <button
-              onClick={handleLogout}
-              style={{
-                padding: "9px 18px",
-                backgroundColor: "#ef4444",
-                color: "white",
-                border: "none",
-                borderRadius: "6px",
-                fontSize: "14px",
-                fontWeight: "600",
-                cursor: "pointer",
-                transition: "background-color 0.2s",
-              }}
-              onMouseOver={(e) => (e.target.style.backgroundColor = "#dc2626")}
-              onMouseOut={(e) => (e.target.style.backgroundColor = "#ef4444")}
-            >
-              Logout
-            </button>
-          </div>
+      {/* Header Title Only */}
+      <div style={{ backgroundColor: "white", borderBottom: "2px solid #e5e7eb", padding: "16px 0", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+        <div style={{ maxWidth: "1600px", margin: "0 auto", padding: "0 24px" }}>
+          <h1 style={{ margin: "0 0 4px 0", fontSize: "24px", fontWeight: "700", color: "#111827" }}>
+            Server Statistics Dashboard
+          </h1>
+          <p style={{ margin: 0, fontSize: "13px", color: "#6b7280" }}>
+            Real-time monitoring and analytics
+          </p>
         </div>
-      </header>
+      </div>
 
       <div style={{ maxWidth: "1600px", margin: "0 auto", padding: "24px" }}>
         {/* Filters Section */}
@@ -896,12 +826,12 @@ const AdminServerStats = () => {
                                 toggleServerExpand(server.server_id)
                               }
                               onMouseOver={(e) =>
-                                (e.currentTarget.style.backgroundColor =
-                                  "#f3f4f6")
+                              (e.currentTarget.style.backgroundColor =
+                                "#f3f4f6")
                               }
                               onMouseOut={(e) =>
-                                (e.currentTarget.style.backgroundColor =
-                                  idx % 2 === 0 ? "#ffffff" : "#f9fafb")
+                              (e.currentTarget.style.backgroundColor =
+                                idx % 2 === 0 ? "#ffffff" : "#f9fafb")
                               }
                             >
                               <td
@@ -1015,10 +945,10 @@ const AdminServerStats = () => {
                                       width: `${server.total_bots > 0 ? (server.active_bots / server.total_bots) * 100 : 0}%`,
                                       backgroundColor:
                                         server.active_bots >
-                                        server.total_bots * 0.8
+                                          server.total_bots * 0.8
                                           ? "#ef4444"
                                           : server.active_bots >
-                                              server.total_bots * 0.5
+                                            server.total_bots * 0.5
                                             ? "#f59e0b"
                                             : "#10b981",
                                       height: "100%",
@@ -1035,10 +965,10 @@ const AdminServerStats = () => {
                                 >
                                   {server.total_bots > 0
                                     ? Math.round(
-                                        (server.active_bots /
-                                          server.total_bots) *
-                                          100,
-                                      )
+                                      (server.active_bots /
+                                        server.total_bots) *
+                                      100,
+                                    )
                                     : 0}
                                   %
                                 </div>
@@ -1171,7 +1101,7 @@ const AdminServerStats = () => {
                                                 style={{
                                                   borderBottom:
                                                     cidx <
-                                                    server.campaigns.length - 1
+                                                      server.campaigns.length - 1
                                                       ? "1px solid #e5e7eb"
                                                       : "none",
                                                 }}
@@ -1299,12 +1229,12 @@ const AdminServerStats = () => {
                                 toggleServerExpand(server.server_id)
                               }
                               onMouseOver={(e) =>
-                                (e.currentTarget.style.backgroundColor =
-                                  "#f3f4f6")
+                              (e.currentTarget.style.backgroundColor =
+                                "#f3f4f6")
                               }
                               onMouseOut={(e) =>
-                                (e.currentTarget.style.backgroundColor =
-                                  idx % 2 === 0 ? "#ffffff" : "#f9fafb")
+                              (e.currentTarget.style.backgroundColor =
+                                idx % 2 === 0 ? "#ffffff" : "#f9fafb")
                               }
                             >
                               <td
@@ -1418,10 +1348,10 @@ const AdminServerStats = () => {
                                       width: `${server.total_bots > 0 ? (server.active_bots / server.total_bots) * 100 : 0}%`,
                                       backgroundColor:
                                         server.active_bots >
-                                        server.total_bots * 0.8
+                                          server.total_bots * 0.8
                                           ? "#ef4444"
                                           : server.active_bots >
-                                              server.total_bots * 0.5
+                                            server.total_bots * 0.5
                                             ? "#f59e0b"
                                             : "#10b981",
                                       height: "100%",
@@ -1438,10 +1368,10 @@ const AdminServerStats = () => {
                                 >
                                   {server.total_bots > 0
                                     ? Math.round(
-                                        (server.active_bots /
-                                          server.total_bots) *
-                                          100,
-                                      )
+                                      (server.active_bots /
+                                        server.total_bots) *
+                                      100,
+                                    )
                                     : 0}
                                   %
                                 </div>
@@ -1574,7 +1504,7 @@ const AdminServerStats = () => {
                                                 style={{
                                                   borderBottom:
                                                     cidx <
-                                                    server.campaigns.length - 1
+                                                      server.campaigns.length - 1
                                                       ? "1px solid #e5e7eb"
                                                       : "none",
                                                 }}

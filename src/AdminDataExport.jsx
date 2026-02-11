@@ -329,25 +329,6 @@ const AdminDataExport = () => {
               Upload CSV to lookup call data by phone numbers
             </p>
           </div>
-          <button
-            onClick={() => navigate("/admin-landing")}
-            style={{
-              padding: "10px 20px",
-              backgroundColor: "#4f46e5",
-              color: "white",
-              border: "none",
-              borderRadius: "8px",
-              fontSize: "14px",
-              fontWeight: "600",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-            }}
-          >
-            <i className="bi bi-arrow-left"></i>
-            Back to Dashboard
-          </button>
         </div>
       </header>
 
