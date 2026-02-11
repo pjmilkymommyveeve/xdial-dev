@@ -14,6 +14,8 @@ import {
     FaTimes,
     FaCheck,
     FaExclamationTriangle,
+    FaList,
+    FaThLarge,
 } from "react-icons/fa";
 
 const AdminCampaignKeywords = () => {
@@ -31,7 +33,9 @@ const AdminCampaignKeywords = () => {
 
     // Filters
     const [searchQuery, setSearchQuery] = useState("");
+
     const [filterHasKeywords, setFilterHasKeywords] = useState(false);
+    const [viewMode, setViewMode] = useState("card");
 
     // UI State for selected model
     const [newCategoryName, setNewCategoryName] = useState("");
@@ -847,138 +851,220 @@ const AdminCampaignKeywords = () => {
                                 </span>
                             </label>
                         </div>
-
-                        {/* List */}
-                        <div
-                            style={{
-                                display: "grid",
-                                gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
-                                gap: "24px",
-                            }}
-                        >
-                            {filteredCampaigns.map((model) => (
-                                <div
-                                    key={model.campaign_model_id}
-                                    onClick={() => handleModelClick(model)}
-                                    style={{
-                                        backgroundColor: "white",
-                                        borderRadius: "12px",
-                                        padding: "24px",
-                                        boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-                                        cursor: "pointer",
-                                        transition: "transform 0.2s, box-shadow 0.2s",
-                                        border: "1px solid transparent",
-                                        position: 'relative',
-                                        overflow: 'hidden'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.transform = "translateY(-4px)";
-                                        e.currentTarget.style.boxShadow =
-                                            "0 12px 20px rgba(0,0,0,0.1)";
-                                        e.currentTarget.style.borderColor = "#c7d2fe";
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.transform = "none";
-                                        e.currentTarget.style.boxShadow =
-                                            "0 2px 4px rgba(0,0,0,0.05)";
-                                        e.currentTarget.style.borderColor = "transparent";
-                                    }}
-                                >
-                                    <div
-                                        style={{
-                                            display: "flex",
-                                            justifyContent: "space-between",
-                                            alignItems: "flex-start",
-                                            marginBottom: "16px",
-                                        }}
-                                    >
-                                        <div>
-                                            <h3
-                                                style={{
-                                                    fontSize: "18px",
-                                                    fontWeight: "700",
-                                                    color: "#111827",
-                                                    marginBottom: "4px",
-                                                }}
-                                            >
-                                                {model.campaign_name}
-                                            </h3>
-                                            <div
-                                                style={{
-                                                    fontSize: "14px",
-                                                    color: "#6b7280",
-                                                    backgroundColor: "#f3f4f6",
-                                                    padding: "4px 8px",
-                                                    borderRadius: "4px",
-                                                    display: "inline-block",
-                                                }}
-                                            >
-                                                Model: {model.model_name}
-                                            </div>
-                                        </div>
-                                        {model.total_keywords > 0 ? (
-                                            <span style={{ backgroundColor: '#ecfdf5', color: '#059669', padding: '2px 8px', borderRadius: '10px', fontSize: '12px', fontWeight: '600' }}>Active</span>
-                                        ) : (
-                                            <span style={{ backgroundColor: '#f3f4f6', color: '#9ca3af', padding: '2px 8px', borderRadius: '10px', fontSize: '12px', fontWeight: '600' }}>Empty</span>
-                                        )}
-                                    </div>
-
-                                    <div
-                                        style={{
-                                            display: "grid",
-                                            gridTemplateColumns: "1fr 1fr",
-                                            gap: "12px",
-                                            paddingTop: "16px",
-                                            borderTop: "1px solid #f3f4f6",
-                                        }}
-                                    >
-                                        <div>
-                                            <div
-                                                style={{
-                                                    fontSize: "12px",
-                                                    color: "#9ca3af",
-                                                    marginBottom: "2px",
-                                                }}
-                                            >
-                                                Categories
-                                            </div>
-                                            <div
-                                                style={{
-                                                    fontSize: "18px",
-                                                    fontWeight: "600",
-                                                    color: "#374151",
-                                                }}
-                                            >
-                                                {model.total_categories}
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div
-                                                style={{
-                                                    fontSize: "12px",
-                                                    color: "#9ca3af",
-                                                    marginBottom: "2px",
-                                                }}
-                                            >
-                                                Keywords
-                                            </div>
-                                            <div
-                                                style={{
-                                                    fontSize: "18px",
-                                                    fontWeight: "600",
-                                                    color: "#374151",
-                                                }}
-                                            >
-                                                {model.total_keywords}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div style={{ marginTop: '16px', fontSize: '12px', color: '#9ca3af', textAlign: 'right' }}>
-                                        Updated: {model.last_updated ? new Date(model.last_updated).toLocaleDateString() : 'Never'}
-                                    </div>
-                                </div>
-                            ))}
+                        <div style={{ display: "flex", gap: "8px", backgroundColor: "white", padding: "4px", borderRadius: "8px", border: "1px solid #e5e7eb" }}>
+                            <button
+                                onClick={() => setViewMode("card")}
+                                style={{
+                                    padding: "8px",
+                                    backgroundColor: viewMode === "card" ? "#eff6ff" : "transparent",
+                                    color: viewMode === "card" ? "#4f46e5" : "#6b7280",
+                                    border: "none",
+                                    borderRadius: "6px",
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                }}
+                                title="Card View"
+                            >
+                                <FaThLarge />
+                            </button>
+                            <button
+                                onClick={() => setViewMode("list")}
+                                style={{
+                                    padding: "8px",
+                                    backgroundColor: viewMode === "list" ? "#eff6ff" : "transparent",
+                                    color: viewMode === "list" ? "#4f46e5" : "#6b7280",
+                                    border: "none",
+                                    borderRadius: "6px",
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                }}
+                                title="List View"
+                            >
+                                <FaList />
+                            </button>
                         </div>
+
+                        {/* List/Grid View */}
+                        {viewMode === "list" ? (
+                            <div style={{ backgroundColor: "white", borderRadius: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", overflow: "hidden" }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                    <thead>
+                                        <tr style={{ backgroundColor: "#f9fafb", borderBottom: "1px solid #e5e7eb", textAlign: "left" }}>
+                                            <th style={{ padding: "16px", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Campaign / Model</th>
+                                            <th style={{ padding: "16px", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Status</th>
+                                            <th style={{ padding: "16px", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Categories</th>
+                                            <th style={{ padding: "16px", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Keywords</th>
+                                            <th style={{ padding: "16px", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Last Updated</th>
+                                            <th style={{ padding: "16px", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredCampaigns.map((model) => (
+                                            <tr
+                                                key={model.campaign_model_id}
+                                                onClick={() => handleModelClick(model)}
+                                                style={{ borderBottom: "1px solid #f3f4f6", cursor: "pointer", transition: "background-color 0.1s" }}
+                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f9fafb"}
+                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                                            >
+                                                <td style={{ padding: "16px" }}>
+                                                    <div style={{ fontWeight: "600", color: "#111827" }}>{model.campaign_name}</div>
+                                                    <div style={{ fontSize: "12px", color: "#6b7280" }}>{model.model_name}</div>
+                                                </td>
+                                                <td style={{ padding: "16px" }}>
+                                                    {model.total_keywords > 0 ? (
+                                                        <span style={{ backgroundColor: '#ecfdf5', color: '#059669', padding: '2px 8px', borderRadius: '10px', fontSize: '12px', fontWeight: '600' }}>Active</span>
+                                                    ) : (
+                                                        <span style={{ backgroundColor: '#f3f4f6', color: '#9ca3af', padding: '2px 8px', borderRadius: '10px', fontSize: '12px', fontWeight: '600' }}>Empty</span>
+                                                    )}
+                                                </td>
+                                                <td style={{ padding: "16px", color: "#374151" }}>{model.total_categories}</td>
+                                                <td style={{ padding: "16px", color: "#374151" }}>{model.total_keywords}</td>
+                                                <td style={{ padding: "16px", color: "#6b7280", fontSize: "14px" }}>
+                                                    {model.last_updated ? new Date(model.last_updated).toLocaleDateString() : '-'}
+                                                </td>
+                                                <td style={{ padding: "16px", textAlign: "right", color: "#4f46e5", fontWeight: "600", fontSize: "14px" }}>
+                                                    View Details →
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <div
+                                style={{
+                                    display: "grid",
+                                    gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
+                                    gap: "24px",
+                                }}
+                            >
+                                {filteredCampaigns.map((model) => (
+                                    <div
+                                        key={model.campaign_model_id}
+                                        onClick={() => handleModelClick(model)}
+                                        style={{
+                                            backgroundColor: "white",
+                                            borderRadius: "12px",
+                                            padding: "24px",
+                                            boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+                                            cursor: "pointer",
+                                            transition: "transform 0.2s, box-shadow 0.2s",
+                                            border: "1px solid transparent",
+                                            position: 'relative',
+                                            overflow: 'hidden'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.transform = "translateY(-4px)";
+                                            e.currentTarget.style.boxShadow =
+                                                "0 12px 20px rgba(0,0,0,0.1)";
+                                            e.currentTarget.style.borderColor = "#c7d2fe";
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.transform = "none";
+                                            e.currentTarget.style.boxShadow =
+                                                "0 2px 4px rgba(0,0,0,0.05)";
+                                            e.currentTarget.style.borderColor = "transparent";
+                                        }}
+                                    >
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                justifyContent: "space-between",
+                                                alignItems: "flex-start",
+                                                marginBottom: "16px",
+                                            }}
+                                        >
+                                            <div>
+                                                <h3
+                                                    style={{
+                                                        fontSize: "18px",
+                                                        fontWeight: "700",
+                                                        color: "#111827",
+                                                        marginBottom: "4px",
+                                                    }}
+                                                >
+                                                    {model.campaign_name}
+                                                </h3>
+                                                <div
+                                                    style={{
+                                                        fontSize: "14px",
+                                                        color: "#6b7280",
+                                                        backgroundColor: "#f3f4f6",
+                                                        padding: "4px 8px",
+                                                        borderRadius: "4px",
+                                                        display: "inline-block",
+                                                    }}
+                                                >
+                                                    Model: {model.model_name}
+                                                </div>
+                                            </div>
+                                            {model.total_keywords > 0 ? (
+                                                <span style={{ backgroundColor: '#ecfdf5', color: '#059669', padding: '2px 8px', borderRadius: '10px', fontSize: '12px', fontWeight: '600' }}>Active</span>
+                                            ) : (
+                                                <span style={{ backgroundColor: '#f3f4f6', color: '#9ca3af', padding: '2px 8px', borderRadius: '10px', fontSize: '12px', fontWeight: '600' }}>Empty</span>
+                                            )}
+                                        </div>
+
+                                        <div
+                                            style={{
+                                                display: "grid",
+                                                gridTemplateColumns: "1fr 1fr",
+                                                gap: "12px",
+                                                paddingTop: "16px",
+                                                borderTop: "1px solid #f3f4f6",
+                                            }}
+                                        >
+                                            <div>
+                                                <div
+                                                    style={{
+                                                        fontSize: "12px",
+                                                        color: "#9ca3af",
+                                                        marginBottom: "2px",
+                                                    }}
+                                                >
+                                                    Categories
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        fontSize: "18px",
+                                                        fontWeight: "600",
+                                                        color: "#374151",
+                                                    }}
+                                                >
+                                                    {model.total_categories}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div
+                                                    style={{
+                                                        fontSize: "12px",
+                                                        color: "#9ca3af",
+                                                        marginBottom: "2px",
+                                                    }}
+                                                >
+                                                    Keywords
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        fontSize: "18px",
+                                                        fontWeight: "600",
+                                                        color: "#374151",
+                                                    }}
+                                                >
+                                                    {model.total_keywords}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div style={{ marginTop: '16px', fontSize: '12px', color: '#9ca3af', textAlign: 'right' }}>
+                                            Updated: {model.last_updated ? new Date(model.last_updated).toLocaleDateString() : 'Never'}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -1000,7 +1086,7 @@ const AdminCampaignKeywords = () => {
             100% { transform: rotate(360deg); }
         }
       `}</style>
-        </div>
+        </div >
     );
 };
 
