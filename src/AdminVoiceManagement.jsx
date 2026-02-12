@@ -109,8 +109,8 @@ const AdminVoiceManagement = () => {
             setVoiceRecordings(recordingsMap);
         };
 
-        fetchRecordingsForAllVoices();
-    }, [campaignModelVoicesData]);
+        fetchAllRecordingsForVoices();
+    }, [campaignModelVoicesData, assignedCategories]);
 
     const fetchInitialData = async () => {
         setLoading(true);
@@ -345,14 +345,42 @@ const AdminVoiceManagement = () => {
 
     const handleRemoveCategoryFromModel = async (assignmentId) => {
         if (!window.confirm("Remove this category from the model? This will delete all associated recordings.")) return;
+
+        // 1. Find all recordings associated with this category assignment
+        let recordingsToDelete = [];
+        const allRecordings = Object.values(voiceRecordings).flat();
+
+        allRecordings.forEach(rec => {
+            if (rec.campaign_model_voice_category_id === assignmentId) {
+                recordingsToDelete.push(rec.id);
+            }
+        });
+
+        console.log(`Found ${recordingsToDelete.length} recordings to delete for assignment ${assignmentId}`);
+
         try {
+            // 2. Delete the recordings first if any exist
+            if (recordingsToDelete.length > 0) {
+                setCmvActionMessage({ type: "info", text: `Deleting ${recordingsToDelete.length} associated recordings...` });
+                const params = new URLSearchParams();
+                recordingsToDelete.forEach(id => params.append("recording_ids", id));
+
+                await api.post("/voice-recordings/delete", params, {
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" }
+                });
+            }
+
+            // 3. Now delete the category assignment
             const response = await api.post("/voice-categories/campaign-models/categories/bulk-delete", [assignmentId]);
             console.log("Remove Category Response:", response.data);
+
             if (response.data.success || response.data.deleted_count > 0) {
-                setCmvActionMessage({ type: "success", text: "Category removed from model!" });
+                setCmvActionMessage({ type: "success", text: "Category and associated recordings removed!" });
                 await fetchCampaignModelVoicesDetailed(selectedCampaignModel.id);
+                // Also refresh recordings to clear the deleted ones from view
+                await fetchAllRecordingsForVoices();
             } else {
-                setCmvActionMessage({ type: "error", text: "Failed to remove" });
+                setCmvActionMessage({ type: "error", text: "Failed to remove category assignment" });
             }
         } catch (err) {
             console.error("Error removing category:", err);
@@ -500,32 +528,55 @@ const AdminVoiceManagement = () => {
         }
     };
 
-    // Fetch recordings for a specific voice
-    const fetchRecordingsForVoice = async (cmvId) => {
+    // Fetch recordings for a specific voice + category combination
+    const fetchRecordingsForCell = async (cmvId, cmvcId) => {
         try {
-            const response = await api.get(`/voice-recordings/campaign-model-voices/${cmvId}`);
-            console.log(`Recordings for CMV ${cmvId}:`, response.data);
+            const response = await api.get(`/voice-recordings/campaign-model-voices/${cmvId}/categories/${cmvcId}`);
+            // response.data is expected to be an array of recordings
             return response.data || [];
         } catch (err) {
-            console.error(`Error fetching recordings for CMV ${cmvId}:`, err);
+            console.error(`Error fetching recordings for CMV ${cmvId} Category ${cmvcId}:`, err);
             return [];
         }
     };
 
-    // Fetch recordings for all assigned voices
+    // Fetch recordings for all assigned voices and categories
     const fetchAllRecordingsForVoices = async () => {
         const assignedVoicesList = getAssignedVoices();
-        if (assignedVoicesList.length === 0) {
+
+        // If no voices or categories, plain return
+        if (assignedVoicesList.length === 0 || assignedCategories.length === 0) {
             setVoiceRecordings({});
             return;
         }
 
         const recordingsMap = {};
+
+        // Iterate through all voices and all categories
         for (const cmv of assignedVoicesList) {
-            const recordings = await fetchRecordingsForVoice(cmv.id);
-            recordingsMap[cmv.id] = recordings;
+            let voiceRecs = [];
+            for (const cat of assignedCategories) {
+                // Fetch for this specific cell
+                // Note: The 'id' of the category assignment (campaign_model_voice_category) is what we need?
+                // The endpoint says {cmvc_id}. 
+                // assignedCategories are the assignments effectively. 
+                // Let's verify if assignedCategories contains the ID we need.
+                // In handleRemoveCategoryFromModel we use assignmentId, which comes from assignedCategories.id
+                // So yes, cat.id is likely the cmvc_id.
+
+                const cellRecs = await fetchRecordingsForCell(cmv.id, cat.id);
+                // Tag them just in case backend doesn't return the ID (though schema says it does)
+                const taggedRecs = cellRecs.map(r => ({
+                    ...r,
+                    campaign_model_voice_category_id: cat.id
+                }));
+
+                voiceRecs = [...voiceRecs, ...taggedRecs];
+            }
+            recordingsMap[cmv.id] = voiceRecs;
         }
-        console.log("All Voice Recordings:", recordingsMap);
+
+        console.log("All Voice Recordings (Aggregated):", recordingsMap);
         setVoiceRecordings(recordingsMap);
     };
 
