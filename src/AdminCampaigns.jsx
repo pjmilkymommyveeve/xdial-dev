@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "./api";
+import Loader from "./components/Loader";
 
 const AdminCampaigns = () => {
   const navigate = useNavigate();
@@ -465,22 +466,15 @@ const AdminCampaigns = () => {
             style={{
               backgroundColor: "white",
               borderRadius: "12px",
-              padding: "80px 24px",
+              padding: "40px",
               textAlign: "center",
               boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center"
             }}
           >
-            <div style={{ fontSize: "48px", marginBottom: "16px" }}>⏳</div>
-            <h3
-              style={{
-                margin: "0 0 8px 0",
-                fontSize: "18px",
-                fontWeight: "600",
-                color: "#111827",
-              }}
-            >
-              Loading campaign statistics...
-            </h3>
+            <Loader size="large" />
           </div>
         )}
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import Loader from "./components/Loader";
 
 const AdminDashboard = () => {
   const [currentView, setCurrentView] = useState("dashboard");
@@ -341,8 +342,8 @@ const AdminDashboard = () => {
   if (loading && !dashboardData && fetchTrigger > 0) {
     // Only show full loading if we have NO data yet and are fetching
     return (
-      <div style={{ padding: 40, textAlign: "center", fontFamily: "Arial, sans-serif" }}>
-        Loading dashboard...
+      <div style={{ padding: 40 }}>
+        <Loader size="large" />
       </div>
     );
   }

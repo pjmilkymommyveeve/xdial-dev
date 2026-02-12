@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import api from "./api"; // Use the configured axios instance
+import Loader from "./components/Loader"; // Import Loader component
 
 const CategoryTrends = ({ campaignId, isEmbedded }) => {
     const [loading, setLoading] = useState(false);
@@ -7,6 +8,7 @@ const CategoryTrends = ({ campaignId, isEmbedded }) => {
     const [error, setError] = useState(null);
     const [selectedRange, setSelectedRange] = useState("15m");
     const [showTrends, setShowTrends] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(true);
 
     const ENGAGED_CATEGORIES = ["Unclear Response", "Qualified", "Neutral"];
 
@@ -221,7 +223,7 @@ const CategoryTrends = ({ campaignId, isEmbedded }) => {
     return (
         <div style={containerStyle}>
             {/* Header */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "32px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isExpanded ? "32px" : "0", transition: "margin-bottom 0.2s" }}>
                 <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
                     <div style={{ display: "flex", flexDirection: "column" }}>
                         <select
@@ -262,34 +264,59 @@ const CategoryTrends = ({ campaignId, isEmbedded }) => {
                     </button>
                 </div>
 
-                {data && (
-                    <div style={{ padding: "8px 16px", backgroundColor: "#f3f4f6", borderRadius: "8px", fontSize: "18px", fontWeight: "700", color: "#111827" }}>
-                        {data.overallEngagedRate.toFixed(1)}%
-                    </div>
-                )}
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    {data && (
+                        <div style={{ padding: "8px 16px", backgroundColor: "#f3f4f6", borderRadius: "8px", fontSize: "18px", fontWeight: "700", color: "#111827" }}>
+                            {data.overallEngagedRate.toFixed(1)}%
+                        </div>
+                    )}
+                    <button
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            color: "#6b7280",
+                            padding: "4px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderRadius: "50%",
+                            transition: "background-color 0.2s",
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f3f4f6"}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                    >
+                        <i className={`bi bi-chevron-${isExpanded ? "up" : "down"}`} style={{ fontSize: "20px" }}></i>
+                    </button>
+                </div>
             </div>
 
             {/* Content */}
-            {loading && <div style={{ textAlign: "center", padding: "40px", color: "#6b7280" }}>Loading...</div>}
+            {isExpanded && (
+                <>
+                    {loading && <div style={{ padding: "40px" }}><Loader size="medium" /></div>}
 
-            {data && !loading && (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px" }}>
-                    {/* Left Column: Engaged */}
-                    <div>
-                        <h3 style={{ fontSize: "14px", fontWeight: "600", color: "#111827", marginBottom: "16px" }}>Engaged Outcomes</h3>
-                        <div style={{ border: "1px solid #f3f4f6", borderRadius: "8px", padding: "0 16px", backgroundColor: "white" }}>
-                            {data.engagedList.map(renderCategoryRow)}
-                        </div>
-                    </div>
+                    {data && !loading && (
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px" }}>
+                            {/* Left Column: Engaged */}
+                            <div>
+                                <h3 style={{ fontSize: "14px", fontWeight: "600", color: "#111827", marginBottom: "16px" }}>Engaged Outcomes</h3>
+                                <div style={{ border: "1px solid #f3f4f6", borderRadius: "8px", padding: "0 16px", backgroundColor: "white" }}>
+                                    {data.engagedList.map(renderCategoryRow)}
+                                </div>
+                            </div>
 
-                    {/* Right Column: Drop Off */}
-                    <div>
-                        <h3 style={{ fontSize: "14px", fontWeight: "600", color: "#111827", marginBottom: "16px" }}>Drop-Off Outcomes</h3>
-                        <div style={{ border: "1px solid #f3f4f6", borderRadius: "8px", padding: "0 16px", backgroundColor: "white" }}>
-                            {data.dropOffList.map(renderCategoryRow)}
+                            {/* Right Column: Drop Off */}
+                            <div>
+                                <h3 style={{ fontSize: "14px", fontWeight: "600", color: "#111827", marginBottom: "16px" }}>Drop-Off Outcomes</h3>
+                                <div style={{ border: "1px solid #f3f4f6", borderRadius: "8px", padding: "0 16px", backgroundColor: "white" }}>
+                                    {data.dropOffList.map(renderCategoryRow)}
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
+                    )}
+                </>
             )}
         </div>
     );

@@ -6,6 +6,7 @@ import DataExport from "./DataExport";
 import ClientHeader from "./ClientHeader";
 import ClientRecordings from "./Clientrecordings";
 import CategoryTrends from "./CategoryTrends";
+import Loader from "./components/Loader";
 const getUserRole = () => {
   return localStorage.getItem("role") || sessionStorage.getItem("role");
 };
@@ -1346,8 +1347,8 @@ const MedicareDashboard = () => {
   // This prevents the chart canvas from being unmounted during filter updates
   if (loading && !dashboardData)
     return (
-      <div style={{ padding: 40, textAlign: "center" }}>
-        Loading dashboard...
+      <div style={{ padding: 40 }}>
+        <Loader size="large" />
       </div>
     );
   if (error)
