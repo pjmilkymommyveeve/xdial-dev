@@ -2231,16 +2231,39 @@ const MedicareDashboard = () => {
 
               {/* Transfer Metrics */}
               <div style={{ marginTop: "24px" }}>
-                <h3
-                  style={{
-                    fontSize: "15px",
-                    fontWeight: 600,
-                    marginBottom: "16px",
-                    color: "#333",
-                  }}
-                >
-                  Transfer Metrics
-                </h3>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                  <h3
+                    style={{
+                      fontSize: "15px",
+                      fontWeight: 600,
+                      margin: 0,
+                      color: "#333",
+                    }}
+                  >
+                    Transfer Metrics
+                  </h3>
+                  <button
+                    onClick={() => {
+                      const url = `/historical-transfer-metrics?campaign_id=${campaignId}${isAdminView ? '&admin_view=true' : ''}`;
+                      window.location.href = url;
+                    }}
+                    style={{
+                      padding: "6px 12px",
+                      fontSize: "13px",
+                      fontWeight: "500",
+                      color: "#fff",
+                      backgroundColor: "#1a73e8",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px"
+                    }}
+                  >
+                    <i className="bi-graph-up"></i> Show More
+                  </button>
+                </div>
                 <div>
                   {/* Top Row: Transfer Metrics with Percentages */}
                   <div
@@ -2257,19 +2280,19 @@ const MedicareDashboard = () => {
                     {/* A Grade Metric */}
                     <div
                       style={{
-                        padding: "16px",
+                        padding: "24px 20px",
                         backgroundColor: "#fff",
-                        borderRadius: "8px",
-                        border: "1px solid #e5e5e5",
+                        borderRadius: "4px",
+                        border: "1px solid #e0e0e0",
                         textAlign: "center",
                       }}
                     >
                       <div
                         style={{
-                          fontSize: "14px",
-                          color: "#2e7d32",
-                          marginBottom: "4px",
-                          fontWeight: "600",
+                          fontSize: "13px",
+                          color: "#00796B", // Match a slightly greener teal from reference
+                          marginBottom: "12px",
+                          fontWeight: "500",
                         }}
                       >
                         A Grade Transfers
@@ -2279,10 +2302,14 @@ const MedicareDashboard = () => {
                           fontSize: "24px",
                           fontWeight: "bold",
                           color: "#1b5e20",
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "baseline",
+                          gap: "8px"
                         }}
                       >
-                        {aGradeCount}{" "}
-                        <span style={{ fontSize: "16px", opacity: 0.8 }}>
+                        {aGradeCount}
+                        <span style={{ fontSize: "14px", fontWeight: "600", color: "#4CAF50" }}>
                           ({aGradePercentageVal}%)
                         </span>
                       </div>
@@ -2291,19 +2318,19 @@ const MedicareDashboard = () => {
                     {/* B Grade Metric */}
                     <div
                       style={{
-                        padding: "16px",
+                        padding: "24px 20px",
                         backgroundColor: "#fff",
-                        borderRadius: "8px",
-                        border: "1px solid #e5e5e5",
+                        borderRadius: "4px",
+                        border: "1px solid #e0e0e0",
                         textAlign: "center",
                       }}
                     >
                       <div
                         style={{
-                          fontSize: "14px",
-                          color: "#1565c0",
-                          marginBottom: "4px",
-                          fontWeight: "600",
+                          fontSize: "13px",
+                          color: "#1976D2",
+                          marginBottom: "12px",
+                          fontWeight: "500",
                         }}
                       >
                         B Grade Transfers
@@ -2312,11 +2339,15 @@ const MedicareDashboard = () => {
                         style={{
                           fontSize: "24px",
                           fontWeight: "bold",
-                          color: "#0d47a1",
+                          color: "#1565C0",
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "baseline",
+                          gap: "8px"
                         }}
                       >
-                        {bGradeCount}{" "}
-                        <span style={{ fontSize: "16px", opacity: 0.8 }}>
+                        {bGradeCount}
+                        <span style={{ fontSize: "14px", fontWeight: "600", color: "#1E88E5" }}>
                           ({bGradePercentageVal}%)
                         </span>
                       </div>
@@ -2325,19 +2356,19 @@ const MedicareDashboard = () => {
                     {/* Dropped Metric */}
                     <div
                       style={{
-                        padding: "16px",
+                        padding: "24px 20px",
                         backgroundColor: "#fff",
-                        borderRadius: "8px",
-                        border: "1px solid #e5e5e5",
+                        borderRadius: "4px",
+                        border: "1px solid #e0e0e0",
                         textAlign: "center",
                       }}
                     >
                       <div
                         style={{
-                          fontSize: "14px",
-                          color: "#c62828",
-                          marginBottom: "4px",
-                          fontWeight: "600",
+                          fontSize: "13px",
+                          color: "#d32f2f",
+                          marginBottom: "12px",
+                          fontWeight: "500",
                         }}
                       >
                         Dropped Calls
@@ -2346,11 +2377,15 @@ const MedicareDashboard = () => {
                         style={{
                           fontSize: "24px",
                           fontWeight: "bold",
-                          color: "#b71c1c",
+                          color: "#c62828",
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "baseline",
+                          gap: "8px"
                         }}
                       >
-                        {droppedCount}{" "}
-                        <span style={{ fontSize: "16px", opacity: 0.8 }}>
+                        {droppedCount}
+                        <span style={{ fontSize: "14px", fontWeight: "600", color: "#ef5350" }}>
                           ({droppedPercentageVal}%)
                         </span>
                       </div>

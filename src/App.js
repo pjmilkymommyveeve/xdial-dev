@@ -10,6 +10,7 @@ import DataExport from './DataExport';
 import IntegrationForm from './IntegrationForm';
 import RequestCampaign from './RequestCampaign';
 import ManageTeam from './ManageTeam';
+import HistoricalTransferMetrics from './HistoricalTransferMetrics';
 import AdminDataExport from './AdminDataExport';
 import AdminDashboard from './AdminDashboard';
 import AdminLanding from './AdminLanding';
@@ -35,6 +36,7 @@ function App() {
                 <Route path="/data-export" element={<DataExport />} />
                 <Route path="/request-campaign" element={<RequestCampaign />} />
                 <Route path="/manage-team" element={<ManageTeam />} />
+                <Route path="/historical-transfer-metrics" element={<HistoricalTransferMetrics />} />
 
                 {/* Admin Routes with Sidebar Layout */}
                 <Route element={<AdminLayout />}>
