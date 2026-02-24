@@ -14,6 +14,7 @@ const AdminCampaigns = () => {
   const [clientFilter, setClientFilter] = useState("");
   const [campaignFilter, setCampaignFilter] = useState("");
   const [selectedFilters, setSelectedFilters] = useState([]);
+  const [showExpired, setShowExpired] = useState(false);
 
   // Sorting state
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
@@ -68,6 +69,11 @@ const AdminCampaigns = () => {
   // Get campaigns expiring soon (within 7 days)
   const expiringSoonCampaigns = campaignData?.campaigns?.filter((campaign) => {
     return isExpiringSoon(campaign.end_date) && campaign.current_status !== 'Archived';
+  }) || [];
+
+  // Get campaigns that are already expired
+  const expiredCampaigns = campaignData?.campaigns?.filter((campaign) => {
+    return isExpired(campaign.end_date) && campaign.current_status !== 'Archived';
   }) || [];
 
   // Fetch campaign stats on mount
@@ -635,8 +641,8 @@ const AdminCampaigns = () => {
               </div>
             </div>
 
-            {/* Expiring Soon Alert Section */}
-            {expiringSoonCampaigns.length > 0 && (
+            {/* Expiring Soon / Expired Alert Section */}
+            {(expiringSoonCampaigns.length > 0 || expiredCampaigns.length > 0) && (
               <div
                 style={{
                   backgroundColor: "#fffbeb",
@@ -651,21 +657,36 @@ const AdminCampaigns = () => {
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "10px",
+                    justifyContent: "space-between",
                     marginBottom: "12px",
                   }}
                 >
-                  <span style={{ fontSize: "20px" }}>⚠️</span>
-                  <h3
-                    style={{
-                      margin: 0,
-                      fontSize: "16px",
-                      fontWeight: "700",
-                      color: "#92400e",
-                    }}
-                  >
-                    Expiring Soon ({expiringSoonCampaigns.length})
-                  </h3>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span style={{ fontSize: "20px" }}>⚠️</span>
+                    <h3
+                      style={{
+                        margin: 0,
+                        fontSize: "16px",
+                        fontWeight: "700",
+                        color: "#92400e",
+                      }}
+                    >
+                      Expiring Soon ({expiringSoonCampaigns.length})
+                    </h3>
+                  </div>
+                  {expiredCampaigns.length > 0 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <label style={{ fontSize: "14px", fontWeight: "600", color: "#b91c1c", display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+                        <input
+                          type="checkbox"
+                          checked={showExpired}
+                          onChange={(e) => setShowExpired(e.target.checked)}
+                          style={{ cursor: "pointer", accentColor: "#b91c1c" }}
+                        />
+                        Show Expired ({expiredCampaigns.length})
+                      </label>
+                    </div>
+                  )}
                 </div>
                 <div
                   style={{
@@ -705,6 +726,45 @@ const AdminCampaigns = () => {
                       >
                         <span>📅</span>
                         Expires: {new Date(campaign.end_date).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </div>
+                    </div>
+                  ))}
+
+                  {showExpired && expiredCampaigns.map((campaign) => (
+                    <div
+                      key={`expired-${campaign.client_campaign_model_id}`}
+                      style={{
+                        backgroundColor: "#fef2f2",
+                        borderRadius: "8px",
+                        padding: "12px 16px",
+                        border: "1px solid #fca5a5",
+                        minWidth: "200px",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => toggleCampaignExpand(campaign.client_campaign_model_id)}
+                    >
+                      <div style={{ fontWeight: "600", color: "#111827", marginBottom: "4px" }}>
+                        {campaign.client_name}
+                      </div>
+                      <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "8px" }}>
+                        {campaign.campaign_name} (ID: {campaign.client_campaign_model_id})
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          fontSize: "13px",
+                          fontWeight: "600",
+                          color: "#991b1b",
+                        }}
+                      >
+                        <span>❌</span>
+                        Expired: {new Date(campaign.end_date).toLocaleDateString("en-US", {
                           month: "short",
                           day: "numeric",
                           year: "numeric",
@@ -785,10 +845,24 @@ const AdminCampaigns = () => {
                             color: "#374151",
                             cursor: "pointer",
                             userSelect: "none",
-                            width: "14%",
+                            width: "13%",
                           }}
                         >
                           Client {sortConfig.key === 'client_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                        </th>
+                        <th
+                          onClick={() => handleSort('campaign_name')}
+                          style={{
+                            padding: "10px 8px",
+                            textAlign: "left",
+                            fontWeight: "600",
+                            color: "#374151",
+                            cursor: "pointer",
+                            userSelect: "none",
+                            width: "14%",
+                          }}
+                        >
+                          Campaign {sortConfig.key === 'campaign_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                         </th>
                         <th
                           onClick={() => handleSort('client_campaign_model_id')}
@@ -988,9 +1062,12 @@ const AdminCampaigns = () => {
                                 <div style={{ fontWeight: "600", color: "#111827", fontSize: "13px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                   {campaign.client_name}
                                 </div>
-                                <div style={{ fontSize: "11px", color: "#9ca3af", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                  {campaign.client_username}
-                                </div>
+                              </div>
+                            </td>
+                            {/* Campaign */}
+                            <td style={{ padding: "10px 8px", color: "#4b5563", fontSize: "12px" }}>
+                              <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                {campaign.campaign_name || "-"}
                               </div>
                             </td>
                             {/* ID */}
@@ -1179,7 +1256,7 @@ const AdminCampaigns = () => {
                           {expandedCampaignId === campaign.client_campaign_model_id && (
                             <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
                               <td
-                                colSpan="13"
+                                colSpan="14"
                                 style={{
                                   padding: 0,
                                   backgroundColor: "#f9fafb",
