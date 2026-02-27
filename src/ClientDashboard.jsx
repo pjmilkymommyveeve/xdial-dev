@@ -44,6 +44,10 @@ const MedicareDashboard = () => {
   // Transfer metrics data
   const [transferMetrics, setTransferMetrics] = useState(null);
 
+  // Voice stats data
+  const [voiceStats, setVoiceStats] = useState(null);
+  const [voiceStatsLoading, setVoiceStatsLoading] = useState(false);
+
   // Trend comparison state for reports page
 
 
@@ -373,6 +377,60 @@ const MedicareDashboard = () => {
 
     if (campaignId && startDate) {
       fetchTransferMetrics();
+    }
+  }, [campaignId, startDate, startTime, endDate, endTime]);
+
+  // Fetch voice stats from API
+  useEffect(() => {
+    const fetchVoiceStats = async () => {
+      if (!campaignId || !startDate) return;
+
+      setVoiceStatsLoading(true);
+      try {
+        const token = localStorage.getItem("access_token");
+        if (!token) return;
+
+        // Build query parameters
+        const params = new URLSearchParams();
+        params.append("start_date", startDate);
+        if (startTime) params.append("start_time", startTime);
+        if (endDate) {
+          params.append("end_date", endDate);
+        }
+        if (endTime) params.append("end_time", endTime);
+
+        const apiUrl = `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/stats/campaign-voice-stats/${campaignId}?${params.toString()}`;
+
+        const response = await fetch(apiUrl, {
+          headers: {
+            accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.status === 401) {
+          return;
+        }
+
+        if (response.ok) {
+          const data = await response.json();
+          setVoiceStats(data);
+        } else {
+          console.warn('Voice stats unavailable - server returned status:', response.status);
+        }
+      } catch (err) {
+        if (err.name === 'TypeError' && (err.message.includes('NetworkError') || err.message.includes('fetch'))) {
+          console.warn('Network error fetching voice stats - feature temporarily unavailable');
+        } else {
+          console.error("Error fetching voice stats:", err);
+        }
+      } finally {
+        setVoiceStatsLoading(false);
+      }
+    };
+
+    if (campaignId && startDate) {
+      fetchVoiceStats();
     }
   }, [campaignId, startDate, startTime, endDate, endTime]);
 
@@ -1563,6 +1621,60 @@ const MedicareDashboard = () => {
                 </button>
               </div>
             </div>
+
+            {/* Voice Stats Section */}
+            {voiceStats && (
+              <div style={{ ...styles.section, marginBottom: "24px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                  <h2 style={styles.sectionTitle}>
+                    <i className="bi bi-mic-fill"></i> Voice Stats
+                  </h2>
+                  <div style={{ fontSize: "14px", color: "#6b7280" }}>
+                    Total Calls: <strong style={{ color: "#111827" }}>{voiceStats.total_calls}</strong> | Transfer Rate: <strong style={{ color: "#4f46e5" }}>{voiceStats.overall_transfer_rate}%</strong>
+                  </div>
+                </div>
+
+                {voiceStatsLoading ? (
+                  <div style={{ textAlign: "center", padding: "20px" }}>
+                    Loading voice stats...
+                  </div>
+                ) : (
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead style={{ backgroundColor: "#f9fafb" }}>
+                        <tr>
+                          <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Voice Name</th>
+                          <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Total Calls</th>
+                          <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Transfers</th>
+                          <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Transfer Rate</th>
+                          <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Qual. Transfers</th>
+                          <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Qual. Rate</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {voiceStats.voice_stats?.map((voice, idx) => (
+                          <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                            <td style={{ padding: "12px", fontSize: "14px", color: "#111827", fontWeight: "600" }}>{voice.voice_name}</td>
+                            <td style={{ padding: "12px", fontSize: "14px", color: "#6b7280" }}>{voice.total_calls?.toLocaleString()}</td>
+                            <td style={{ padding: "12px", fontSize: "14px", color: "#10b981" }}>{voice.transferred_calls?.toLocaleString()}</td>
+                            <td style={{ padding: "12px", fontSize: "14px", color: "#4f46e5", fontWeight: "600" }}>{voice.transfer_rate}%</td>
+                            <td style={{ padding: "12px", fontSize: "14px", color: "#059669" }}>{voice.qualified_transferred_calls?.toLocaleString()}</td>
+                            <td style={{ padding: "12px", fontSize: "14px", color: "#4338ca", fontWeight: "600" }}>{voice.qualified_transfer_rate}%</td>
+                          </tr>
+                        ))}
+                        {(!voiceStats.voice_stats || voiceStats.voice_stats.length === 0) && (
+                          <tr>
+                            <td colSpan="6" style={{ padding: "20px", textAlign: "center", color: "#6b7280", fontSize: "14px" }}>
+                              No voice stats available for this period.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Statistics Content */}
             <div
