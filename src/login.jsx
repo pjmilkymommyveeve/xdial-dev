@@ -8,6 +8,7 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -133,6 +134,10 @@ const LoginPage = () => {
     }
   };
 
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
   return (
     <>
       <style>{`
@@ -147,76 +152,178 @@ const LoginPage = () => {
 
         body {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-          background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%);
+          background: #FFFFFF;
           color: #111827;
-          line-height: 1.3;
-          font-size: 14px;
+          line-height: 1.5;
+          min-height: 100vh;
+        }
+        
+        #root {
           min-height: 100vh;
           display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 1.5rem;
+          flex-direction: column;
         }
 
-        .login-container {
+        .login-page-wrapper {
+          display: flex;
+          min-height: 100vh;
           width: 100%;
-          max-width: 400px;
-          background: white;
-          border-radius: 16px;
-          border: 1px solid #F3F4F6;
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-          padding: 2.5rem;
+          flex: 1;
         }
 
-        .login-header {
-          text-align: center;
-          margin-bottom: 2rem;
-        }
-
-        .logo-wrapper {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 0.75rem;
-          margin-bottom: 1.5rem;
-        }
-
-        .logo-icon {
-          width: 38px;
-          height: 38px;
-          border-radius: 10px;
-          background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
-          display: flex;
-          align-items: center;
-          justify-content: center;
+        /* Left Side */
+        .login-left {
+          flex: 1;
+          background: linear-gradient(135deg, #1C44B2 0%, #17368E 100%);
           color: white;
-          font-size: 1.75rem;
-        }
-
-        .logo-text {
+          padding: 4rem 5rem;
           display: flex;
           flex-direction: column;
-          gap: 0.125rem;
+          position: relative;
+          overflow: hidden;
         }
 
-        .logo-name {
-          font-size: 1.125rem;
-          font-weight: 700;
-          color: #111827;
-          letter-spacing: -0.5px;
+        .login-left::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: radial-gradient(circle at top right, rgba(255,255,255,0.08) 0%, transparent 40%),
+                      radial-gradient(circle at bottom left, rgba(255,255,255,0.05) 0%, transparent 40%);
+          pointer-events: none;
         }
 
-        .login-title {
-          font-size: 1.5rem;
+        .login-logo {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          margin-bottom: auto;
+          position: relative;
+          z-index: 2;
+        }
+
+        .login-logo-icon {
+          width: 44px;
+          height: 44px;
+          border-radius: 12px;
+          background: rgba(255, 255, 255, 0.15);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.25rem;
+          border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .login-logo-text {
+          font-size: 1.375rem;
           font-weight: 600;
-          color: #111827;
-          margin-bottom: 0.5rem;
         }
 
-        .login-subtitle {
+        .login-content {
+          margin-top: 5rem;
+          margin-bottom: auto;
+          max-width: 500px;
+          position: relative;
+          z-index: 2;
+        }
+
+        .login-content h1 {
+          font-size: 2.75rem;
+          font-weight: 700;
+          line-height: 1.2;
+          margin-bottom: 1.25rem;
+        }
+
+        .login-content p.description {
+          font-size: 1.125rem;
+          color: rgba(255, 255, 255, 0.9);
+          margin-bottom: 3.5rem;
+          line-height: 1.6;
+        }
+
+        .features-list {
+          display: flex;
+          flex-direction: column;
+          gap: 1.75rem;
+        }
+
+        .feature-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 1.25rem;
+        }
+
+        .feature-icon {
+          width: 44px;
+          height: 44px;
+          border-radius: 12px;
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.25rem;
+          flex-shrink: 0;
+        }
+
+        .feature-text {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+
+        .feature-text h3 {
+          font-size: 1rem;
+          font-weight: 600;
+          margin-bottom: 0.25rem;
+        }
+
+        .feature-text p {
           font-size: 0.875rem;
+          color: rgba(255, 255, 255, 0.75);
+          margin-bottom: 0;
+        }
+
+        .login-footer {
+          font-size: 0.875rem;
+          color: rgba(255, 255, 255, 0.7);
+          position: relative;
+          z-index: 2;
+        }
+
+        /* Right Side */
+        .login-right {
+          flex: 1;
+          background: #FFFFFF;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 4rem;
+        }
+
+        .login-form-container {
+          width: 100%;
+          max-width: 420px;
+        }
+
+        .login-form-header {
+          margin-bottom: 2.5rem;
+        }
+
+        .login-form-header h2 {
+          font-size: 2.25rem;
+          color: #111827;
+          font-weight: 600;
+          margin-bottom: 0.75rem;
+          letter-spacing: -0.025em;
+        }
+
+        .login-form-header p {
+          font-size: 1rem;
           color: #6B7280;
-          font-weight: 400;
+          line-height: 1.5;
         }
 
         .login-form {
@@ -233,89 +340,94 @@ const LoginPage = () => {
 
         .form-label {
           font-size: 0.875rem;
-          font-weight: 500;
+          font-weight: 600;
           color: #374151;
-          display: flex;
-          align-items: center;
-          gap: 0.375rem;
         }
 
-        .form-label i {
-          font-size: 0.875rem;
-          color: #9CA3AF;
+        .input-wrapper {
+          position: relative;
+          display: flex;
+          align-items: center;
         }
 
         .form-input {
-          padding: 0.75rem 1rem;
+          width: 100%;
+          padding: 0.875rem 1rem;
+          background: #F9FAFB;
           border: 1px solid #E5E7EB;
           border-radius: 8px;
-          font-size: 0.875rem;
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-          background-color: #FFFFFF;
+          font-size: 0.938rem;
           color: #111827;
+          font-family: inherit;
           transition: all 0.2s ease;
-        }
-
-        .form-input::placeholder {
-          color: #D1D5DB;
         }
 
         .form-input:focus {
           outline: none;
-          border-color: #4F46E5;
-          background-color: #FAFBFF;
-          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+          background: #FFFFFF;
+          border-color: #2563EB;
+          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
-        .form-input:hover:not(:focus):not(:disabled) {
-          border-color: #D1D5DB;
-          background-color: #F9FAFB;
+        .form-input::placeholder {
+          color: #9CA3AF;
         }
 
-        .form-input:disabled {
-          background-color: #F3F4F6;
-          cursor: not-allowed;
-          opacity: 0.6;
+        .form-input::-ms-reveal,
+        .form-input::-ms-clear {
+          display: none;
+        }
+        
+        .form-input::-webkit-credentials-auto-fill-button {
+          visibility: hidden;
+          display: none !important;
+          pointer-events: none;
+        }
+
+        .password-toggle {
+          position: absolute;
+          right: 1rem;
+          background: none;
+          border: none;
+          color: #9CA3AF;
+          cursor: pointer;
+          font-size: 1.25rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0;
+          transition: color 0.2s;
+        }
+
+        .password-toggle:hover {
+          color: #6B7280;
         }
 
         .login-btn {
-          padding: 0.875rem 1rem;
-          background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+          width: 100%;
+          padding: 0.875rem;
+          background: #2563EB;
+          color: white;
           border: none;
           border-radius: 8px;
-          color: white;
-          font-size: 0.938rem;
+          font-size: 1rem;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s ease;
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 0.5rem;
-          margin-top: 0.75rem;
+          margin-top: 0.5rem;
         }
 
         .login-btn:hover:not(:disabled) {
-          background: linear-gradient(135deg, #3730A3 0%, #6D28D9 100%);
-          box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
-          transform: translateY(-2px);
-        }
-
-        .login-btn:active:not(:disabled) {
-          transform: translateY(0);
-          box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
+          background: #1D4ED8;
         }
 
         .login-btn:disabled {
-          background: linear-gradient(135deg, #D1D5DB 0%, #E5E7EB 100%);
+          background: #93C5FD;
           cursor: not-allowed;
-          transform: none;
-          box-shadow: none;
-        }
-
-        .login-btn i {
-          font-size: 1rem;
         }
 
         .spin {
@@ -327,142 +439,199 @@ const LoginPage = () => {
           to { transform: rotate(360deg); }
         }
 
+        .help-box {
+          margin-top: 2rem;
+          padding: 1.25rem;
+          background: #EFF6FF;
+          border-radius: 8px;
+          color: #1E3A8A;
+          font-size: 0.875rem;
+          line-height: 1.5;
+        }
+
+        .help-box strong {
+          font-weight: 600;
+        }
+
         .error-message {
-          display: none;
-          padding: 0.75rem 1rem;
-          background-color: #FEE2E2;
-          border: 1px solid #FCA5A5;
+          display: flex;
+          padding: 0.875rem 1rem;
+          background-color: #FEF2F2;
+          border: 1px solid #FECACA;
           border-radius: 8px;
           color: #DC2626;
-          font-size: 0.813rem;
+          font-size: 0.875rem;
           font-weight: 500;
           align-items: center;
           gap: 0.5rem;
-          margin-bottom: 1rem;
-        }
-
-        .error-message.show {
-          display: flex;
-        }
-
-        .error-message i {
-          font-size: 0.938rem;
-          flex-shrink: 0;
+          margin-bottom: 1.5rem;
         }
 
         .success-message {
-          display: none;
-          padding: 0.75rem 1rem;
-          background-color: #D1FAE5;
+          display: flex;
+          padding: 0.875rem 1rem;
+          background-color: #ECFDF5;
           border: 1px solid #A7F3D0;
           border-radius: 8px;
           color: #059669;
-          font-size: 0.813rem;
+          font-size: 0.875rem;
           font-weight: 500;
           align-items: center;
           gap: 0.5rem;
-          margin-bottom: 1rem;
+          margin-bottom: 1.5rem;
         }
 
-        .success-message.show {
-          display: flex;
-        }
-
-        .success-message i {
-          font-size: 0.938rem;
-          flex-shrink: 0;
-        }
-
-        @media (max-width: 480px) {
-          .login-container {
-            padding: 2rem 1.5rem;
+        @media (max-width: 992px) {
+          .login-page-wrapper {
+            flex-direction: column;
           }
-          .login-title {
-            font-size: 1.25rem;
+          .login-left {
+            padding: 3rem 2rem;
+            min-height: auto;
           }
-          .logo-wrapper {
-            margin-bottom: 1rem;
+          .login-content {
+            margin-top: 3rem;
+            margin-bottom: 3rem;
+          }
+          .login-right {
+            padding: 3rem 2rem;
           }
         }
       `}</style>
 
-      <div className="login-container">
-        <div className="login-header">
-          <div className="logo-wrapper">
-            <div className="logo-icon">
-              <i className="bi bi-telephone-fill"></i>
+      <div className="login-page-wrapper">
+        <div className="login-left">
+          <div className="login-logo">
+            <div className="login-logo-icon">
+              <i className="bi bi-telephone"></i>
             </div>
-            <div className="logo-text">
-              <div className="logo-name">Xdial Networks</div>
+            <div className="login-logo-text">Xdial Networks</div>
+          </div>
+
+          <div className="login-content">
+            <h1>Campaign Management Dashboard</h1>
+            <p className="description">
+              Manage your operations, track campaigns, and optimize performance all in one place.
+            </p>
+
+            <div className="features-list">
+              <div className="feature-item">
+                <div className="feature-icon">
+                  <i className="bi bi-bar-chart"></i>
+                </div>
+                <div className="feature-text">
+                  <h3>Real-time Analytics</h3>
+                  <p>Track campaign performance live</p>
+                </div>
+              </div>
+
+              <div className="feature-item">
+                <div className="feature-icon">
+                  <i className="bi bi-people"></i>
+                </div>
+                <div className="feature-text">
+                  <h3>Agent Management</h3>
+                  <p>Monitor and manage your team</p>
+                </div>
+              </div>
+
+              <div className="feature-item">
+                <div className="feature-icon">
+                  <i className="bi bi-headset"></i>
+                </div>
+                <div className="feature-text">
+                  <h3>Total Support Tools</h3>
+                  <p>Complete suite of features</p>
+                </div>
+              </div>
             </div>
           </div>
-          <h1 className="login-title">Welcome Back</h1>
-          <p className="login-subtitle">Sign in to your account to continue</p>
+
+          <div className="login-footer">
+            © 2026 Xdial Networks. All rights reserved.
+          </div>
         </div>
 
-        {error && (
-          <div className="error-message show">
-            <i className="bi bi-exclamation-circle-fill"></i>
-            <span>{error}</span>
-          </div>
-        )}
+        <div className="login-right">
+          <div className="login-form-container">
+            <div className="login-form-header">
+              <h2>Sign in to Dashboard</h2>
+              <p>Enter your credentials to access the campaign management system</p>
+            </div>
 
-        {success && (
-          <div className="success-message show">
-            <i className="bi bi-check-circle-fill"></i>
-            <span>{success}</span>
-          </div>
-        )}
-
-        <form className="login-form" onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label className="form-label">
-              <i className="bi bi-person"></i>
-              Username
-            </label>
-            <input
-              type="text"
-              name="username"
-              className="form-input"
-              placeholder="Enter your username"
-              value={formData.username}
-              onChange={handleChange}
-              required
-              disabled={loading}
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">
-              <i className="bi bi-lock"></i>
-              Password
-            </label>
-            <input
-              type="password"
-              name="password"
-              className="form-input"
-              placeholder="Enter your password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              disabled={loading}
-            />
-          </div>
-
-          <button type="submit" className="login-btn" disabled={loading}>
-            {loading ? (
-              <>
-                <i className="bi bi-arrow-repeat spin"></i>
-                Signing In...
-              </>
-            ) : (
-              <>
-                <i className="bi bi-box-arrow-in-right"></i>
-                Sign In
-              </>
+            {error && (
+              <div className="error-message">
+                <i className="bi bi-exclamation-circle-fill"></i>
+                <span>{error}</span>
+              </div>
             )}
-          </button>
-        </form>
+
+            {success && (
+              <div className="success-message">
+                <i className="bi bi-check-circle-fill"></i>
+                <span>{success}</span>
+              </div>
+            )}
+
+            <form className="login-form" onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label className="form-label">Username</label>
+                <div className="input-wrapper">
+                  <input
+                    type="text"
+                    name="username"
+                    className="form-input"
+                    placeholder="Enter your username"
+                    value={formData.username}
+                    onChange={handleChange}
+                    required
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Password</label>
+                <div className="input-wrapper">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    className="form-input"
+                    placeholder="Enter your password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                    disabled={loading}
+                    style={{ paddingRight: '3rem' }}
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={togglePasswordVisibility}
+                    tabIndex="-1"
+                  >
+                    <i className={showPassword ? "bi bi-eye-slash" : "bi bi-eye"}></i>
+                  </button>
+                </div>
+              </div>
+
+              <button type="submit" className="login-btn" disabled={loading}>
+                {loading ? (
+                  <>
+                    <i className="bi bi-arrow-repeat spin"></i>
+                    Signing In...
+                  </>
+                ) : (
+                  "Sign In"
+                )}
+              </button>
+            </form>
+
+            <div className="help-box">
+              <strong>Need help?</strong> Contact your system administrator for login credentials or support.
+            </div>
+          </div>
+        </div>
       </div>
     </>
   );

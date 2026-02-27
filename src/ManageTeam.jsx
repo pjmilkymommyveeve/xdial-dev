@@ -275,9 +275,8 @@ const ManageTeam = () => {
                             <span className="slider"></span>
                           </label>
                           <span
-                            className={`status-badge ${
-                              employee.is_active ? "active" : "inactive"
-                            }`}
+                            className={`status-badge ${employee.is_active ? "active" : "inactive"
+                              }`}
                           >
                             {employee.is_active ? "Active" : "Inactive"}
                           </span>

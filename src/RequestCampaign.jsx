@@ -59,7 +59,7 @@ const RequestCampaign = () => {
         method: 'GET',
         headers: {
           'accept': 'application/json',
-        },  
+        },
       });
 
       if (!response.ok) {
@@ -67,7 +67,7 @@ const RequestCampaign = () => {
       }
 
       const config = await response.json();
-      
+
       console.log('Form config loaded:', config);
 
       setCampaigns(config.campaigns || []);
@@ -87,7 +87,7 @@ const RequestCampaign = () => {
     if (formData.campaign && campaignConfig[formData.campaign]) {
       const models = Object.keys(campaignConfig[formData.campaign]);
       setAvailableModels(models);
-      
+
       if (!formData.model || !models.includes(formData.model)) {
         setFormData(prev => ({ ...prev, model: models[0] || '', transferSettingsId: '' }));
       }
@@ -102,15 +102,15 @@ const RequestCampaign = () => {
     if (formData.campaign && formData.model && campaignConfig[formData.campaign]?.[formData.model]) {
       const settings = campaignConfig[formData.campaign][formData.model];
       setAvailableTransferSettings(settings);
-      
+
       const recommended = settings.find(s => {
         const fullSetting = transferSettings.find(ts => ts.id === s.id);
         return fullSetting?.is_recommended;
       });
-      
+
       if (!formData.transferSettingsId || !settings.find(s => s.id === formData.transferSettingsId)) {
-        setFormData(prev => ({ 
-          ...prev, 
+        setFormData(prev => ({
+          ...prev,
           transferSettingsId: recommended ? recommended.id : (settings[0]?.id || '')
         }));
       }
@@ -151,7 +151,7 @@ const RequestCampaign = () => {
       ];
 
       const missingFields = requiredFields.filter(f => !formData[f.field] || formData[f.field] === '');
-      
+
       if (missingFields.length > 0) {
         const fieldNames = missingFields.map(f => f.label).join(', ');
         throw new Error(`Please fill in the following required fields: ${fieldNames}`);
@@ -197,11 +197,11 @@ const RequestCampaign = () => {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('API Error Response:', errorData);
-        
+
         if (errorData.detail && typeof errorData.detail === 'string') {
           throw new Error(errorData.detail);
         }
-        
+
         // Handle validation errors (422)
         if (response.status === 422 && errorData.detail) {
           if (Array.isArray(errorData.detail)) {
@@ -213,9 +213,9 @@ const RequestCampaign = () => {
                 .join(' ');
               return readableField;
             });
-            
+
             const uniqueFields = [...new Set(fieldErrors)];
-            
+
             if (uniqueFields.length === 1) {
               throw new Error(`Please fill in the ${uniqueFields[0]} field correctly.`);
             } else {
@@ -223,19 +223,19 @@ const RequestCampaign = () => {
             }
           }
         }
-        
+
         if (response.status === 400) {
           throw new Error('Invalid form data. Please check all fields and try again.');
         } else if (response.status === 500) {
           throw new Error('Server error. Please try again later or contact support.');
         }
-        
+
         throw new Error('Unable to submit the form. Please check all fields and try again.');
       }
 
       const data = await response.json();
       console.log('Success response:', data);
-      
+
       setSubmitMessage({
         type: 'success',
         text: 'Campaign request submitted successfully! Our team will review and activate it shortly.'
@@ -302,7 +302,7 @@ const RequestCampaign = () => {
               <h1 className="form-title">Request New Campaign</h1>
               <p className="form-subtitle">Configure your Remote Agent campaign and integration settings</p>
             </div>
-            <button 
+            <button
               className="back-btn"
               onClick={() => window.location.href = '/client-landing'}
             >
@@ -363,7 +363,7 @@ const RequestCampaign = () => {
                   <label>
                     Transfer Quality Settings <span className="required">*</span>
                   </label>
-                  
+
                   <div className="transfer-settings-grid">
                     {availableTransferSettings.map(setting => {
                       const fullSetting = getTransferSettingDetails(setting.id);
@@ -381,7 +381,7 @@ const RequestCampaign = () => {
                               name="transferSettingsId"
                               value={setting.id}
                               checked={formData.transferSettingsId === setting.id}
-                              onChange={() => {}}
+                              onChange={() => { }}
                               required
                             />
                             <span className="transfer-setting-name">
@@ -391,7 +391,7 @@ const RequestCampaign = () => {
                               )}
                             </span>
                           </div>
-                          
+
                           <p className="transfer-setting-description">
                             {fullSetting.description}
                           </p>
@@ -401,10 +401,10 @@ const RequestCampaign = () => {
                               <div className="metric-circle">
                                 <svg viewBox="0 0 36 36" className="circular-chart">
                                   <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                                  <path 
-                                    className="circle quality" 
-                                    strokeDasharray={`${fullSetting.quality_score}, 100`} 
-                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
+                                  <path
+                                    className="circle quality"
+                                    strokeDasharray={`${fullSetting.quality_score}, 100`}
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                                   />
                                 </svg>
                                 <div className="metric-number">{fullSetting.quality_score}</div>
@@ -415,10 +415,10 @@ const RequestCampaign = () => {
                               <div className="metric-circle">
                                 <svg viewBox="0 0 36 36" className="circular-chart">
                                   <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                                  <path 
-                                    className="circle volume" 
-                                    strokeDasharray={`${fullSetting.volume_score}, 100`} 
-                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
+                                  <path
+                                    className="circle volume"
+                                    strokeDasharray={`${fullSetting.volume_score}, 100`}
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                                   />
                                 </svg>
                                 <div className="metric-number">{fullSetting.volume_score}</div>
