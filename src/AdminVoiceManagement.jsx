@@ -674,18 +674,18 @@ const AdminVoiceManagement = () => {
 
     // ==================== STYLES ====================
     const cardStyle = {
-        backgroundColor: "#1e293b",
-        borderRadius: "12px",
-        border: "1px solid #334155",
+        backgroundColor: "white",
+        borderRadius: "16px",
+        boxShadow: "0 4px 6px rgba(0,0,0,0.05)",
         marginBottom: "24px",
         overflow: "hidden",
     };
 
     const inputStyle = {
         padding: "10px 14px",
-        backgroundColor: "#0f172a",
-        color: "#e2e8f0",
-        border: "1px solid #475569",
+        backgroundColor: "white",
+        color: "#374151",
+        border: "1px solid #d1d5db",
         borderRadius: "8px",
         fontSize: "14px",
     };
@@ -711,18 +711,18 @@ const AdminVoiceManagement = () => {
     const voiceColors = ["#3b82f6", "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b", "#ec4899", "#ef4444", "#84cc16"];
 
     return (
-        <div style={{ minHeight: "100vh", backgroundColor: "#0f172a", fontFamily: "Arial, sans-serif", color: "#e2e8f0" }}>
+        <div style={{ minHeight: "100vh", backgroundColor: "#f9fafb", fontFamily: "'Inter', sans-serif", padding: "32px" }}>
             {/* Header */}
             <header style={{
-                backgroundColor: "#1e293b",
-                borderBottom: "1px solid #334155",
-                padding: "16px 24px",
+                maxWidth: "1400px",
+                margin: "0 auto",
+                marginBottom: "32px",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
             }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                    <h1 style={{ margin: 0, fontSize: "22px", fontWeight: "700", color: "#f1f5f9" }}>
+                    <h1 style={{ margin: 0, fontSize: "28px", fontWeight: "800", color: "#111827" }}>
                         Voice Management
                     </h1>
                 </div>
@@ -740,7 +740,7 @@ const AdminVoiceManagement = () => {
                 </div>
             </header>
 
-            <div style={{ padding: "20px" }}>
+            <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
                 {error && (
                     <div style={{ padding: "12px", backgroundColor: "#7f1d1d", border: "1px solid #ef4444", borderRadius: "8px", marginBottom: "20px", color: "#fecaca", fontSize: "14px" }}>
                         {error}
@@ -751,104 +751,104 @@ const AdminVoiceManagement = () => {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
                     {/* All Voices Card */}
                     <div style={cardStyle}>
-                        <div style={{ padding: "16px 20px", borderBottom: "1px solid #334155", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ padding: "16px 20px", borderBottom: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                                 <span style={{ fontSize: "18px" }}>🎙️</span>
-                                <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "600", color: "#f1f5f9" }}>All Voices</h3>
-                                <span style={{ backgroundColor: "#3b82f6", color: "white", padding: "2px 8px", borderRadius: "10px", fontSize: "12px" }}>{voices.length}</span>
+                                <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "600", color: "#111827" }}>All Voices</h3>
+                                <span style={{ backgroundColor: "#eff6ff", color: "#3b82f6", padding: "2px 8px", borderRadius: "10px", fontSize: "12px", fontWeight: "600" }}>{voices.length}</span>
                             </div>
                             <div style={{ display: "flex", gap: "6px" }}>
                                 {selectedVoiceIds.length > 0 && (
-                                    <button onClick={handleBulkDeleteVoices} style={{ padding: "6px 10px", backgroundColor: "#dc2626", color: "white", border: "none", borderRadius: "6px", fontSize: "12px", cursor: "pointer" }}>
+                                    <button onClick={handleBulkDeleteVoices} style={{ padding: "6px 10px", backgroundColor: "#fee2e2", color: "#ef4444", border: "none", borderRadius: "6px", fontSize: "12px", cursor: "pointer", fontWeight: "600" }}>
                                         🗑️ {selectedVoiceIds.length}
                                     </button>
                                 )}
-                                <button onClick={fetchVoices} style={{ padding: "6px 10px", backgroundColor: "#334155", color: "#e2e8f0", border: "none", borderRadius: "6px", fontSize: "12px", cursor: "pointer" }}>🔄</button>
+                                <button onClick={fetchVoices} style={{ padding: "6px 10px", backgroundColor: "#f3f4f6", color: "#4b5563", border: "none", borderRadius: "6px", fontSize: "12px", cursor: "pointer", fontWeight: "600" }}>🔄</button>
                             </div>
                         </div>
                         <MessageBanner message={voiceActionMessage} onClose={() => setVoiceActionMessage(null)} />
-                        <div style={{ padding: "12px 16px", borderBottom: "1px solid #334155", display: "flex", gap: "8px" }}>
+                        <div style={{ padding: "12px 16px", borderBottom: "1px solid #e5e7eb", display: "flex", gap: "8px", backgroundColor: "#f9fafb" }}>
                             <input type="text" placeholder="Search..." value={voiceSearchQuery} onChange={(e) => setVoiceSearchQuery(e.target.value)} style={{ ...inputStyle, flex: 1, padding: "8px 12px" }} />
                             <input type="text" placeholder="New voice..." value={newVoiceName} onChange={(e) => setNewVoiceName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleCreateVoice()} style={{ ...inputStyle, flex: 1, padding: "8px 12px" }} />
-                            <button onClick={handleCreateVoice} disabled={isCreatingVoice || !newVoiceName.trim()} style={{ padding: "8px 14px", backgroundColor: "#10b981", color: "white", border: "none", borderRadius: "6px", fontSize: "14px", fontWeight: "600", cursor: "pointer", opacity: !newVoiceName.trim() ? 0.5 : 1 }}>+</button>
+                            <button onClick={handleCreateVoice} disabled={isCreatingVoice || !newVoiceName.trim()} style={{ padding: "8px 14px", backgroundColor: "#4f46e5", color: "white", border: "none", borderRadius: "6px", fontSize: "14px", fontWeight: "600", cursor: "pointer", opacity: !newVoiceName.trim() ? 0.5 : 1 }}>+</button>
                         </div>
                         <div style={{ maxHeight: "250px", overflowY: "auto" }}>
                             {filteredVoices.map((voice, idx) => (
-                                <div key={voice.id} style={{ padding: "10px 16px", backgroundColor: idx % 2 === 0 ? "#1e293b" : "#172033", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <div key={voice.id} style={{ padding: "10px 16px", backgroundColor: "white", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                        <input type="checkbox" checked={selectedVoiceIds.includes(voice.id)} onChange={() => toggleVoiceSelection(voice.id)} style={{ accentColor: "#3b82f6" }} />
+                                        <input type="checkbox" checked={selectedVoiceIds.includes(voice.id)} onChange={() => toggleVoiceSelection(voice.id)} style={{ accentColor: "#4f46e5" }} />
                                         <div style={{ width: "28px", height: "28px", borderRadius: "50%", backgroundColor: voiceColors[idx % voiceColors.length], display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: "600", fontSize: "12px" }}>
                                             {voice.name?.charAt(0).toUpperCase() || "?"}
                                         </div>
-                                        <span style={{ fontWeight: "500", color: "#f1f5f9", fontSize: "13px" }}>{voice.name}</span>
-                                        <span style={{ fontSize: "11px", color: "#64748b" }}>#{voice.id}</span>
+                                        <span style={{ fontWeight: "600", color: "#111827", fontSize: "13px" }}>{voice.name}</span>
+                                        <span style={{ fontSize: "11px", color: "#6b7280" }}>#{voice.id}</span>
                                     </div>
-                                    <button onClick={() => handleDeleteVoice(voice.id)} style={{ padding: "4px 8px", backgroundColor: "transparent", color: "#ef4444", border: "1px solid #ef4444", borderRadius: "4px", fontSize: "11px", cursor: "pointer" }}>🗑️</button>
+                                    <button onClick={() => handleDeleteVoice(voice.id)} style={{ padding: "4px 8px", backgroundColor: "transparent", color: "#ef4444", border: "1px solid #ef4444", borderRadius: "4px", fontSize: "11px", cursor: "pointer", fontWeight: "600" }}>🗑️</button>
                                 </div>
                             ))}
-                            {filteredVoices.length === 0 && <div style={{ padding: "24px", textAlign: "center", color: "#64748b" }}>No voices</div>}
+                            {filteredVoices.length === 0 && <div style={{ padding: "24px", textAlign: "center", color: "#6b7280" }}>No voices</div>}
                         </div>
                     </div>
 
                     {/* Voice Categories Card */}
                     <div style={cardStyle}>
-                        <div style={{ padding: "16px 20px", borderBottom: "1px solid #334155", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ padding: "16px 20px", borderBottom: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                                 <span style={{ fontSize: "18px" }}>📂</span>
-                                <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "600", color: "#f1f5f9" }}>Voice Categories</h3>
-                                <span style={{ backgroundColor: "#8b5cf6", color: "white", padding: "2px 8px", borderRadius: "10px", fontSize: "12px" }}>{voiceCategories.length}</span>
+                                <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "600", color: "#111827" }}>Voice Categories</h3>
+                                <span style={{ backgroundColor: "#faf5ff", color: "#a855f7", padding: "2px 8px", borderRadius: "10px", fontSize: "12px", fontWeight: "600" }}>{voiceCategories.length}</span>
                             </div>
                             <div style={{ display: "flex", gap: "6px" }}>
                                 {selectedCategoryIds.length > 0 && (
-                                    <button onClick={handleBulkDeleteCategories} style={{ padding: "6px 10px", backgroundColor: "#dc2626", color: "white", border: "none", borderRadius: "6px", fontSize: "12px", cursor: "pointer" }}>
+                                    <button onClick={handleBulkDeleteCategories} style={{ padding: "6px 10px", backgroundColor: "#fee2e2", color: "#ef4444", border: "none", borderRadius: "6px", fontSize: "12px", cursor: "pointer", fontWeight: "600" }}>
                                         🗑️ {selectedCategoryIds.length}
                                     </button>
                                 )}
-                                <button onClick={fetchCategories} style={{ padding: "6px 10px", backgroundColor: "#334155", color: "#e2e8f0", border: "none", borderRadius: "6px", fontSize: "12px", cursor: "pointer" }}>🔄</button>
+                                <button onClick={fetchCategories} style={{ padding: "6px 10px", backgroundColor: "#f3f4f6", color: "#4b5563", border: "none", borderRadius: "6px", fontSize: "12px", cursor: "pointer", fontWeight: "600" }}>🔄</button>
                             </div>
                         </div>
                         <MessageBanner message={categoryActionMessage} onClose={() => setCategoryActionMessage(null)} />
-                        <div style={{ padding: "12px 16px", borderBottom: "1px solid #334155", display: "flex", gap: "8px" }}>
+                        <div style={{ padding: "12px 16px", borderBottom: "1px solid #e5e7eb", display: "flex", gap: "8px", backgroundColor: "#f9fafb" }}>
                             <input type="text" placeholder="Search..." value={categorySearchQuery} onChange={(e) => setCategorySearchQuery(e.target.value)} style={{ ...inputStyle, flex: 1, padding: "8px 12px" }} />
                             <input type="text" placeholder="New category..." value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleCreateCategory()} style={{ ...inputStyle, flex: 1, padding: "8px 12px" }} />
-                            <button onClick={handleCreateCategory} disabled={isCreatingCategory || !newCategoryName.trim()} style={{ padding: "8px 14px", backgroundColor: "#8b5cf6", color: "white", border: "none", borderRadius: "6px", fontSize: "14px", fontWeight: "600", cursor: "pointer", opacity: !newCategoryName.trim() ? 0.5 : 1 }}>+</button>
+                            <button onClick={handleCreateCategory} disabled={isCreatingCategory || !newCategoryName.trim()} style={{ padding: "8px 14px", backgroundColor: "#a855f7", color: "white", border: "none", borderRadius: "6px", fontSize: "14px", fontWeight: "600", cursor: "pointer", opacity: !newCategoryName.trim() ? 0.5 : 1 }}>+</button>
                         </div>
                         <div style={{ maxHeight: "250px", overflowY: "auto" }}>
                             {filteredCategories.map((cat, idx) => (
-                                <div key={cat.id} style={{ padding: "10px 16px", backgroundColor: idx % 2 === 0 ? "#1e293b" : "#172033", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <div key={cat.id} style={{ padding: "10px 16px", backgroundColor: "white", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                        <input type="checkbox" checked={selectedCategoryIds.includes(cat.id)} onChange={() => toggleCategorySelection(cat.id)} style={{ accentColor: "#8b5cf6" }} />
-                                        <div style={{ width: "28px", height: "28px", borderRadius: "6px", backgroundColor: "#8b5cf6", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: "600", fontSize: "12px" }}>
+                                        <input type="checkbox" checked={selectedCategoryIds.includes(cat.id)} onChange={() => toggleCategorySelection(cat.id)} style={{ accentColor: "#a855f7" }} />
+                                        <div style={{ width: "28px", height: "28px", borderRadius: "6px", backgroundColor: "#a855f7", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: "600", fontSize: "12px" }}>
                                             {cat.name?.charAt(0).toUpperCase() || "?"}
                                         </div>
-                                        <span style={{ fontWeight: "500", color: "#f1f5f9", fontSize: "13px" }}>{cat.name}</span>
-                                        <span style={{ fontSize: "11px", color: "#64748b" }}>#{cat.id}</span>
+                                        <span style={{ fontWeight: "600", color: "#111827", fontSize: "13px" }}>{cat.name}</span>
+                                        <span style={{ fontSize: "11px", color: "#6b7280" }}>#{cat.id}</span>
                                     </div>
-                                    <button onClick={() => handleDeleteCategory(cat.id)} style={{ padding: "4px 8px", backgroundColor: "transparent", color: "#ef4444", border: "1px solid #ef4444", borderRadius: "4px", fontSize: "11px", cursor: "pointer" }}>🗑️</button>
+                                    <button onClick={() => handleDeleteCategory(cat.id)} style={{ padding: "4px 8px", backgroundColor: "transparent", color: "#ef4444", border: "1px solid #ef4444", borderRadius: "4px", fontSize: "11px", cursor: "pointer", fontWeight: "600" }}>🗑️</button>
                                 </div>
                             ))}
-                            {filteredCategories.length === 0 && <div style={{ padding: "24px", textAlign: "center", color: "#64748b" }}>No categories</div>}
+                            {filteredCategories.length === 0 && <div style={{ padding: "24px", textAlign: "center", color: "#6b7280" }}>No categories</div>}
                         </div>
                     </div>
                 </div>
 
                 {/* ==================== CAMPAIGN MODEL VOICE GRID ==================== */}
                 <div style={cardStyle}>
-                    <div style={{ padding: "16px 20px", borderBottom: "1px solid #334155", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                    <div style={{ padding: "24px", borderBottom: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
                         <div>
-                            <h2 style={{ margin: "0 0 4px 0", fontSize: "18px", fontWeight: "600", color: "#f1f5f9" }}>
+                            <h2 style={{ margin: "0 0 8px 0", fontSize: "20px", fontWeight: "700", color: "#111827" }}>
                                 📋 Campaign Model Configuration
                             </h2>
-                            <p style={{ margin: 0, color: "#94a3b8", fontSize: "13px" }}>Select campaign model, assign voices, upload recordings per category</p>
+                            <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>Select campaign model, assign voices, upload recordings per category</p>
                         </div>
-                        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
                             <select
                                 value={selectedCampaignModel?.id || ""}
                                 onChange={(e) => {
                                     const model = campaignModels.find(m => m.id === parseInt(e.target.value));
                                     handleCampaignModelSelect(model || null);
                                 }}
-                                style={{ ...inputStyle, minWidth: "240px", cursor: "pointer" }}
+                                style={{ ...inputStyle, minWidth: "280px", cursor: "pointer" }}
                             >
                                 <option value="">Select Campaign Model</option>
                                 {campaignModels.map((model) => (
@@ -858,7 +858,7 @@ const AdminVoiceManagement = () => {
                                 ))}
                             </select>
                             {selectedCampaignModel && (
-                                <button onClick={() => fetchCampaignModelVoicesDetailed(selectedCampaignModel.id)} style={{ padding: "10px 14px", backgroundColor: "#334155", color: "#e2e8f0", border: "none", borderRadius: "6px", fontSize: "13px", cursor: "pointer" }}>🔄</button>
+                                <button onClick={() => fetchCampaignModelVoicesDetailed(selectedCampaignModel.id)} style={{ padding: "10px 14px", backgroundColor: "#f3f4f6", color: "#4b5563", border: "none", borderRadius: "8px", fontSize: "14px", cursor: "pointer", fontWeight: "600" }}>🔄</button>
                             )}
                         </div>
                     </div>
@@ -866,21 +866,21 @@ const AdminVoiceManagement = () => {
                     <MessageBanner message={cmvActionMessage} onClose={() => setCmvActionMessage(null)} />
 
                     {!selectedCampaignModel ? (
-                        <div style={{ padding: "60px", textAlign: "center", color: "#64748b" }}>
-                            <div style={{ fontSize: "48px", marginBottom: "16px" }}>📋</div>
-                            <h3 style={{ fontSize: "16px", margin: "0 0 8px 0", color: "#94a3b8" }}>Select a Campaign Model</h3>
-                            <p style={{ fontSize: "13px" }}>Choose from dropdown to configure voices and recordings</p>
+                        <div style={{ padding: "80px", textAlign: "center", color: "#6b7280" }}>
+                            <div style={{ fontSize: "64px", marginBottom: "20px" }}>📋</div>
+                            <h3 style={{ fontSize: "20px", margin: "0 0 12px 0", color: "#374151", fontWeight: "700" }}>Select a Campaign Model</h3>
+                            <p style={{ fontSize: "14px", maxWidth: "400px", margin: "0 auto" }}>Choose a campaign model from the dropdown above to configure voices and manage their recordings per category.</p>
                         </div>
                     ) : isLoadingCMV ? (
-                        <div style={{ padding: "60px", textAlign: "center", color: "#64748b" }}>
-                            <div style={{ fontSize: "48px", marginBottom: "16px", animation: "pulse 2s infinite" }}>⏳</div>
-                            <p>Loading...</p>
+                        <div style={{ padding: "80px", textAlign: "center", color: "#6b7280" }}>
+                            <div className="spinner" style={{ margin: "0 auto 20px auto" }}></div>
+                            <p style={{ fontSize: "16px", fontWeight: "500" }}>Loading Configuration...</p>
                         </div>
                     ) : (
                         <>
                             {/* Assign Voice Row */}
-                            <div style={{ padding: "14px 20px", borderBottom: "1px solid #334155", backgroundColor: "#0f172a", display: "flex", alignItems: "center", gap: "12px" }}>
-                                <span style={{ color: "#94a3b8", fontSize: "13px", fontWeight: "500" }}>Assign Voice:</span>
+                            <div style={{ padding: "16px 24px", borderBottom: "1px solid #e5e7eb", backgroundColor: "#f9fafb", display: "flex", alignItems: "center", gap: "16px" }}>
+                                <span style={{ color: "#4b5563", fontSize: "14px", fontWeight: "600" }}>Assign Voice:</span>
                                 <select value={selectedVoiceToAssign} onChange={(e) => setSelectedVoiceToAssign(e.target.value)} style={{ ...inputStyle, minWidth: "180px" }}>
                                     <option value="">Select voice...</option>
                                     {getUnassignedVoices().map(v => (
@@ -913,19 +913,19 @@ const AdminVoiceManagement = () => {
                                 <>
                                     {/* Manage Categories Section */}
                                     <div style={{ padding: "20px", borderBottom: "1px solid #334155" }}>
-                                        <h3 style={{ fontSize: "16px", fontWeight: "600", color: "#f8fafc", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                                        <h3 style={{ fontSize: "16px", fontWeight: "600", color: "#111827", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
                                             <span style={{ fontSize: "18px" }}>🏷️</span> Manage Categories for {selectedCampaignModel.campaign?.name} / {selectedCampaignModel.model?.name}
                                         </h3>
 
-                                        <div style={{ display: "flex", gap: "10px", alignItems: "flex-end", marginBottom: "20px", padding: "16px", backgroundColor: "#1e293b", borderRadius: "8px", border: "1px solid #334155" }}>
+                                        <div style={{ display: "flex", gap: "10px", alignItems: "flex-end", marginBottom: "20px", padding: "16px", backgroundColor: "#f9fafb", borderRadius: "8px", border: "1px solid #e5e7eb" }}>
                                             <div style={{ flex: 1 }}>
-                                                <label style={{ display: "block", fontSize: "12px", color: "#94a3b8", marginBottom: "6px" }}>Assign New Category</label>
+                                                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#374151", marginBottom: "6px" }}>Assign New Category</label>
                                                 <select
                                                     value={selectedCategoryToAssign}
                                                     onChange={(e) => setSelectedCategoryToAssign(e.target.value)}
                                                     style={{
-                                                        width: "100%", padding: "10px", backgroundColor: "#0f172a", border: "1px solid #334155",
-                                                        borderRadius: "6px", color: "#f1f5f9", outline: "none", fontSize: "14px"
+                                                        width: "100%", padding: "10px", backgroundColor: "white", border: "1px solid #d1d5db",
+                                                        borderRadius: "6px", color: "#111827", outline: "none", fontSize: "14px"
                                                     }}
                                                 >
                                                     <option value="">Select a category...</option>
@@ -954,17 +954,17 @@ const AdminVoiceManagement = () => {
                                         <div style={{ overflowX: "auto" }}>
                                             <div style={{ display: "inline-block", minWidth: "100%" }}>
                                                 {/* Grid Header */}
-                                                <div style={{ display: "grid", gridTemplateColumns: `160px repeat(${assignedVoices.length}, 1fr)`, borderBottom: "1px solid #334155" }}>
-                                                    <div style={{ padding: "16px", backgroundColor: "#0f172a", color: "#94a3b8", fontSize: "12px", fontWeight: "600", borderRight: "1px solid #334155" }}>
+                                                <div style={{ display: "grid", gridTemplateColumns: `160px repeat(${assignedVoices.length}, 1fr)`, borderBottom: "1px solid #e5e7eb" }}>
+                                                    <div style={{ padding: "16px", backgroundColor: "#f9fafb", color: "#6b7280", fontSize: "12px", fontWeight: "600", borderRight: "1px solid #e5e7eb" }}>
                                                         CATEGORY \ VOICE
                                                     </div>
                                                     {assignedVoices.map(cmv => (
-                                                        <div key={cmv.id} style={{ padding: "16px", backgroundColor: "#0f172a", borderRight: "1px solid #334155", minWidth: "200px" }}>
-                                                            <div style={{ color: "#f1f5f9", fontWeight: "600", fontSize: "14px", marginBottom: "4px" }}>
+                                                        <div key={cmv.id} style={{ padding: "16px", backgroundColor: "#f9fafb", borderRight: "1px solid #e5e7eb", minWidth: "200px" }}>
+                                                            <div style={{ color: "#111827", fontWeight: "600", fontSize: "14px", marginBottom: "4px" }}>
                                                                 {cmv.voice_name || `Voice ${cmv.voice_id}`}
                                                             </div>
                                                             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                                                <span style={{ fontSize: "11px", color: cmv.active ? "#10b981" : "#ef4444", backgroundColor: cmv.active ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)", padding: "2px 6px", borderRadius: "4px" }}>
+                                                                <span style={{ fontSize: "11px", color: cmv.active ? "#059669" : "#ef4444", backgroundColor: cmv.active ? "#ecfdf5" : "#fee2e2", padding: "2px 6px", borderRadius: "4px", fontWeight: "600" }}>
                                                                     {cmv.active ? "Active" : "Inactive"}
                                                                 </span>
                                                                 <div style={{ display: "flex", gap: "8px" }}>
@@ -975,7 +975,7 @@ const AdminVoiceManagement = () => {
                                                                         }}
                                                                         style={{
                                                                             width: "36px", height: "20px",
-                                                                            backgroundColor: cmv.active ? "#10b981" : "#475569",
+                                                                            backgroundColor: cmv.active ? "#10b981" : "#d1d5db",
                                                                             borderRadius: "10px", position: "relative", cursor: "pointer"
                                                                         }}
                                                                     >
@@ -985,7 +985,7 @@ const AdminVoiceManagement = () => {
                                                                             left: cmv.active ? "18px" : "2px", transition: "left 0.2s"
                                                                         }}></div>
                                                                     </div>
-                                                                    <button onClick={() => handleRemoveVoiceFromCM(cmv.id)} title="Remove voice" style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: "14px" }}>✕</button>
+                                                                    <button onClick={() => handleRemoveVoiceFromCM(cmv.id)} title="Remove voice" style={{ background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: "14px" }}>✕</button>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -994,24 +994,24 @@ const AdminVoiceManagement = () => {
 
                                                 {/* Category Rows */}
                                                 {assignedCategories.length === 0 ? (
-                                                    <div style={{ padding: "30px", textAlign: "center", color: "#94a3b8", backgroundColor: "#1e293b" }}>
+                                                    <div style={{ padding: "30px", textAlign: "center", color: "#6b7280", backgroundColor: "#f9fafb" }}>
                                                         No categories assigned to this model. Add a category above to start managing recordings.
                                                     </div>
                                                 ) : (
                                                     assignedCategories.map((category) => (
-                                                        <div key={category.id} style={{ display: "grid", gridTemplateColumns: `160px repeat(${assignedVoices.length}, 1fr)`, borderBottom: "1px solid #334155" }}>
+                                                        <div key={category.id} style={{ display: "grid", gridTemplateColumns: `160px repeat(${assignedVoices.length}, 1fr)`, borderBottom: "1px solid #e5e7eb" }}>
                                                             {/* Category Label */}
-                                                            <div style={{ padding: "16px 20px", backgroundColor: "#1e293b", borderRight: "1px solid #334155", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                                                            <div style={{ padding: "16px 20px", backgroundColor: "#f9fafb", borderRight: "1px solid #e5e7eb", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                                                                 <div>
-                                                                    <div style={{ fontWeight: "600", color: "#f1f5f9", fontSize: "13px", marginBottom: "2px" }}>{category.voice_category_name}</div>
-                                                                    <div style={{ fontSize: "10px", color: "#64748b" }}>ID: {category.voice_category_id}</div>
+                                                                    <div style={{ fontWeight: "600", color: "#111827", fontSize: "13px", marginBottom: "2px" }}>{category.voice_category_name}</div>
+                                                                    <div style={{ fontSize: "10px", color: "#6b7280" }}>ID: {category.voice_category_id}</div>
                                                                 </div>
                                                                 <button
                                                                     onClick={() => handleRemoveCategoryFromModel(category.id)}
                                                                     style={{
                                                                         marginTop: "10px", backgroundColor: "transparent", color: "#ef4444",
                                                                         border: "1px solid #ef4444", borderRadius: "4px", padding: "4px 8px",
-                                                                        fontSize: "10px", cursor: "pointer", alignSelf: "start"
+                                                                        fontSize: "11px", cursor: "pointer", alignSelf: "start", fontWeight: "600"
                                                                     }}
                                                                 >
                                                                     Remove
@@ -1027,13 +1027,13 @@ const AdminVoiceManagement = () => {
                                                                 return (
                                                                     <div key={cellKey} style={{
                                                                         padding: "12px",
-                                                                        backgroundColor: cmv.active ? "#0f172a" : "#1a1f2e",
-                                                                        borderLeft: "1px solid #334155",
+                                                                        backgroundColor: cmv.active ? "white" : "#f3f4f6",
+                                                                        borderLeft: "1px solid #e5e7eb",
                                                                         minHeight: "100px",
                                                                         opacity: cmv.active ? 1 : 0.5,
                                                                     }}>
                                                                         {!cmv.active ? (
-                                                                            <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#475569", fontSize: "12px" }}>
+                                                                            <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontSize: "12px", fontWeight: "600" }}>
                                                                                 Voice Inactive
                                                                             </div>
                                                                         ) : (
@@ -1043,29 +1043,30 @@ const AdminVoiceManagement = () => {
                                                                                         {cellRecordings.map((rec) => (
                                                                                             <div key={rec.id} style={{
                                                                                                 display: "flex", alignItems: "center", justifyContent: "space-between",
-                                                                                                padding: "6px 8px", backgroundColor: "#1e293b", borderRadius: "6px", marginBottom: "4px"
+                                                                                                padding: "6px 8px", backgroundColor: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "6px", marginBottom: "4px"
                                                                                             }}>
                                                                                                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                                                                                    <span style={{ color: "#3b82f6", fontSize: "14px" }}>▶</span>
-                                                                                                    <span style={{ fontSize: "11px", color: "#e2e8f0", maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                                                                    <span style={{ color: "#4f46e5", fontSize: "14px" }}>▶</span>
+                                                                                                    <span style={{ fontSize: "12px", color: "#374151", maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                                                                                         {rec.name || rec.filename || `rec_${rec.id}`}
                                                                                                     </span>
                                                                                                 </div>
-                                                                                                <button onClick={() => handleDeleteRecording(rec.id)} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: "12px", padding: "2px 4px" }}>🗑️</button>
+                                                                                                <button onClick={() => handleDeleteRecording(rec.id)} style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: "12px", padding: "2px 4px" }}>🗑️</button>
                                                                                             </div>
                                                                                         ))}
                                                                                     </div>
                                                                                 )}
 
                                                                                 {isUploading ? (
-                                                                                    <div style={{ padding: "16px", textAlign: "center", color: "#3b82f6", fontSize: "12px" }}>
+                                                                                    <div style={{ padding: "16px", textAlign: "center", color: "#4f46e5", fontSize: "12px", fontWeight: "600" }}>
                                                                                         <span style={{ animation: "pulse 1s infinite" }}>⏳ Uploading...</span>
                                                                                     </div>
                                                                                 ) : (
                                                                                     <label style={{
                                                                                         display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                                                                                        padding: "12px", border: "2px dashed #334155", borderRadius: "8px", cursor: "pointer",
+                                                                                        padding: "12px", border: "2px dashed #d1d5db", borderRadius: "8px", cursor: "pointer",
                                                                                         minHeight: cellRecordings.length > 0 ? "50px" : "60px", textAlign: "center",
+                                                                                        backgroundColor: "#f9fafb"
                                                                                     }}>
                                                                                         <input
                                                                                             type="file"
@@ -1076,14 +1077,14 @@ const AdminVoiceManagement = () => {
                                                                                                 e.target.value = null;
                                                                                             }}
                                                                                         />
-                                                                                        <span style={{ fontSize: "20px", color: "#475569", marginBottom: "4px" }}>☁️</span>
-                                                                                        <span style={{ fontSize: "11px", color: "#64748b" }}>Drag MP3 here</span>
-                                                                                        <span style={{ fontSize: "9px", color: "#475569" }}>or click to browse</span>
+                                                                                        <span style={{ fontSize: "20px", color: "#9ca3af", marginBottom: "4px" }}>☁️</span>
+                                                                                        <span style={{ fontSize: "12px", color: "#6b7280", fontWeight: "500" }}>Drag MP3 here</span>
+                                                                                        <span style={{ fontSize: "10px", color: "#9ca3af" }}>or click to browse</span>
                                                                                     </label>
                                                                                 )}
 
                                                                                 {cellRecordings.length > 0 && (
-                                                                                    <label style={{ display: "block", marginTop: "6px", fontSize: "11px", color: "#3b82f6", cursor: "pointer", textAlign: "center" }}>
+                                                                                    <label style={{ display: "block", marginTop: "6px", fontSize: "12px", color: "#4f46e5", cursor: "pointer", textAlign: "center", fontWeight: "600" }}>
                                                                                         + Add Variation
                                                                                         <input
                                                                                             type="file"
@@ -1107,38 +1108,38 @@ const AdminVoiceManagement = () => {
                                             </div>
                                         </div>
                                     </div>
-                                    <div style={{ display: "grid", gridTemplateColumns: `160px repeat(${assignedVoices.length}, 1fr)`, borderBottom: "1px solid #334155", backgroundColor: "#1a1f2e" }}>
-                                        <div style={{ padding: "16px 20px", backgroundColor: "#1a1f2e", borderRight: "1px solid #334155" }}>
-                                            <div style={{ fontWeight: "600", color: "#f59e0b", fontSize: "13px", marginBottom: "2px" }}>📁 Unassigned</div>
-                                            <div style={{ fontSize: "10px", color: "#64748b" }}>Recordings without category</div>
+                                    <div style={{ display: "grid", gridTemplateColumns: `160px repeat(${assignedVoices.length}, 1fr)`, borderBottom: "1px solid #e5e7eb", backgroundColor: "#fffbeb" }}>
+                                        <div style={{ padding: "16px 20px", backgroundColor: "#fffbeb", borderRight: "1px solid #fde68a" }}>
+                                            <div style={{ fontWeight: "600", color: "#d97706", fontSize: "13px", marginBottom: "2px" }}>📁 Unassigned</div>
+                                            <div style={{ fontSize: "10px", color: "#92400e" }}>Recordings without category</div>
                                         </div>
                                         {assignedVoices.map((cmv) => {
                                             const unassignedRecs = getUnassignedRecordings(cmv);
                                             return (
                                                 <div key={`unassigned-${cmv.id}`} style={{
                                                     padding: "12px",
-                                                    backgroundColor: "#1a1f2e",
-                                                    borderLeft: "1px solid #334155",
+                                                    backgroundColor: "#fffbeb",
+                                                    borderLeft: "1px solid #fde68a",
                                                     minHeight: "80px",
                                                 }}>
                                                     {unassignedRecs.length === 0 ? (
-                                                        <div style={{ color: "#475569", fontSize: "11px", textAlign: "center", padding: "8px" }}>
+                                                        <div style={{ color: "#b45309", fontSize: "12px", textAlign: "center", padding: "8px", fontWeight: "500" }}>
                                                             No unassigned recordings
                                                         </div>
                                                     ) : (
                                                         unassignedRecs.map(rec => (
                                                             <div key={rec.id} style={{
                                                                 display: "flex", flexDirection: "column", gap: "4px",
-                                                                padding: "8px", backgroundColor: "#0f172a", borderRadius: "6px", marginBottom: "6px"
+                                                                padding: "8px", backgroundColor: "white", borderRadius: "6px", marginBottom: "6px", border: "1px solid #fde68a"
                                                             }}>
                                                                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                                                                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                                                        <span style={{ color: "#f59e0b", fontSize: "14px" }}>▶</span>
-                                                                        <span style={{ fontSize: "11px", color: "#e2e8f0", maxWidth: "100px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                                        <span style={{ color: "#d97706", fontSize: "14px" }}>▶</span>
+                                                                        <span style={{ fontSize: "12px", color: "#111827", maxWidth: "100px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                                                             {rec.name || rec.filename || `rec_${rec.id}`}
                                                                         </span>
                                                                     </div>
-                                                                    <button onClick={() => handleDeleteRecording(rec.id)} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: "12px", padding: "2px" }}>🗑️</button>
+                                                                    <button onClick={() => handleDeleteRecording(rec.id)} style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: "12px", padding: "2px" }}>🗑️</button>
                                                                 </div>
                                                                 <select
                                                                     defaultValue=""
@@ -1149,9 +1150,9 @@ const AdminVoiceManagement = () => {
                                                                         }
                                                                     }}
                                                                     style={{
-                                                                        width: "100%", padding: "4px 6px", backgroundColor: "#1e293b",
-                                                                        border: "1px solid #f59e0b", borderRadius: "4px",
-                                                                        color: "#94a3b8", fontSize: "10px", cursor: "pointer"
+                                                                        width: "100%", padding: "4px 6px", backgroundColor: "white",
+                                                                        border: "1px solid #fde68a", borderRadius: "4px",
+                                                                        color: "#92400e", fontSize: "11px", cursor: "pointer"
                                                                     }}
                                                                 >
                                                                     <option value="">Assign to category...</option>
