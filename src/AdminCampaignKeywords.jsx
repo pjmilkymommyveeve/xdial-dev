@@ -48,6 +48,10 @@ const AdminCampaignKeywords = () => {
     const [showCsvModal, setShowCsvModal] = useState(false);
     const fileInputRef = useRef(null);
 
+    // New states for single category view
+    const [activeCategory, setActiveCategory] = useState(null);
+    const [keywordSearchQuery, setKeywordSearchQuery] = useState("");
+
     useEffect(() => {
         fetchCampaigns();
     }, []);
@@ -101,6 +105,15 @@ const AdminCampaignKeywords = () => {
             setLoading(true);
             const response = await api.get(`/campaigns/keywords/campaign-model/${id}`);
             setSelectedModel(response.data);
+            if (response.data.keywords && Object.keys(response.data.keywords).length > 0) {
+                // Keep active category if it still exists
+                setActiveCategory(prev => {
+                    if (prev && response.data.keywords[prev]) return prev;
+                    return Object.keys(response.data.keywords)[0];
+                });
+            } else {
+                setActiveCategory(null);
+            }
             setError(null);
         } catch (err) {
             console.error("Failed to fetch model details:", err);
@@ -402,309 +415,267 @@ const AdminCampaignKeywords = () => {
                                     </span>
                                 </div>
                             </div>
-                            <div style={{ display: "flex", gap: "12px" }}>
-                                <button
-                                    onClick={() => setShowCsvModal(true)}
-                                    style={{
-                                        padding: "10px 20px",
-                                        backgroundColor: "#f59e0b",
-                                        color: "white",
-                                        border: "none",
-                                        borderRadius: "8px",
-                                        fontWeight: "600",
-                                        cursor: "pointer",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "8px",
-                                    }}
-                                >
-                                    <FaCloudUploadAlt /> Upload CSV
-                                </button>
-                                <button
-                                    onClick={() => setAddingKeywordsToCategory("new_category")} // Hack to scroll to bottom or just focus new category input
-                                    style={{
-                                        padding: "10px 20px",
-                                        backgroundColor: "#10b981",
-                                        color: "white",
-                                        border: "none",
-                                        borderRadius: "8px",
-                                        fontWeight: "600",
-                                        cursor: "pointer",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "8px",
-                                    }}
-                                >
-                                    <FaPlus /> Add Category
-                                </button>
-                            </div>
+                            {/* We removed the old top-right buttons since adding categories is now in the grid, and CSV upload is per-category-view */}
                         </div>
 
-                        {/* Categories List */}
-                        <div style={{ display: "grid", gap: "24px" }}>
+                        {/* Category Selection Boxes */}
+                        <div style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+                            gap: "10px",
+                            marginBottom: "24px",
+                        }}>
                             {selectedModel.keywords &&
-                                Object.entries(selectedModel.keywords).map(([category, keywords]) => (
-                                    <div
-                                        key={category}
-                                        style={{
-                                            backgroundColor: "white",
-                                            borderRadius: "12px",
-                                            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                                            overflow: "hidden",
-                                        }}
-                                    >
+                                Object.entries(selectedModel.keywords).map(([category, keywords], index) => {
+                                    const isSelected = activeCategory === category;
+                                    const colors = ["#4f46e5", "#0ea5e9", "#f59e0b", "#9f1239", "#dc2626", "#d97706", "#c026d3", "#65a30d"];
+                                    const color = colors[index % colors.length];
+
+                                    return (
                                         <div
+                                            key={category}
+                                            onClick={() => {
+                                                setActiveCategory(category);
+                                                setKeywordSearchQuery("");
+                                            }}
                                             style={{
-                                                padding: "16px 24px",
-                                                borderBottom: "1px solid #f3f4f6",
+                                                backgroundColor: "white",
+                                                border: isSelected ? `2px solid ${color}` : "1px solid #e5e7eb",
+                                                borderRadius: "6px",
+                                                padding: "10px 12px",
+                                                cursor: "pointer",
+                                                boxShadow: isSelected ? "0 4px 6px -1px rgba(0, 0, 0, 0.1)" : "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+                                                transition: "all 0.2s ease-in-out",
                                                 display: "flex",
-                                                justifyContent: "space-between",
-                                                alignItems: "center",
-                                                backgroundColor: "#f9fafb",
+                                                flexDirection: "column",
                                             }}
                                         >
-                                            {editingCategory === category ? (
-                                                <div style={{ display: "flex", gap: "8px" }}>
-                                                    <input
-                                                        type="text"
-                                                        value={renameCategoryName}
-                                                        onChange={(e) => setRenameCategoryName(e.target.value)}
-                                                        style={{
-                                                            padding: "4px 8px",
-                                                            borderRadius: "4px",
-                                                            border: "1px solid #d1d5db",
-                                                        }}
-                                                    />
-                                                    <button
-                                                        onClick={() => handleRenameCategory(category)}
-                                                        style={{ color: "#10b981", cursor: "pointer", border: "none", background: "none" }}
-                                                    >
-                                                        <FaCheck />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setEditingCategory(null)}
-                                                        style={{ color: "#6b7280", cursor: "pointer", border: "none", background: "none" }}
-                                                    >
-                                                        <FaTimes />
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <h3
-                                                    style={{
-                                                        fontSize: "18px",
-                                                        fontWeight: "600",
-                                                        color: "#374151",
-                                                        margin: 0,
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        gap: "12px",
-                                                    }}
-                                                >
-                                                    {category}
-                                                    <span
-                                                        style={{
-                                                            fontSize: "12px",
-                                                            backgroundColor: "#e5e7eb",
-                                                            color: "#6b7280",
-                                                            padding: "2px 8px",
-                                                            borderRadius: "12px",
-                                                        }}
-                                                    >
-                                                        {keywords.length} keywords
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                                <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
+                                                    {isSelected ? (
+                                                        <FaCheck style={{ color: color, fontSize: "14px", flexShrink: 0 }} />
+                                                    ) : (
+                                                        <div style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: color, flexShrink: 0 }} />
+                                                    )}
+                                                    <span style={{ fontSize: "13px", fontWeight: "600", color: "#111827", wordBreak: "break-word" }} title={category}>
+                                                        {category}
                                                     </span>
-                                                </h3>
-                                            )}
-
-                                            <div style={{ display: "flex", gap: "8px" }}>
-                                                <button
-                                                    onClick={() => {
-                                                        setEditingCategory(category);
-                                                        setRenameCategoryName(category);
-                                                    }}
-                                                    title="Rename Category"
-                                                    style={{
-                                                        padding: "6px",
-                                                        color: "#4b5563",
-                                                        background: "transparent",
-                                                        border: "none",
-                                                        cursor: "pointer",
-                                                    }}
-                                                >
-                                                    <FaEdit />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteCategory(category)}
-                                                    title="Delete Category"
-                                                    style={{
-                                                        padding: "6px",
-                                                        color: "#ef4444",
-                                                        background: "transparent",
-                                                        border: "none",
-                                                        cursor: "pointer",
-                                                    }}
-                                                >
-                                                    <FaTrash />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div style={{ padding: "24px" }}>
-                                            <div
-                                                style={{
-                                                    display: "flex",
-                                                    flexWrap: "wrap",
-                                                    gap: "8px",
-                                                    marginBottom: "16px",
-                                                }}
-                                            >
-                                                {keywords.length === 0 ? (
-                                                    <div style={{ color: '#9ca3af', fontStyle: 'italic' }}>No keywords in this category.</div>
-                                                ) : (
-                                                    keywords.map((keyword, idx) => (
-                                                        <div
-                                                            key={idx}
-                                                            style={{
-                                                                backgroundColor: "#f3f4f6",
-                                                                color: "#374151",
-                                                                padding: "6px 12px",
-                                                                borderRadius: "20px",
-                                                                fontSize: "14px",
-                                                                display: "flex",
-                                                                alignItems: "center",
-                                                                gap: "8px",
-                                                            }}
-                                                        >
-                                                            {keyword}
-                                                            <div
-                                                                style={{ cursor: 'pointer', color: '#9ca3af' }}
-                                                                onClick={() => {
-                                                                    if (window.confirm(`Delete keyword "${keyword}"?`)) {
-                                                                        handleRemoveKeywords(category, [keyword])
-                                                                    }
-                                                                }}
-                                                            >×</div>
-                                                        </div>
-                                                    ))
-                                                )}
-                                            </div>
-
-                                            {addingKeywordsToCategory === category ? (
-                                                <div style={{ marginTop: "16px", padding: '16px', border: '1px solid #e5e7eb', borderRadius: '8px', backgroundColor: '#f9fafb' }}>
-                                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>Add Keywords (one per line):</label>
-                                                    <textarea
-                                                        value={bulkKeywordsInput}
-                                                        onChange={e => setBulkKeywordsInput(e.target.value)}
-                                                        style={{
-                                                            width: '100%',
-                                                            minHeight: '100px',
-                                                            padding: '8px',
-                                                            borderRadius: '6px',
-                                                            border: '1px solid #d1d5db',
-                                                            marginBottom: '8px',
-                                                            fontFamily: 'monospace'
-                                                        }}
-                                                        placeholder="hello\nhi there\ngood morning"
-                                                    />
-                                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                                        <button
-                                                            onClick={() => setAddingKeywordsToCategory(null)}
-                                                            style={{
-                                                                padding: '8px 16px',
-                                                                backgroundColor: 'white',
-                                                                border: '1px solid #d1d5db',
-                                                                borderRadius: '6px',
-                                                                cursor: 'pointer'
-                                                            }}
-                                                        >
-                                                            Cancel
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleAddKeywords(category)}
-                                                            style={{
-                                                                padding: '8px 16px',
-                                                                backgroundColor: '#10b981',
-                                                                color: 'white',
-                                                                border: 'none',
-                                                                borderRadius: '6px',
-                                                                cursor: 'pointer'
-                                                            }}
-                                                        >
-                                                            Add Keywords
-                                                        </button>
-                                                    </div>
                                                 </div>
-                                            ) : (
-                                                <button
-                                                    onClick={() => {
-                                                        setAddingKeywordsToCategory(category)
-                                                        setBulkKeywordsInput("")
-                                                    }}
-                                                    style={{
-                                                        color: "#4f46e5",
-                                                        background: "none",
-                                                        border: "none",
-                                                        fontWeight: "600",
-                                                        cursor: "pointer",
-                                                        fontSize: "14px",
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        gap: "6px",
-                                                    }}
-                                                >
-                                                    <FaPlus size={12} /> Add Keywords
-                                                </button>
-                                            )}
+                                                <span style={{ fontSize: "12px", fontWeight: "500", color: "#6b7280", flexShrink: 0, marginLeft: "8px" }}>
+                                                    ({keywords.length})
+                                                </span>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
 
-                            {/* Add New Category Section */}
                             <div
+                                onClick={() => {
+                                    const newName = window.prompt("Enter new category name:");
+                                    if (newName && newName.trim()) {
+                                        api.post(`/campaigns/keywords/campaign-model/${selectedModel.campaign_model_id}/add-category`, { category: newName.trim() })
+                                            .then(() => fetchModelDetails(selectedModel.campaign_model_id))
+                                            .catch(err => alert("Failed to add category: " + (err.response?.data?.detail || err.message)));
+                                    }
+                                }}
                                 style={{
-                                    backgroundColor: "white",
-                                    borderRadius: "12px",
-                                    border: "2px dashed #e5e7eb",
-                                    padding: "24px",
+                                    backgroundColor: "#f9fafb",
+                                    border: "2px dashed #d1d5db",
+                                    borderRadius: "6px",
+                                    padding: "10px 12px",
+                                    cursor: "pointer",
                                     display: "flex",
                                     alignItems: "center",
                                     justifyContent: "center",
-                                    flexDirection: "column",
-                                    gap: "16px"
+                                    gap: "8px",
+                                    color: "#6b7280",
+                                    fontWeight: "600",
+                                    fontSize: "13px",
+                                    transition: "all 0.2s"
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.borderColor = "#9ca3af";
+                                    e.currentTarget.style.color = "#4b5563";
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.borderColor = "#d1d5db";
+                                    e.currentTarget.style.color = "#6b7280";
                                 }}
                             >
-                                <h4 style={{ margin: 0, color: '#6b7280' }}>Create New Category</h4>
-                                <div style={{ display: 'flex', gap: '12px', width: '100%', maxWidth: '500px' }}>
-                                    <input
-                                        id="new-category-input"
-                                        type="text"
-                                        placeholder="Category Name (e.g., greeting_response)"
-                                        value={newCategoryName}
-                                        onChange={(e) => setNewCategoryName(e.target.value)}
-                                        style={{
-                                            flex: 1,
-                                            padding: '10px',
-                                            borderRadius: '8px',
-                                            border: '1px solid #d1d5db'
-                                        }}
-                                    />
-                                    <button
-                                        onClick={handleAddCategory}
-                                        disabled={!newCategoryName.trim()}
-                                        style={{
-                                            padding: '10px 20px',
-                                            backgroundColor: newCategoryName.trim() ? '#4f46e5' : '#e5e7eb',
-                                            color: newCategoryName.trim() ? 'white' : '#9ca3af',
-                                            border: 'none',
-                                            borderRadius: '8px',
-                                            cursor: newCategoryName.trim() ? 'pointer' : 'not-allowed',
-                                            fontWeight: '600'
-                                        }}
-                                    >
-                                        Create
-                                    </button>
-                                </div>
+                                <FaPlus /> Add Category
                             </div>
                         </div>
+
+                        {/* Active Category Detail */}
+                        {activeCategory && selectedModel.keywords[activeCategory] && (
+                            <div style={{
+                                backgroundColor: "white",
+                                borderRadius: "16px",
+                                boxShadow: "0 4px 6px rgba(0,0,0,0.05)",
+                                border: "1px solid #f3f4f6",
+                                overflow: "hidden",
+                                padding: "32px",
+                            }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+                                    <h2 style={{ margin: 0, fontSize: "24px", fontWeight: "700", color: "#111827" }}>
+                                        {activeCategory}
+                                    </h2>
+                                    <div style={{ display: "flex", gap: "12px" }}>
+                                        <button
+                                            onClick={() => {
+                                                const newName = window.prompt("Enter new name for category:", activeCategory);
+                                                if (newName && newName.trim() && newName.trim() !== activeCategory) {
+                                                    api.post(`/campaigns/keywords/campaign-model/${selectedModel.campaign_model_id}/rename-category`, { old_name: activeCategory, new_name: newName.trim() })
+                                                        .then(() => fetchModelDetails(selectedModel.campaign_model_id))
+                                                        .catch(err => alert("Failed to rename: " + (err.response?.data?.detail || err.message)));
+                                                }
+                                            }}
+                                            style={{
+                                                padding: "8px 16px",
+                                                backgroundColor: "#f3f4f6",
+                                                color: "#4b5563",
+                                                border: "none",
+                                                borderRadius: "8px",
+                                                fontWeight: "600",
+                                                cursor: "pointer",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "8px",
+                                            }}
+                                        >
+                                            <FaEdit /> Rename
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteCategory(activeCategory)}
+                                            style={{
+                                                padding: "8px 16px",
+                                                backgroundColor: "#fee2e2",
+                                                color: "#ef4444",
+                                                border: "none",
+                                                borderRadius: "8px",
+                                                fontWeight: "600",
+                                                cursor: "pointer",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "8px",
+                                            }}
+                                        >
+                                            <FaTrash /> Delete Category
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                                    <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "flex-end", backgroundColor: "#f9fafb", padding: "16px", borderRadius: "10px" }}>
+                                        {/* Search Keywords */}
+                                        <div style={{ flex: 1, minWidth: "200px" }}>
+                                            <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#374151", marginBottom: "6px" }}>
+                                                Search Keywords
+                                            </label>
+                                            <div style={{ position: "relative" }}>
+                                                <FaSearch style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#9ca3af", fontSize: "13px" }} />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Type to search..."
+                                                    value={keywordSearchQuery}
+                                                    onChange={(e) => setKeywordSearchQuery(e.target.value)}
+                                                    style={{ width: "100%", padding: "8px 12px 8px 36px", borderRadius: "6px", border: "1px solid #d1d5db", fontSize: "14px" }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Add Keywords */}
+                                        <div style={{ flex: 2, minWidth: "250px" }}>
+                                            <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#374151", marginBottom: "6px" }}>
+                                                Add Keywords <span style={{ fontWeight: "normal", color: "#6b7280", fontSize: "11px" }}>(comma-separated, no apostrophes)</span>
+                                            </label>
+                                            <div style={{ display: "flex", gap: "8px" }}>
+                                                <input
+                                                    type="text"
+                                                    placeholder="keyword1, keyword2..."
+                                                    value={bulkKeywordsInput}
+                                                    onChange={(e) => setBulkKeywordsInput(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            e.preventDefault();
+                                                            if (bulkKeywordsInput.trim()) {
+                                                                const keywords = bulkKeywordsInput.split(",").map(k => k.trim()).filter(k => k);
+                                                                api.post(`/campaigns/keywords/campaign-model/${selectedModel.campaign_model_id}/bulk-add-keywords`, { category: activeCategory, keywords })
+                                                                    .then(() => {
+                                                                        setBulkKeywordsInput("");
+                                                                        fetchModelDetails(selectedModel.campaign_model_id);
+                                                                    })
+                                                                    .catch(err => alert("Failed to add keywords: " + (err.response?.data?.detail || err.message)));
+                                                            }
+                                                        }
+                                                    }}
+                                                    style={{ flex: 1, padding: "8px 12px", borderRadius: "6px", border: "1px solid #d1d5db", fontSize: "14px" }}
+                                                />
+                                                <button
+                                                    onClick={() => {
+                                                        if (!bulkKeywordsInput.trim()) return;
+                                                        const keywords = bulkKeywordsInput.split(",").map((k) => k.trim()).filter((k) => k);
+                                                        api.post(`/campaigns/keywords/campaign-model/${selectedModel.campaign_model_id}/bulk-add-keywords`, { category: activeCategory, keywords })
+                                                            .then(() => {
+                                                                setBulkKeywordsInput("");
+                                                                fetchModelDetails(selectedModel.campaign_model_id);
+                                                            })
+                                                            .catch(err => alert("Failed to add keywords: " + (err.response?.data?.detail || err.message)));
+                                                    }}
+                                                    style={{ padding: "8px 16px", backgroundColor: "#4f46e5", color: "white", border: "none", borderRadius: "6px", fontWeight: "600", cursor: "pointer", fontSize: "14px" }}
+                                                >
+                                                    Add
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Upload CSV */}
+                                        <div>
+                                            <button
+                                                onClick={() => setShowCsvModal(true)}
+                                                style={{ padding: "8px 16px", backgroundColor: "#10b981", color: "white", border: "none", borderRadius: "6px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", height: "37px" }}
+                                            >
+                                                <FaCloudUploadAlt /> Upload CSV
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Keywords List */}
+                                    <div style={{ marginTop: "16px" }}>
+                                        <h3 style={{ fontSize: "16px", fontWeight: "600", color: "#374151", marginBottom: "16px" }}>
+                                            Keywords ({(selectedModel.keywords[activeCategory] || []).length})
+                                        </h3>
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                            {(selectedModel.keywords[activeCategory] || [])
+                                                .filter(k => k.toLowerCase().includes(keywordSearchQuery.toLowerCase()))
+                                                .map((keyword, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px" }}
+                                                    >
+                                                        <span style={{ color: "#374151", fontSize: "14px" }}>{keyword}</span>
+                                                        <button
+                                                            onClick={() => {
+                                                                if (window.confirm(`Remove keyword "${keyword}"?`)) {
+                                                                    handleRemoveKeywords(activeCategory, [keyword]);
+                                                                }
+                                                            }}
+                                                            style={{ color: "#ef4444", background: "none", border: "none", fontWeight: "600", fontSize: "14px", cursor: "pointer" }}
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            {(selectedModel.keywords[activeCategory] || []).filter(k => k.toLowerCase().includes(keywordSearchQuery.toLowerCase())).length === 0 && (
+                                                <div style={{ color: "#9ca3af", fontStyle: "italic", padding: "16px", textAlign: "center", backgroundColor: "#f9fafb", borderRadius: "8px", border: "1px dashed #d1d5db" }}>
+                                                    No keywords found.
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* CSV Upload Modal */}
                         {showCsvModal && (
