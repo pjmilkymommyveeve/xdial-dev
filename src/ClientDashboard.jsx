@@ -1630,7 +1630,7 @@ const MedicareDashboard = () => {
                     <i className="bi bi-mic-fill"></i> Voice Stats
                   </h2>
                   <div style={{ fontSize: "14px", color: "#6b7280" }}>
-                    Total Calls: <strong style={{ color: "#111827" }}>{voiceStats.total_calls}</strong> | Transfer Rate: <strong style={{ color: "#4f46e5" }}>{voiceStats.overall_transfer_rate}%</strong>
+                    Total Calls: <strong style={{ color: "#111827" }}>{voiceStats.total_calls}</strong> | Transfer Rate: <strong style={{ color: "#4f46e5" }}>{voiceStats.overall_transfer_rate}%</strong> | Null Voice Calls: <strong style={{ color: "#ef4444" }}>{voiceStats.null_voice_calls}</strong>
                   </div>
                 </div>
 
@@ -1647,8 +1647,11 @@ const MedicareDashboard = () => {
                           <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Total Calls</th>
                           <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Transfers</th>
                           <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Transfer Rate</th>
+                          <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Non Transfers</th>
                           <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Qual. Transfers</th>
                           <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Qual. Rate</th>
+                          <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Non Qual. Transfers</th>
+                          <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Non Qual. Rate</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1658,13 +1661,16 @@ const MedicareDashboard = () => {
                             <td style={{ padding: "12px", fontSize: "14px", color: "#6b7280" }}>{voice.total_calls?.toLocaleString()}</td>
                             <td style={{ padding: "12px", fontSize: "14px", color: "#10b981" }}>{voice.transferred_calls?.toLocaleString()}</td>
                             <td style={{ padding: "12px", fontSize: "14px", color: "#4f46e5", fontWeight: "600" }}>{voice.transfer_rate}%</td>
+                            <td style={{ padding: "12px", fontSize: "14px", color: "#6b7280" }}>{voice.non_transferred_calls?.toLocaleString()}</td>
                             <td style={{ padding: "12px", fontSize: "14px", color: "#059669" }}>{voice.qualified_transferred_calls?.toLocaleString()}</td>
                             <td style={{ padding: "12px", fontSize: "14px", color: "#4338ca", fontWeight: "600" }}>{voice.qualified_transfer_rate}%</td>
+                            <td style={{ padding: "12px", fontSize: "14px", color: "#dc2626" }}>{voice.non_qualified_transferred_calls?.toLocaleString()}</td>
+                            <td style={{ padding: "12px", fontSize: "14px", color: "#b91c1c", fontWeight: "600" }}>{voice.non_qualified_transfer_rate}%</td>
                           </tr>
                         ))}
                         {(!voiceStats.voice_stats || voiceStats.voice_stats.length === 0) && (
                           <tr>
-                            <td colSpan="6" style={{ padding: "20px", textAlign: "center", color: "#6b7280", fontSize: "14px" }}>
+                            <td colSpan="9" style={{ padding: "20px", textAlign: "center", color: "#6b7280", fontSize: "14px" }}>
                               No voice stats available for this period.
                             </td>
                           </tr>
