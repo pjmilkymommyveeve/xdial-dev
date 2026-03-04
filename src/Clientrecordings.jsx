@@ -217,6 +217,15 @@ const ClientRecordings = ({ isEmbedded }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const formatCallTime = (timeStr) => {
+    if (!timeStr) return timeStr;
+    const cleanStr = timeStr.toString().trim();
+    if (cleanStr.length === 6 && !isNaN(cleanStr)) {
+      return `${cleanStr.substring(0, 2)}:${cleanStr.substring(2, 4)}:${cleanStr.substring(4, 6)}`;
+    }
+    return timeStr;
+  };
+
   const downloadRecording = (recording) => {
     // Open the recording URL - browser will download or open in new tab
     window.open(recording.file_url, '_blank');
@@ -464,7 +473,7 @@ const ClientRecordings = ({ isEmbedded }) => {
                             key={index}
                             className={currentRowIndex === index && showPlayer ? "playing" : ""}
                           >
-                            <td>{recording.time}</td>
+                            <td>{formatCallTime(recording.time)}</td>
                             <td style={{ fontWeight: 500 }}>{recording.phone_number}</td>
                             <td>{recording.duration}</td>
                             <td style={{ color: "#6b7280" }}>{recording.size}</td>
@@ -587,7 +596,7 @@ const ClientRecordings = ({ isEmbedded }) => {
               <div className="player-info">
                 <div className="player-phone">{currentRecording?.phone_number || "N/A"}</div>
                 <div className="player-meta">
-                  {currentRecording?.server_name || "N/A"} • {currentRecording?.time || "N/A"}
+                  {currentRecording?.server_name || "N/A"} • {currentRecording?.time ? formatCallTime(currentRecording.time) : "N/A"}
                 </div>
               </div>
             </div>
