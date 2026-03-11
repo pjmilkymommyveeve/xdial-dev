@@ -12,7 +12,8 @@ import {
     FaServer,
     FaChevronLeft,
     FaChevronRight,
-    FaBars
+    FaBars,
+    FaClipboardList
 } from 'react-icons/fa';
 
 const AdminSidebar = ({ isOpen, toggleSidebar, connected, agentCount }) => {
@@ -69,6 +70,12 @@ const AdminSidebar = ({ isOpen, toggleSidebar, connected, agentCount }) => {
             path: '/admin-data-export',
             label: 'Data Export',
             icon: <FaFileDownload />,
+            show: true
+        },
+        {
+            path: '/admin-reporting',
+            label: 'Reporting',
+            icon: <FaClipboardList />,
             show: true
         },
         {
