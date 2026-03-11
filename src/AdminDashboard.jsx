@@ -17,6 +17,14 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
+  const [reportCategories, setReportCategories] = useState([]);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportCallId, setReportCallId] = useState(null);
+  const [selectedReportCategory, setSelectedReportCategory] = useState("");
+  const [reportNotes, setReportNotes] = useState("");
+  const [submittingReport, setSubmittingReport] = useState(false);
+  const [reportModalError, setReportModalError] = useState(null);
+  const [reportModalSuccess, setReportModalSuccess] = useState(null);
   const navigate = useNavigate();
 
   // Dynamic stage filter states
@@ -244,6 +252,76 @@ const AdminDashboard = () => {
     localStorage.clear();
     sessionStorage.clear();
     navigate("/");
+  };
+
+  const handleOpenReportModal = async (callId) => {
+    setReportCallId(callId);
+    setSelectedReportCategory("");
+    setReportNotes("");
+    setReportModalError(null);
+    setReportModalSuccess(null);
+    setShowReportModal(true);
+
+    // Fetch categories if not already fetched
+    if (reportCategories.length === 0) {
+      try {
+        const token = localStorage.getItem("access_token");
+        const res = await fetch("https://api.xlitecore.xdialnetworks.com/api/v1/reporting/categories", {
+          headers: {
+            "accept": "application/json",
+            "Authorization": `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setReportCategories(data);
+        } else {
+          setReportModalError("Failed to fetch report categories.");
+        }
+      } catch (err) {
+        setReportModalError("Error fetching report categories.");
+      }
+    }
+  };
+
+  const handleSubmitReport = async () => {
+    if (!selectedReportCategory) {
+      setReportModalError("Please select a category.");
+      return;
+    }
+
+    setSubmittingReport(true);
+    setReportModalError(null);
+    setReportModalSuccess(null);
+
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch("https://api.xlitecore.xdialnetworks.com/api/v1/reporting/reports", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "accept": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          call_id: reportCallId,
+          category_id: parseInt(selectedReportCategory),
+          notes: reportNotes
+        })
+      });
+
+      if (res.ok) {
+        setReportModalSuccess("Report submitted successfully.");
+        setTimeout(() => setShowReportModal(false), 2000);
+      } else {
+        const errorData = await res.json();
+        setReportModalError(errorData.detail?.[0]?.msg || errorData.message || "Failed to submit report.");
+      }
+    } catch (err) {
+      setReportModalError("Error submitting report.");
+    } finally {
+      setSubmittingReport(false);
+    }
   };
 
   const handleReset = () => {
@@ -757,6 +835,9 @@ const AdminDashboard = () => {
                       <i className={`bi bi-caret-${sortDirection === "asc" ? "up" : "down"}-fill`} style={{ fontSize: '10px' }}></i>
                     )}
                   </th>
+                  <th style={{ textAlign: "center", padding: "12px", fontWeight: 600, minWidth: "100px" }}>
+                    Action
+                  </th>
                 </tr>
               </thead>
               <tbody style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
@@ -821,6 +902,28 @@ const AdminDashboard = () => {
 
                       <td style={{ padding: "12px", color: "#666" }}>
                         {record.first_timestamp}
+                      </td>
+                      <td style={{ padding: "12px", textAlign: "center" }}>
+                        <button
+                          onClick={() => handleOpenReportModal(record.id)}
+                          style={{
+                            padding: "6px 12px",
+                            backgroundColor: "#fef3c7",
+                            color: "#d97706",
+                            border: "1px solid #fde68a",
+                            borderRadius: "4px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            margin: "0 auto"
+                          }}
+                          title="Report Issue"
+                        >
+                          <i className="bi bi-flag-fill"></i> Report
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -906,6 +1009,73 @@ const AdminDashboard = () => {
         rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
       />
+
+      {/* Report Modal */}
+      {showReportModal && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: "rgba(0,0,0,0.5)", display: "flex",
+          justifyContent: "center", alignItems: "center", zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: "white", padding: "24px", borderRadius: "8px",
+            width: "400px", maxWidth: "90%", boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
+          }}>
+            <h3 style={{ marginTop: 0, marginBottom: "16px", fontSize: "18px" }}>Report Call #{reportCallId}</h3>
+
+            {reportModalError && <div style={{ color: "#d32f2f", marginBottom: "12px", fontSize: "14px" }}>{reportModalError}</div>}
+            {reportModalSuccess && <div style={{ color: "#2e7d32", marginBottom: "12px", fontSize: "14px" }}>{reportModalSuccess}</div>}
+
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: 500 }}>Category</label>
+              <select
+                style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "4px", fontSize: "14px" }}
+                value={selectedReportCategory}
+                onChange={(e) => setSelectedReportCategory(e.target.value)}
+              >
+                <option value="">Select a category...</option>
+                {reportCategories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {(() => {
+              const selectedCat = reportCategories.find(c => c.id.toString() === selectedReportCategory);
+              if (selectedCat && selectedCat.name.toLowerCase() === "other") {
+                return (
+                  <div style={{ marginBottom: "16px" }}>
+                    <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: 500 }}>Description</label>
+                    <textarea
+                      style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "4px", fontSize: "14px", minHeight: "80px" }}
+                      value={reportNotes}
+                      onChange={(e) => setReportNotes(e.target.value)}
+                      placeholder="Please enter a description..."
+                    />
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+              <button
+                onClick={() => setShowReportModal(false)}
+                style={{ padding: "8px 16px", border: "1px solid #ddd", backgroundColor: "white", borderRadius: "4px", cursor: "pointer", fontSize: "14px" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitReport}
+                disabled={submittingReport || reportModalSuccess}
+                style={{ padding: "8px 16px", border: "none", backgroundColor: "#4f46e5", color: "white", borderRadius: "4px", cursor: submittingReport ? "not-allowed" : "pointer", fontSize: "14px", opacity: (submittingReport || reportModalSuccess) ? 0.7 : 1 }}
+              >
+                {submittingReport ? "Submitting..." : "Submit"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         /* Mobile Responsive Styles */
