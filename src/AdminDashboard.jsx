@@ -1040,23 +1040,15 @@ const AdminDashboard = () => {
               </select>
             </div>
 
-            {(() => {
-              const selectedCat = reportCategories.find(c => c.id.toString() === selectedReportCategory);
-              if (selectedCat && selectedCat.name.toLowerCase() === "other") {
-                return (
-                  <div style={{ marginBottom: "16px" }}>
-                    <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: 500 }}>Description</label>
-                    <textarea
-                      style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "4px", fontSize: "14px", minHeight: "80px" }}
-                      value={reportNotes}
-                      onChange={(e) => setReportNotes(e.target.value)}
-                      placeholder="Please enter a description..."
-                    />
-                  </div>
-                );
-              }
-              return null;
-            })()}
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: 500 }}>Description</label>
+              <textarea
+                style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "4px", fontSize: "14px", minHeight: "80px" }}
+                value={reportNotes}
+                onChange={(e) => setReportNotes(e.target.value)}
+                placeholder="Please enter a description..."
+              />
+            </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
               <button
