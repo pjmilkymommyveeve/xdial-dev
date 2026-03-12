@@ -20,6 +20,7 @@ import AdminVoiceStats from './AdminVoiceStats';
 import AdminVoiceManagement from './AdminVoiceManagement';
 import AdminCampaignKeywords from './AdminCampaignKeywords';
 import AdminReporting from './AdminReporting';
+import AdminScripts from './AdminScripts';
 
 import AdminLayout from './components/AdminLayout';
 
@@ -50,6 +51,7 @@ function App() {
                     <Route path="/admin-voice-management" element={<AdminVoiceManagement />} />
                     <Route path="/admin-campaign-keywords" element={<AdminCampaignKeywords />} />
                     <Route path="/admin-reporting" element={<AdminReporting />} />
+                    <Route path="/admin-scripts" element={<AdminScripts />} />
                     <Route path="/integration-form" element={<IntegrationForm />} />
                 </Route>
             </Routes>

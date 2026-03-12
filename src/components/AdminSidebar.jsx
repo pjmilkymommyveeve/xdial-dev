@@ -13,7 +13,8 @@ import {
     FaChevronLeft,
     FaChevronRight,
     FaBars,
-    FaClipboardList
+    FaClipboardList,
+    FaFileCode
 } from 'react-icons/fa';
 
 const AdminSidebar = ({ isOpen, toggleSidebar, connected, agentCount }) => {
@@ -76,6 +77,12 @@ const AdminSidebar = ({ isOpen, toggleSidebar, connected, agentCount }) => {
             path: '/admin-reporting',
             label: 'Reporting',
             icon: <FaClipboardList />,
+            show: true
+        },
+        {
+            path: '/admin-scripts',
+            label: 'Scripts',
+            icon: <FaFileCode />,
             show: true
         },
         {
