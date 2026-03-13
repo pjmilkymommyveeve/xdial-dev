@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { FaFileCode } from "react-icons/fa";
+import { FaFileCode, FaSearch } from "react-icons/fa";
 
 const AdminScripts = () => {
     const [scripts, setScripts] = useState([]);
+    const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -50,6 +51,10 @@ const AdminScripts = () => {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     };
 
+    const filteredScripts = scripts.filter(script => 
+        script.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
         <div style={{ padding: "24px", backgroundColor: "#f8f9fa", minHeight: "100vh", fontFamily: "Arial, sans-serif" }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -60,6 +65,25 @@ const AdminScripts = () => {
             </div>
 
             <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+                <div style={{ padding: '16px 24px', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
+                    <div style={{ position: 'relative', maxWidth: '400px' }}>
+                        <FaSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+                        <input
+                            type="text"
+                            placeholder="Search scripts by file name..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            style={{ 
+                                width: '100%', 
+                                padding: '10px 12px 10px 36px', 
+                                border: '1px solid #d1d5db', 
+                                borderRadius: '6px', 
+                                fontSize: '14px', 
+                                boxSizing: 'border-box' 
+                            }}
+                        />
+                    </div>
+                </div>
                 <div style={{ padding: '24px' }}>
                     {loading ? (
                         <LoadingSpinner />
@@ -77,10 +101,10 @@ const AdminScripts = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {scripts.length === 0 ? (
+                                    {filteredScripts.length === 0 ? (
                                         <tr><td colSpan={4} style={{ textAlign: 'center', padding: '32px', color: '#6b7280' }}>No scripts found.</td></tr>
-                                    ) : scripts.map((script, index) => (
-                                        <tr key={index} style={{ borderBottom: index < scripts.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                                    ) : filteredScripts.map((script, index) => (
+                                        <tr key={index} style={{ borderBottom: index < filteredScripts.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
                                             <td style={{ padding: '16px', fontWeight: '600', color: '#111827', fontSize: '14px' }}>{script.name}</td>
                                             <td style={{ padding: '16px', color: '#6b7280', fontSize: '14px' }}>{formatBytes(script.size_bytes)}</td>
                                             <td style={{ padding: '16px', color: '#6b7280', fontSize: '14px' }}>{formatDate(script.created_at)}</td>
