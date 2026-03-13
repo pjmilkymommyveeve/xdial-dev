@@ -496,6 +496,8 @@ const CallReportsTab = () => {
     const [filters, setFilters] = useState({
         call_id: "",
         category_id: "",
+        client_id: "",
+        campaign_id: "",
         start_date: "",
         end_date: ""
     });
@@ -525,6 +527,8 @@ const CallReportsTab = () => {
 
             if (filters.call_id) params.append("call_id", filters.call_id);
             if (filters.category_id) params.append("category_id", filters.category_id);
+            if (filters.client_id) params.append("client_id", filters.client_id);
+            if (filters.campaign_id) params.append("campaign_id", filters.campaign_id);
             if (filters.start_date) params.append("start_date", filters.start_date);
             if (filters.end_date) params.append("end_date", filters.end_date);
 
@@ -565,7 +569,7 @@ const CallReportsTab = () => {
     };
 
     const resetFilters = () => {
-        const defaultFilters = { call_id: "", category_id: "", start_date: "", end_date: "" };
+        const defaultFilters = { call_id: "", category_id: "", client_id: "", campaign_id: "", start_date: "", end_date: "" };
         setFilters(defaultFilters);
 
         // Explicit full reset via direct fetch bypassing stale state
@@ -658,6 +662,14 @@ const CallReportsTab = () => {
                             <option value="">All Categories</option>
                             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
+                    </div>
+                    <div style={{ flex: '1 1 150px' }}>
+                        <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", fontWeight: "500", color: "#374151" }}>Client ID</label>
+                        <input type="number" value={filters.client_id} onChange={(e) => handleFilterChange("client_id", e.target.value)} style={inputStyle} />
+                    </div>
+                    <div style={{ flex: '1 1 150px' }}>
+                        <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", fontWeight: "500", color: "#374151" }}>Client Campaign ID</label>
+                        <input type="number" value={filters.campaign_id} onChange={(e) => handleFilterChange("campaign_id", e.target.value)} style={inputStyle} />
                     </div>
                     <div style={{ flex: '1 1 150px' }}>
                         <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", fontWeight: "500", color: "#374151" }}>Start Date</label>
