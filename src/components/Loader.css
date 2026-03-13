@@ -1,8 +1,9 @@
 .loader-container {
   display: flex;
-  justify_content: center;
+  justify-content: center;
   align-items: center;
   width: 100%;
+  min-height: 200px;
   padding: 20px;
 }
 

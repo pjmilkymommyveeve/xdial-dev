@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "./api";
+import Loader from "./components/Loader";
 
 const AdminVoiceManagement = () => {
     const navigate = useNavigate();
@@ -873,7 +874,9 @@ const AdminVoiceManagement = () => {
                         </div>
                     ) : isLoadingCMV ? (
                         <div style={{ padding: "80px", textAlign: "center", color: "#6b7280" }}>
-                            <div className="spinner" style={{ margin: "0 auto 20px auto" }}></div>
+                            <div style={{ margin: "0 auto 20px auto", width: "fit-content" }}>
+                                <Loader size="large" />
+                            </div>
                             <p style={{ fontSize: "16px", fontWeight: "500" }}>Loading Configuration...</p>
                         </div>
                     ) : (

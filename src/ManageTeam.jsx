@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import Loader from "./components/Loader";
 
 const ManageTeam = () => {
   const [employees, setEmployees] = useState([]);
@@ -180,7 +181,7 @@ const ManageTeam = () => {
       <>
         <style>{styles}</style>
         <div className="loading-container">
-          <div className="loading-spinner"></div>
+          <Loader size="large" />
           <p>Loading team members...</p>
         </div>
       </>
@@ -505,18 +506,6 @@ const styles = `
     gap: 1rem;
   }
 
-  .loading-spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid #E5E7EB;
-    border-top: 4px solid #4F46E5;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
   }
 
   /* Header */

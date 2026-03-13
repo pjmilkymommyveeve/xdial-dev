@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { FaFileCode, FaSearch } from "react-icons/fa";
+import Loader from "./components/Loader";
 
 const AdminScripts = () => {
     const [scripts, setScripts] = useState([]);
@@ -30,12 +31,7 @@ const AdminScripts = () => {
         fetchScripts();
     }, []);
 
-    const LoadingSpinner = () => (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
-            <div style={{ width: '40px', height: '40px', border: '4px solid #f3f3f3', borderTop: '4px solid #4f46e5', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-            <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-        </div>
-    );
+
 
     const formatDate = (isoString) => {
         if (!isoString) return "-";
@@ -86,7 +82,7 @@ const AdminScripts = () => {
                 </div>
                 <div style={{ padding: '24px' }}>
                     {loading ? (
-                        <LoadingSpinner />
+                        <Loader size="medium" />
                     ) : error ? (
                         <div style={{ color: "#dc2626", padding: "20px", backgroundColor: "#fee2e2", borderRadius: "8px" }}>Error: {error}</div>
                     ) : (

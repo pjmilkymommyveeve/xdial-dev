@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import Loader from './components/Loader';
 
 const RequestCampaign = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -265,7 +266,7 @@ const RequestCampaign = () => {
         <style>{styles}</style>
         <div className="integration-form-container">
           <div className="loading-state">
-            <div className="spinner"></div>
+            <Loader size="large" />
             <p>Loading form configuration...</p>
           </div>
         </div>

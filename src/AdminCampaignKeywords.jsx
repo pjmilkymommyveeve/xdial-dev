@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from "react";
+import Loader from "./components/Loader";
 import { useNavigate } from "react-router-dom";
 import api from "./api";
 import {
@@ -316,7 +317,7 @@ const AdminCampaignKeywords = () => {
                     backgroundColor: "#f3f4f6",
                 }}
             >
-                <div className="spinner"></div> {/* Assuming a global spinner class or I can add inline styles later */}
+                <Loader size="medium" /> {/* Assuming a global spinner class or I can add inline styles later */}
                 Loading...
             </div>
         );

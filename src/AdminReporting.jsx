@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import Loader from "./components/Loader";
 import {
     FaChartPie,
     FaList,
@@ -75,15 +76,7 @@ const AdminReporting = () => {
     );
 };
 
-// ----------------------------------------------------------------------
-// SPINNER COMPONENT
-// ----------------------------------------------------------------------
-const LoadingSpinner = () => (
-    <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
-        <div style={{ width: '40px', height: '40px', border: '4px solid #f3f3f3', borderTop: '4px solid #4f46e5', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-    </div>
-);
+
 
 // ----------------------------------------------------------------------
 // BADGE COMPONENT
@@ -141,7 +134,7 @@ const AnalyticsOverviewTab = () => {
         fetchOverview();
     }, []);
 
-    if (loading) return <LoadingSpinner />;
+    if (loading) return <Loader size="medium" />;
     if (error) return <div style={{ color: "#dc2626", padding: "20px", backgroundColor: "#fee2e2", borderRadius: "8px" }}>Error: {error}</div>;
     if (!data) return <div style={{ color: "#6b7280" }}>No data available</div>;
 
@@ -362,7 +355,7 @@ const CategoriesTab = () => {
             </div>
 
             {loading ? (
-                <LoadingSpinner />
+                <Loader size="medium" />
             ) : error ? (
                 <div style={{ color: "#dc2626", padding: "20px", backgroundColor: "#fee2e2", borderRadius: "8px" }}>Error: {error}</div>
             ) : (
@@ -698,7 +691,7 @@ const CallReportsTab = () => {
 
             {/* Table */}
             {loading ? (
-                <LoadingSpinner />
+                <Loader size="medium" />
             ) : error ? (
                 <div style={{ color: "#dc2626", padding: "20px", backgroundColor: "#fee2e2", borderRadius: "8px" }}>Error: {error}</div>
             ) : (

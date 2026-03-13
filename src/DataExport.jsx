@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import api from "./api";
 import ClientHeader from "./ClientHeader";
+import Loader from "./components/Loader";
 
 export default function DataExport({ isEmbedded }) {
   const location = useLocation();
@@ -248,7 +249,7 @@ export default function DataExport({ isEmbedded }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
-        <div className="spinner" style={{ width: "2rem", height: "2rem", borderWidth: "3px" }}></div>
+        <Loader size="large" />
       </div>
     );
   }
@@ -317,8 +318,7 @@ export default function DataExport({ isEmbedded }) {
         .text-gray-500 { color: #6b7280; }
         .text-purple-500 { color: #a855f7; }
         .text-gray-400 { color: #9ca3af; }
-        .text-orange-500 { color: #f97316; }
-        .spinner { width: 1rem; height: 1rem; border: 2px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.6s linear infinite; }
+        .text-orange-500 { color: #f97316; }   
         @keyframes spin { to { transform: rotate(360deg); } }
         .info-card { background-color: #f9fafb; padding: 1rem; border-radius: 0.5rem; font-size: 0.875rem; color: #6b7280; }
         .info-card p { margin-bottom: 0.5rem; }
@@ -605,10 +605,10 @@ export default function DataExport({ isEmbedded }) {
                   disabled={exporting}
                 >
                   {exporting ? (
-                    <>
-                      <div className="spinner"></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                      <Loader size="small" />
                       Exporting...
-                    </>
+                    </div>
                   ) : (
                     <>
                       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">

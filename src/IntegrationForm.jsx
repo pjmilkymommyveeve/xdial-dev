@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import Loader from './components/Loader';
 import './IntegrationForm.css';
 
 const IntegrationForm = () => {
@@ -337,7 +338,7 @@ const IntegrationForm = () => {
     return (
       <div className="integration-form-container">
         <div className="loading-state">
-          <div className="spinner"></div>
+          <Loader size="large" />
           <p>Loading form configuration...</p>
         </div>
       </div>
