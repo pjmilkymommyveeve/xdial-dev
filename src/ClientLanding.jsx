@@ -47,7 +47,21 @@ const ClientLanding = () => {
         );
 
         if (employerResponse.status === 401) {
-          throw new Error("Session expired. Please login again.");
+          const currentToken = localStorage.getItem("access_token");
+          let isExpired = true;
+          if (currentToken) {
+            try {
+              const payload = JSON.parse(atob(currentToken.split('.')[1]));
+              if (payload.exp && Date.now() < (payload.exp * 1000) - 60000) {
+                isExpired = false;
+              }
+            } catch(e) {}
+          }
+          if (isExpired) {
+            throw new Error("Session expired. Please login again.");
+          } else {
+            console.warn("Received 401 but token is still valid. Ignoring logout.");
+          }
         }
 
         if (!employerResponse.ok) {
@@ -88,7 +102,21 @@ const ClientLanding = () => {
       );
 
       if (response.status === 401) {
-        throw new Error("Session expired. Please login again.");
+        const currentToken = localStorage.getItem("access_token");
+        let isExpired = true;
+        if (currentToken) {
+          try {
+            const payload = JSON.parse(atob(currentToken.split('.')[1]));
+            if (payload.exp && Date.now() < (payload.exp * 1000) - 60000) {
+              isExpired = false;
+            }
+          } catch(e) {}
+        }
+        if (isExpired) {
+          throw new Error("Session expired. Please login again.");
+        } else {
+          console.warn("Received 401 but token is still valid. Ignoring logout.");
+        }
       }
 
       if (response.status === 404) {

@@ -64,9 +64,23 @@ const HistoricalTransferMetrics = () => {
                 });
 
                 if (response.status === 401) {
-                    localStorage.removeItem('access_token');
-                    navigate("/");
-                    return;
+                    const currentToken = localStorage.getItem("access_token");
+                    let isExpired = true;
+                    if (currentToken) {
+                        try {
+                            const payload = JSON.parse(atob(currentToken.split('.')[1]));
+                            if (payload.exp && Date.now() < (payload.exp * 1000) - 60000) {
+                                isExpired = false;
+                            }
+                        } catch(e) {}
+                    }
+                    if (isExpired) {
+                        localStorage.removeItem('access_token');
+                        navigate("/");
+                        return;
+                    } else {
+                        console.warn("Received 401 but token is still valid. Ignoring logout.");
+                    }
                 }
 
                 if (response.ok) {

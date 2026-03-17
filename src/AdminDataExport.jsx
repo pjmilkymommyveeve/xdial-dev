@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { isTokenExpired } from "./api";
 
 const getApiUrl = () => {
   return "https://api.xlitecore.xdialnetworks.com";
@@ -147,12 +148,31 @@ const AdminDataExport = () => {
         body: formData,
       });
 
-      if (response.status === 401 || response.status === 403) {
-        setError("Authentication failed. Please login again.");
-        localStorage.clear();
-        setTimeout(() => {
-          navigate("/");
-        }, 2000);
+      if (response.status === 401) {
+        const currentToken = localStorage.getItem("access_token");
+        let isExpired = true;
+        if (currentToken) {
+          try {
+            const payload = JSON.parse(atob(currentToken.split('.')[1]));
+            if (payload.exp && Date.now() < (payload.exp * 1000) - 60000) {
+              isExpired = false;
+            }
+          } catch(e) {}
+        }
+        
+        if (isExpired) {
+          setError("Authentication failed. Please login again.");
+          localStorage.clear();
+          setTimeout(() => {
+            navigate("/");
+          }, 2000);
+          return;
+        } else {
+          console.warn("Received 401 but token is still valid. Ignoring logout.");
+        }
+      }
+      if (response.status === 403) {
+        setError("Access denied. You do not have permission.");
         return;
       }
 
@@ -220,12 +240,31 @@ const AdminDataExport = () => {
         body: formData,
       });
 
-      if (response.status === 401 || response.status === 403) {
-        setError("Authentication failed. Please login again.");
-        localStorage.clear();
-        setTimeout(() => {
-          navigate("/");
-        }, 2000);
+      if (response.status === 401) {
+        const currentToken = localStorage.getItem("access_token");
+        let isExpired = true;
+        if (currentToken) {
+          try {
+            const payload = JSON.parse(atob(currentToken.split('.')[1]));
+            if (payload.exp && Date.now() < (payload.exp * 1000) - 60000) {
+              isExpired = false;
+            }
+          } catch(e) {}
+        }
+        
+        if (isExpired) {
+          setError("Authentication failed. Please login again.");
+          localStorage.clear();
+          setTimeout(() => {
+            navigate("/");
+          }, 2000);
+          return;
+        } else {
+          console.warn("Received 401 but token is still valid. Ignoring logout.");
+        }
+      }
+      if (response.status === 403) {
+        setError("Access denied. You do not have permission.");
         return;
       }
 
@@ -305,10 +344,19 @@ const AdminDataExport = () => {
         },
       });
 
-      if (response.status === 401 || response.status === 403) {
-        setHoneypotError("Authentication failed. Please login again.");
-        localStorage.clear();
-        setTimeout(() => navigate("/"), 2000);
+      if (response.status === 401) {
+        const currentToken = localStorage.getItem("access_token");
+        if (currentToken && !isTokenExpired(currentToken)) {
+          console.warn("Received 401 but token is still valid. Ignoring logout.");
+        } else {
+          setHoneypotError("Authentication failed. Please login again.");
+          localStorage.clear();
+          setTimeout(() => navigate("/"), 2000);
+          return;
+        }
+      }
+      if (response.status === 403) {
+        setHoneypotError("Access denied. You do not have permission.");
         return;
       }
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Loader from "./components/Loader";
+import { isTokenExpired } from "./api";
 
 const AdminDashboard = () => {
   const [currentView, setCurrentView] = useState("dashboard");
@@ -115,12 +116,17 @@ const AdminDashboard = () => {
           signal: signal
         });
 
-        if (res.status === 401 || res.status === 403) {
-          localStorage.clear();
-          setTimeout(() => {
-            window.location.href = "/";
-          }, 2000);
-          return;
+        if (res.status === 401) {
+          const currentToken = localStorage.getItem("access_token");
+          if (currentToken && !isTokenExpired(currentToken)) {
+            console.warn("Received 401 but token is still valid. Ignoring logout.");
+          } else {
+            localStorage.clear();
+            setTimeout(() => {
+              window.location.href = "/";
+            }, 2000);
+            return;
+          }
         }
 
         if (!res.ok) {

@@ -10,6 +10,23 @@ const api = axios.create({
   },
 });
 
+// Helper to check if a JWT is expired
+export const isTokenExpired = (token) => {
+  if (!token) return true;
+  try {
+    const payloadBase64 = token.split('.')[1];
+    const decodedJson = atob(payloadBase64);
+    const decoded = JSON.parse(decodedJson);
+    const exp = decoded.exp;
+    if (!exp) return false;
+    // Check if current time is past expiration (add a small 1-minute buffer)
+    return (Date.now() >= (exp * 1000) - 60000);
+  } catch (e) {
+    console.error('Error decoding token:', e);
+    return true; // if we can't decode it, treat as expired to be safe
+  }
+};
+
 // Request interceptor - automatically attaches token to all requests
 api.interceptors.request.use(
   (config) => {
@@ -38,23 +55,28 @@ api.interceptors.response.use(
   (error) => {
     // Handle specific error cases
     if (error.response) {
-      // 401 Unauthorized - token expired or invalid
+      // 401 Unauthorized - check if token is actually expired
       if (error.response.status === 401) {
-        // Clear stored tokens
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user_id');
-        localStorage.removeItem('username');
-        localStorage.removeItem('role');
-  
-        
-        // Redirect to login
-        window.location.href = '/';
+        const token = localStorage.getItem('access_token');
+        if (isTokenExpired(token)) {
+          console.error('Token expired, clearing session');
+          // Clear stored tokens
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('user_id');
+          localStorage.removeItem('username');
+          localStorage.removeItem('role');
+    
+          // Redirect to login
+          window.location.href = '/';
+        } else {
+          console.warn('Received 401 but token is still valid. Ignoring logout.');
+        }
       }
       
       // 403 Forbidden
       if (error.response.status === 403) {
         console.error('Access denied');
-        // Optionally redirect or show error message
+        // Do NOT log the user out on 403. Let the individual components handle the UI feedback.
       }
       
       // 404 Not Found

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import Chart from "chart.js/auto";
 import api from "./api";
+import { isTokenExpired } from "./api";
 import DataExport from "./DataExport";
 import ClientHeader from "./ClientHeader";
 import ClientRecordings from "./Clientrecordings";
@@ -214,7 +215,12 @@ const MedicareDashboard = () => {
         });
 
         if (response.status === 401) {
-          throw new Error("Session expired. Please login again.");
+          const currentToken = localStorage.getItem("access_token");
+          if (currentToken && !isTokenExpired(currentToken)) {
+            console.warn("Received 401 but token is still valid. Ignoring logout.");
+          } else {
+            throw new Error("Session expired. Please login again.");
+          }
         }
 
         if (!response.ok) {
@@ -288,13 +294,18 @@ const MedicareDashboard = () => {
         });
 
         if (response.status === 401) {
-          // Session expired - redirect to login
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('user_id');
-          localStorage.removeItem('username');
-          localStorage.removeItem('role');
-          window.location.href = '/';
-          return;
+          const currentToken = localStorage.getItem("access_token");
+          if (currentToken && !isTokenExpired(currentToken)) {
+            console.warn("Received 401 but token is still valid. Ignoring logout.");
+          } else {
+            // Session expired - redirect to login
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('user_id');
+            localStorage.removeItem('username');
+            localStorage.removeItem('role');
+            window.location.href = '/';
+            return;
+          }
         }
 
         if (response.ok) {
@@ -349,13 +360,18 @@ const MedicareDashboard = () => {
         });
 
         if (response.status === 401) {
-          // Session expired - redirect to login
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('user_id');
-          localStorage.removeItem('username');
-          localStorage.removeItem('role');
-          window.location.href = '/';
-          return;
+          const currentToken = localStorage.getItem("access_token");
+          if (currentToken && !isTokenExpired(currentToken)) {
+            console.warn("Received 401 but token is still valid. Ignoring logout.");
+          } else {
+            // Session expired - redirect to login
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('user_id');
+            localStorage.removeItem('username');
+            localStorage.removeItem('role');
+            window.location.href = '/';
+            return;
+          }
         }
 
         if (response.ok) {
@@ -409,7 +425,12 @@ const MedicareDashboard = () => {
         });
 
         if (response.status === 401) {
-          return;
+          const currentToken = localStorage.getItem("access_token");
+          if (currentToken && !isTokenExpired(currentToken)) {
+            console.warn("Received 401 but token is still valid. Ignoring return.");
+          } else {
+            return;
+          }
         }
 
         if (response.ok) {
