@@ -8,6 +8,7 @@ import ClientHeader from "./ClientHeader";
 import ClientRecordings from "./Clientrecordings";
 import CategoryTrends from "./CategoryTrends";
 import Loader from "./components/Loader";
+import DateRangePicker from "./components/DateRangePicker";
 const getUserRole = () => {
   return localStorage.getItem("role") || sessionStorage.getItem("role");
 };
@@ -1563,52 +1564,18 @@ const MedicareDashboard = () => {
               </div>
 
               {/* KEY FIX: Add Date/Time filters for Statistics */}
-              <div style={styles.datetimeRow}>
+              <div style={{...styles.datetimeRow, gridTemplateColumns: 'minmax(250px, 400px)'}}>
                 <div style={styles.inputGroup}>
-                  <label style={styles.inputLabel}>
-                    Start Date (US EST/EDT)
-                  </label>
-                  <input
-                    type="date"
-                    style={styles.input}
-                    value={startDate}
-                    onChange={(e) => {
-                      setStartDate(e.target.value);
-                      // If end date is before start date, update it
-                      if (endDate && e.target.value > endDate) {
-                        setEndDate(e.target.value);
-                      }
-                    }}
-                  />
-                </div>
-                <div style={styles.inputGroup}>
-                  <label style={styles.inputLabel}>
-                    Start Time (US EST/EDT)
-                  </label>
-                  <input
-                    type="time"
-                    style={styles.input}
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                  />
-                </div>
-                <div style={styles.inputGroup}>
-                  <label style={styles.inputLabel}>End Date (US EST/EDT)</label>
-                  <input
-                    type="date"
-                    style={styles.input}
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    min={startDate} // Prevent selecting date before start
-                  />
-                </div>
-                <div style={styles.inputGroup}>
-                  <label style={styles.inputLabel}>End Time (US EST/EDT)</label>
-                  <input
-                    type="time"
-                    style={styles.input}
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
+                  <label style={styles.inputLabel}>Date & Time Range (US EST/EDT)</label>
+                  <DateRangePicker 
+                    startDate={startDate}
+                    setStartDate={setStartDate}
+                    endDate={endDate}
+                    setEndDate={setEndDate}
+                    startTime={startTime}
+                    setStartTime={setStartTime}
+                    endTime={endTime}
+                    setEndTime={setEndTime}
                   />
                 </div>
               </div>
@@ -2069,45 +2036,18 @@ const MedicareDashboard = () => {
                 />
               </div>
 
-              <div style={styles.datetimeRow}>
+              <div style={{...styles.datetimeRow, gridTemplateColumns: 'minmax(250px, 400px)'}}>
                 <div style={styles.inputGroup}>
-                  <label style={styles.inputLabel}>
-                    Start Date (US EST/EDT)
-                  </label>
-                  <input
-                    type="date"
-                    style={styles.input}
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
-                </div>
-                <div style={styles.inputGroup}>
-                  <label style={styles.inputLabel}>
-                    Start Time (US EST/EDT)
-                  </label>
-                  <input
-                    type="time"
-                    style={styles.input}
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                  />
-                </div>
-                <div style={styles.inputGroup}>
-                  <label style={styles.inputLabel}>End Date (US EST/EDT)</label>
-                  <input
-                    type="date"
-                    style={styles.input}
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                  />
-                </div>
-                <div style={styles.inputGroup}>
-                  <label style={styles.inputLabel}>End Time (US EST/EDT)</label>
-                  <input
-                    type="time"
-                    style={styles.input}
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
+                  <label style={styles.inputLabel}>Date & Time Range (US EST/EDT)</label>
+                  <DateRangePicker 
+                    startDate={startDate}
+                    setStartDate={setStartDate}
+                    endDate={endDate}
+                    setEndDate={setEndDate}
+                    startTime={startTime}
+                    setStartTime={setStartTime}
+                    endTime={endTime}
+                    setEndTime={setEndTime}
                   />
                 </div>
               </div>

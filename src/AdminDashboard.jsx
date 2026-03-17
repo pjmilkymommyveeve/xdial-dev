@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Loader from "./components/Loader";
 import { isTokenExpired } from "./api";
+import DateRangePicker from "./components/DateRangePicker";
 
 const AdminDashboard = () => {
   const [currentView, setCurrentView] = useState("dashboard");
@@ -594,44 +595,18 @@ const AdminDashboard = () => {
           />
 
           {/* Date and Time Inputs */}
-          <div className="date-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "24px" }}>
-            <div>
-              <label style={{ fontSize: "13px", fontWeight: 500, marginBottom: "6px", display: "block" }}>Start Date (US EST/EDT)</label>
-              <input
-                type="date"
-                style={{ width: "100%", padding: "10px 12px", border: "1px solid #ddd", borderRadius: "4px", fontSize: "14px" }}
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: "13px", fontWeight: 500, marginBottom: "6px", display: "block" }}>Start Time (US EST/EDT)</label>
-              <input
-                type="time"
-                style={{ width: "100%", padding: "10px 12px", border: "1px solid #ddd", borderRadius: "4px", fontSize: "14px" }}
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: "13px", fontWeight: 500, marginBottom: "6px", display: "block" }}>End Date (US EST/EDT)</label>
-              <input
-                type="date"
-                style={{ width: "100%", padding: "10px 12px", border: "1px solid #ddd", borderRadius: "4px", fontSize: "14px" }}
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                placeholder="dd/mm/yyyy"
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: "13px", fontWeight: 500, marginBottom: "6px", display: "block" }}>End Time (US EST/EDT)</label>
-              <input
-                type="time"
-                style={{ width: "100%", padding: "10px 12px", border: "1px solid #ddd", borderRadius: "4px", fontSize: "14px" }}
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-              />
-            </div>
+          <div className="date-grid" style={{ marginBottom: "24px" }}>
+            <DateRangePicker 
+              startDate={startDate}
+              setStartDate={setStartDate}
+              endDate={endDate}
+              setEndDate={setEndDate}
+              startTime={startTime}
+              setStartTime={setStartTime}
+              endTime={endTime}
+              setEndTime={setEndTime}
+              onApply={handleApplyFilters}
+            />
           </div>
 
           {/* Stage Filters */}
