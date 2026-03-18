@@ -36,15 +36,12 @@ const AdminDataExport = () => {
 
   // Honeypot State
   const [honeypotFilters, setHoneypotFilters] = useState({
+    honeypotTypes: "",
     clientId: "",
     clientCampaignModelId: "",
     serverId: "",
     startDate: "",
     endDate: "",
-  });
-  const [honeypotData, setHoneypotData] = useState([]);
-  const [honeypotStats, setHoneypotStats] = useState({
-    totalHoneypotCalls: 0,
   });
   const [isHoneypotLoading, setIsHoneypotLoading] = useState(false);
   const [honeypotError, setHoneypotError] = useState("");
@@ -313,7 +310,7 @@ const AdminDataExport = () => {
     }));
   };
 
-  const fetchHoneypotData = async (format = "json") => {
+  const fetchHoneypotDataCSV = async () => {
     setIsHoneypotLoading(true);
     setHoneypotError("");
 
@@ -326,6 +323,10 @@ const AdminDataExport = () => {
       }
 
       const queryParams = new URLSearchParams();
+      if (honeypotFilters.honeypotTypes) {
+        const types = honeypotFilters.honeypotTypes.split(',').map(t => t.trim()).filter(Boolean);
+        types.forEach(type => queryParams.append("honeypot_types", type));
+      }
       if (honeypotFilters.clientId) queryParams.append("client_id", honeypotFilters.clientId);
       if (honeypotFilters.clientCampaignModelId) queryParams.append("client_campaign_model_id", honeypotFilters.clientCampaignModelId);
       if (honeypotFilters.serverId) queryParams.append("server_id", honeypotFilters.serverId);
@@ -333,8 +334,7 @@ const AdminDataExport = () => {
       if (honeypotFilters.endDate) queryParams.append("end_date", honeypotFilters.endDate);
 
       const queryString = queryParams.toString();
-      const endpoint = format === "json" ? "json" : "csv";
-      const url = `${API_URL}/api/v1/campaigns/call-lookup/honeypot/${endpoint}${queryString ? `?${queryString}` : ""}`;
+      const url = `${API_URL}/api/v1/campaigns/call-lookup/honeypot/csv${queryString ? `?${queryString}` : ""}`;
 
       const response = await fetch(url, {
         method: "GET",
@@ -364,27 +364,17 @@ const AdminDataExport = () => {
         throw new Error(`Server returned ${response.status}`);
       }
 
-      if (format === "csv") {
-        const blob = await response.blob();
-        const downloadUrl = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = downloadUrl;
-        a.download = `honeypot-data-${new Date().toISOString().split("T")[0]}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(downloadUrl);
-        document.body.removeChild(a);
-        setCopyFeedback("CSV downloaded successfully!");
-        setTimeout(() => setCopyFeedback(""), 3000);
-      } else {
-        const data = await response.json();
-        setHoneypotData(data.results || []);
-        setHoneypotStats({
-          totalHoneypotCalls: data.total_honeypot_calls || 0,
-        });
-        setCopyFeedback("Honeypot data loaded successfully!");
-        setTimeout(() => setCopyFeedback(""), 3000);
-      }
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = `honeypot-data-${new Date().toISOString().split("T")[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(downloadUrl);
+      document.body.removeChild(a);
+      setCopyFeedback("CSV downloaded successfully!");
+      setTimeout(() => setCopyFeedback(""), 3000);
     } catch (err) {
       console.error("Error fetching honeypot data:", err);
       setHoneypotError(`Failed to fetch data: ${err.message}`);
@@ -807,6 +797,34 @@ const AdminDataExport = () => {
                   marginBottom: "8px",
                 }}
               >
+                Honeypot Types (Optional)
+              </label>
+              <input
+                type="text"
+                name="honeypotTypes"
+                value={honeypotFilters.honeypotTypes}
+                onChange={handleHoneypotFilterChange}
+                placeholder="e.g. honeypot, honeypot_d"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  color: "#374151",
+                  marginBottom: "8px",
+                }}
+              >
                 Client ID (Optional)
               </label>
               <input
@@ -959,13 +977,13 @@ const AdminDataExport = () => {
 
           <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
             <button
-              onClick={() => fetchHoneypotData("json")}
+              onClick={fetchHoneypotDataCSV}
               disabled={isHoneypotLoading}
               style={{
                 flex: 1,
                 minWidth: "200px",
                 padding: "12px 24px",
-                backgroundColor: !isHoneypotLoading ? "#10b981" : "#d1d5db",
+                backgroundColor: !isHoneypotLoading ? "#4f46e5" : "#d1d5db",
                 color: "white",
                 border: "none",
                 borderRadius: "8px",
@@ -990,37 +1008,14 @@ const AdminDataExport = () => {
                       animation: "spin 1s linear infinite",
                     }}
                   ></div>
-                  Loading Data...
+                  Downloading...
                 </>
               ) : (
                 <>
-                  <i className="bi bi-search"></i>
-                  Load Data (JSON)
+                  <i className="bi bi-download"></i>
+                  Download CSV
                 </>
               )}
-            </button>
-            <button
-              onClick={() => fetchHoneypotData("csv")}
-              disabled={isHoneypotLoading}
-              style={{
-                flex: 1,
-                minWidth: "200px",
-                padding: "12px 24px",
-                backgroundColor: "#4f46e5",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "14px",
-                fontWeight: "600",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-              }}
-            >
-              <i className="bi bi-download"></i>
-              Download CSV
             </button>
           </div>
         </div>
@@ -1544,72 +1539,7 @@ const AdminDataExport = () => {
           </div>
         )}
 
-        {/* Honeypot Results */}
-        {honeypotData.length > 0 && (
-          <div style={{ marginTop: "40px" }}>
-            <h3 style={{ fontSize: "20px", fontWeight: "600", color: "#111827", marginBottom: "16px" }}>
-              Honeypot Results <span style={{ fontSize: "14px", fontWeight: "400", color: "#6b7280" }}>({honeypotStats.totalHoneypotCalls} total)</span>
-            </h3>
-
-            <div
-              style={{
-                backgroundColor: "white",
-                borderRadius: "12px",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                overflow: "hidden",
-                overflowX: "auto"
-              }}
-            >
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  fontSize: "14px",
-                }}
-              >
-                <thead>
-                  <tr
-                    style={{
-                      backgroundColor: "#f9fafb",
-                      borderBottom: "2px solid #e5e7eb",
-                    }}
-                  >
-                    <th style={{ padding: "16px", textAlign: "left", fontWeight: "600", color: "#374151" }}>Phone Number</th>
-                    <th style={{ padding: "16px", textAlign: "left", fontWeight: "600", color: "#374151" }}>Date</th>
-                    <th style={{ padding: "16px", textAlign: "left", fontWeight: "600", color: "#374151" }}>Client</th>
-                    <th style={{ padding: "16px", textAlign: "left", fontWeight: "600", color: "#374151" }}>Campaign</th>
-                    <th style={{ padding: "16px", textAlign: "left", fontWeight: "600", color: "#374151" }}>Model</th>
-                    <th style={{ padding: "16px", textAlign: "left", fontWeight: "600", color: "#374151" }}>Stage</th>
-                    <th style={{ padding: "16px", textAlign: "left", fontWeight: "600", color: "#374151" }}>Response Category</th>
-                    <th style={{ padding: "16px", textAlign: "left", fontWeight: "600", color: "#374151" }}>Transcription</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {honeypotData.map((record, index) => (
-                    <tr key={index} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                      <td style={{ padding: "16px", fontWeight: "500", color: "#111827" }}>{record.number}</td>
-                      <td style={{ padding: "16px", color: "#6b7280" }}>{new Date(record.timestamp).toLocaleString()}</td>
-                      <td style={{ padding: "16px", color: "#374151" }}>{record.client_name || "-"}</td>
-                      <td style={{ padding: "16px" }}>
-                        <span style={{ padding: "4px 8px", backgroundColor: "#eff6ff", color: "#1e40af", borderRadius: "4px", fontSize: "12px" }}>
-                          {record.campaign_name || "-"}
-                        </span>
-                      </td>
-                      <td style={{ padding: "16px", color: "#374151" }}>{record.model_name || "-"}</td>
-                      <td style={{ padding: "16px", textAlign: "center" }}>{record.stage}</td>
-                      <td style={{ padding: "16px" }}>
-                        <span style={{ padding: "4px 8px", backgroundColor: "#fef3c7", color: "#92400e", borderRadius: "4px", fontSize: "12px" }}>
-                          {record.response_category}
-                        </span>
-                      </td>
-                      <td style={{ padding: "16px", color: "#374151", maxWidth: "300px" }}>{record.transcription}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+        {/* Honeypot Results Removed */}
       </div>
       <style>{`
     @keyframes spin {
