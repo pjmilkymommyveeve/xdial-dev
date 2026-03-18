@@ -11,6 +11,8 @@ const AdminDashboard = () => {
   const [startTime, setStartTime] = useState("");
   const [endDate, setEndDate] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [transcriptionSearch, setTranscriptionSearch] = useState("");
+  const [transcriptionStage, setTranscriptionStage] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortColumn, setSortColumn] = useState("timestamp"); // Default sort by timestamp
   const [sortDirection, setSortDirection] = useState("desc");
@@ -97,6 +99,8 @@ const AdminDashboard = () => {
         if (startTime) params.append('start_time', startTime);
         if (endTime) params.append('end_time', endTime);
         if (searchText) params.append('search', searchText);
+        if (transcriptionSearch) params.append('transcription_search', transcriptionSearch);
+        if (transcriptionStage) params.append('transcription_stage', transcriptionStage);
         params.append('page', currentPage.toString());
         params.append('page_size', '50');
         params.append('sort_order', sortDirection);
@@ -342,6 +346,8 @@ const AdminDashboard = () => {
     setStartTime("");
     setEndDate("");
     setEndTime("");
+    setTranscriptionSearch("");
+    setTranscriptionStage("");
     setStageFilters({});
     setCurrentPage(1);
     setFetchTrigger((prev) => prev + 1);
@@ -593,6 +599,36 @@ const AdminDashboard = () => {
             onChange={(e) => setSearchText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleApplyFilters()}
           />
+
+          <div style={{ display: "flex", gap: "16px", marginBottom: "20px", flexWrap: "wrap" }}>
+            <div style={{ flex: "1 1 300px" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px", color: "#374151" }}>
+                Transcription Search
+              </label>
+              <input
+                type="text"
+                style={{ width: "100%", padding: "10px 12px", border: "1px solid #ddd", borderRadius: "4px", fontSize: "14px", boxSizing: "border-box" }}
+                placeholder="Search text within transcriptions..."
+                value={transcriptionSearch}
+                onChange={(e) => setTranscriptionSearch(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleApplyFilters()}
+              />
+            </div>
+            <div style={{ flex: "1 1 200px" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px", color: "#374151" }}>
+                Transcription Stage
+              </label>
+              <input
+                type="number"
+                min="0"
+                style={{ width: "100%", padding: "10px 12px", border: "1px solid #ddd", borderRadius: "4px", fontSize: "14px", boxSizing: "border-box" }}
+                placeholder="Any Stage (e.g., 1, 2)"
+                value={transcriptionStage}
+                onChange={(e) => setTranscriptionStage(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleApplyFilters()}
+              />
+            </div>
+          </div>
 
           {/* Date and Time Inputs */}
           <div className="date-grid" style={{ marginBottom: "24px" }}>
