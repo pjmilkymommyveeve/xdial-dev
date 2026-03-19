@@ -412,7 +412,7 @@ const AdminCampaignKeywords = () => {
                                         Model: {selectedModel.model_name}
                                     </span>
                                     <span style={{ color: "#9ca3af", fontSize: "14px" }}>
-                                        Last Updated: {new Date(selectedModel.last_updated).toLocaleString()}
+                                        Last Updated: {new Date(selectedModel.last_updated).toLocaleString("en-US", { timeZone: "America/New_York", year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
                                     </span>
                                 </div>
                             </div>
@@ -895,7 +895,7 @@ const AdminCampaignKeywords = () => {
                                                 <td style={{ padding: "16px", color: "#374151" }}>{model.total_categories}</td>
                                                 <td style={{ padding: "16px", color: "#374151" }}>{model.total_keywords}</td>
                                                 <td style={{ padding: "16px", color: "#6b7280", fontSize: "14px" }}>
-                                                    {model.last_updated ? new Date(model.last_updated).toLocaleDateString() : '-'}
+                                                    {model.last_updated ? new Date(model.last_updated).toLocaleDateString("en-US", { timeZone: "America/New_York" }) : '-'}
                                                 </td>
                                                 <td style={{ padding: "16px", textAlign: "right", color: "#4f46e5", fontWeight: "600", fontSize: "14px" }}>
                                                     View Details →
@@ -1031,7 +1031,7 @@ const AdminCampaignKeywords = () => {
                                             </div>
                                         </div>
                                         <div style={{ marginTop: '16px', fontSize: '12px', color: '#9ca3af', textAlign: 'right' }}>
-                                            Updated: {model.last_updated ? new Date(model.last_updated).toLocaleDateString() : 'Never'}
+                                            Updated: {model.last_updated ? new Date(model.last_updated).toLocaleDateString("en-US", { timeZone: "America/New_York" }) : 'Never'}
                                         </div>
                                     </div>
                                 ))}
