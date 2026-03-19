@@ -1,47 +1,69 @@
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-import timezone from 'dayjs/plugin/timezone';
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
-
-/**
- * Converts a backend timestamp (assumed UTC) to America/New_York time.
- * @param {string|number|Date} timestamp - The timestamp from the backend
- * @returns {string} Formatted NY time, e.g. "03/24/2024, 08:00:00 AM"
- */
 export const convertToNYTime = (timestamp) => {
-  if (!timestamp) return "-";
+  if (!timestamp) return timestamp;
   
   try {
-    // Parse as UTC. If no timezone offset is provided, dayjs defaults it to UTC.
-    // If an offset is provided (e.g., Z or +05:00), it correctly adjusts to UTC.
-    const d = dayjs.utc(timestamp);
-    
-    if (!d.isValid()) return timestamp;
+    // If it's a number (Unix timestamp)
+    if (typeof timestamp === 'number') {
+      // Convert seconds to milliseconds if necessary
+      const ms = timestamp < 10000000000 ? timestamp * 1000 : timestamp;
+      return new Date(ms).toLocaleString("en-US", { 
+        timeZone: "America/New_York",
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+      });
+    }
 
-    return d.tz("America/New_York").format("MM/DD/YYYY, hh:mm:ss A");
-  } catch (error) {
-    console.error("Error converting timezone:", error, timestamp);
+    // If it's already a Date object
+    if (timestamp instanceof Date) {
+      if (isNaN(timestamp.getTime())) return null;
+      return timestamp.toLocaleString("en-US", { 
+        timeZone: "America/New_York",
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+      });
+    }
+
+    // For string timestamps sent from backend
+    let dateStr = timestamp;
+    if (typeof dateStr === 'string') {
+      // If it's a format like "YYYY-MM-DD HH:mm:ss" without timezone, treat as UTC
+      if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?$/.test(dateStr)) {
+        dateStr = dateStr.replace(' ', 'T') + 'Z';
+      }
+    }
+
+    const date = new Date(dateStr);
+    
+    // Fallback to original string if invalid date
+    if (isNaN(date.getTime())) return timestamp; 
+
+    return date.toLocaleString("en-US", {
+      timeZone: "America/New_York",
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+    });
+  } catch (e) {
+    console.error("Error converting timezone:", e);
     return timestamp;
   }
 };
 
-/**
- * Converts a backend timestamp to America/New_York date only.
- * @param {string|number|Date} timestamp - The timestamp from the backend
- * @returns {string} Formatted NY date, e.g. "03/24/2024"
- */
 export const convertToNYDateOnly = (timestamp) => {
-  if (!timestamp) return "-";
-  
+  if (!timestamp) return timestamp;
   try {
-    const d = dayjs.utc(timestamp);
-    
-    if (!d.isValid()) return timestamp;
-
-    return d.tz("America/New_York").format("MM/DD/YYYY");
-  } catch (error) {
+    let dateStr = timestamp;
+    if (typeof dateStr === 'string') {
+      if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?$/.test(dateStr)) {
+        dateStr = dateStr.replace(' ', 'T') + 'Z';
+      }
+    }
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return timestamp; 
+    return date.toLocaleDateString("en-US", {
+      timeZone: "America/New_York",
+      year: 'numeric', month: 'numeric', day: 'numeric'
+    });
+  } catch (e) {
     return timestamp;
   }
 };
