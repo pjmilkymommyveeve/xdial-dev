@@ -35,7 +35,6 @@ const AdminDataExport = () => {
   });
 
   // Honeypot State
-  const [honeypotCategories, setHoneypotCategories] = useState([]);
   const [honeypotFilters, setHoneypotFilters] = useState({
     honeypotTypes: "",
     clientId: "",
@@ -46,27 +45,6 @@ const AdminDataExport = () => {
   });
   const [isHoneypotLoading, setIsHoneypotLoading] = useState(false);
   const [honeypotError, setHoneypotError] = useState("");
-
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const token = localStorage.getItem("access_token");
-        const response = await fetch(`${API_URL}/api/v1/campaigns/call-lookup/honeypot/categories`, {
-          headers: {
-            accept: "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {})
-          }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setHoneypotCategories(data.categories || []);
-        }
-      } catch (err) {
-        console.error("Failed to fetch honeypot categories:", err);
-      }
-    };
-    fetchCategories();
-  }, []);
 
   useEffect(() => {
     document.title = "Admin Data Export - Xdial";
@@ -821,28 +799,21 @@ const AdminDataExport = () => {
               >
                 Honeypot Types (Optional)
               </label>
-              <select
+              <input
+                type="text"
                 name="honeypotTypes"
                 value={honeypotFilters.honeypotTypes}
                 onChange={handleHoneypotFilterChange}
+                placeholder="e.g. honeypot, honeypot_d"
                 style={{
                   width: "100%",
                   padding: "10px 12px",
                   border: "1px solid #d1d5db",
                   borderRadius: "8px",
                   fontSize: "14px",
-                  backgroundColor: "white",
-                  cursor: "pointer",
                   boxSizing: "border-box",
                 }}
-              >
-                <option value="">All Types (No Filter)</option>
-                {honeypotCategories.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
             <div>
               <label
