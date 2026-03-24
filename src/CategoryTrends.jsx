@@ -37,8 +37,25 @@ const CategoryTrends = ({ campaignId, isEmbedded }) => {
         try {
             const now = new Date();
             let startDate, startTime, endDate, endTime, intervalMinutes;
-            const formatDate = (date) => date.toISOString().split("T")[0];
-            const formatTime = (date) => date.toISOString().split("T")[1].substring(0, 5);
+            const formatDate = (date) => {
+                return new Intl.DateTimeFormat("en-CA", {
+                    timeZone: "America/New_York",
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit"
+                }).format(date);
+            };
+            const formatTime = (date) => {
+                const formatter = new Intl.DateTimeFormat("en-GB", {
+                    timeZone: "America/New_York",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false
+                });
+                let timeStr = formatter.format(date);
+                if (timeStr.startsWith("24:")) timeStr = "00:" + timeStr.substring(3);
+                return timeStr;
+            };
 
             if (selectedRange === "5m") {
                 intervalMinutes = 5;

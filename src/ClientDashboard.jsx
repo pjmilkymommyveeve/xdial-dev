@@ -277,12 +277,56 @@ const MedicareDashboard = () => {
 
         // Build query parameters
         const params = new URLSearchParams();
-        params.append("start_date", startDate);
-        if (startTime) params.append("start_time", startTime);
-        if (endDate) {
-          params.append("end_date", endDate);
+        
+        let nyStartDate = startDate;
+        let nyStartTime = startTime;
+        let nyEndDate = endDate;
+        let nyEndTime = endTime;
+
+        try {
+          const convertToNY = (dStr, tStr) => {
+            if (!dStr) return { d: null, t: null };
+            const dateObj = new Date(`${dStr}T${tStr || "00:00"}:00`);
+            if (isNaN(dateObj.getTime())) return { d: dStr, t: tStr };
+            
+            const d = new Intl.DateTimeFormat("en-CA", {
+                timeZone: "America/New_York",
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit"
+            }).format(dateObj);
+            
+            let t = null;
+            if (tStr) {
+               const formatter = new Intl.DateTimeFormat("en-GB", {
+                   timeZone: "America/New_York",
+                   hour: "2-digit",
+                   minute: "2-digit",
+                   hour12: false
+               });
+               t = formatter.format(dateObj);
+               if (t.startsWith("24:")) t = "00:" + t.substring(3);
+            }
+            return { d, t };
+          };
+          
+          const startNY = convertToNY(startDate, startTime);
+          nyStartDate = startNY.d || startDate;
+          nyStartTime = startNY.t || startTime;
+          
+          const endNY = convertToNY(endDate, endTime);
+          nyEndDate = endNY.d || endDate;
+          nyEndTime = endNY.t || endTime;
+        } catch (e) {
+          console.error("Timezone conversion error", e);
         }
-        if (endTime) params.append("end_time", endTime);
+
+        params.append("start_date", nyStartDate);
+        if (nyStartTime) params.append("start_time", nyStartTime);
+        if (nyEndDate) {
+          params.append("end_date", nyEndDate);
+        }
+        if (nyEndTime) params.append("end_time", nyEndTime);
         params.append("interval", "60"); // 60 minute intervals
 
         const apiUrl = `https://api.xlitecore.xdialnetworks.com/api/v1/campaigns/${campaignId}/category-timeseries?${params.toString()}`;
