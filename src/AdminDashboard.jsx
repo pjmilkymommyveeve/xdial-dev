@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import Loader from "./components/Loader";
 import { isTokenExpired } from "./api";
 import DateRangePicker from "./components/DateRangePicker";
-import { convertToNYTime } from "./timezoneUtils";
 
 const AdminDashboard = () => {
   const [currentView, setCurrentView] = useState("dashboard");
@@ -919,7 +918,7 @@ const AdminDashboard = () => {
                       })}
 
                       <td style={{ padding: "12px", color: "#666" }}>
-                        {convertToNYTime(record.first_timestamp)}
+                        {record.first_timestamp}
                       </td>
                       <td style={{ padding: "12px", textAlign: "center" }}>
                         <button

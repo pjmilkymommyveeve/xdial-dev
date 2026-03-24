@@ -726,7 +726,6 @@ const AdminCampaigns = () => {
                       >
                         <span>📅</span>
                         Expires: {new Date(campaign.end_date).toLocaleDateString("en-US", {
-                          timeZone: "America/New_York",
                           month: "short",
                           day: "numeric",
                           year: "numeric",
@@ -766,7 +765,6 @@ const AdminCampaigns = () => {
                       >
                         <span>❌</span>
                         Expired: {new Date(campaign.end_date).toLocaleDateString("en-US", {
-                          timeZone: "America/New_York",
                           month: "short",
                           day: "numeric",
                           year: "numeric",
@@ -1158,7 +1156,6 @@ const AdminCampaigns = () => {
                               <span style={getExpiryStyle(campaign.end_date)}>
                                 {campaign.end_date
                                   ? new Date(campaign.end_date).toLocaleDateString("en-US", {
-                                    timeZone: "America/New_York",
                                     year: "numeric",
                                     month: "short",
                                     day: "numeric",
@@ -1292,7 +1289,6 @@ const AdminCampaigns = () => {
                                       <span style={{ fontSize: "13px", color: campaign.last_active ? "#10b981" : "#6b7280" }}>
                                         {campaign.last_active
                                           ? new Date(campaign.last_active).toLocaleString("en-US", {
-                                            timeZone: "America/New_York",
                                             year: "numeric",
                                             month: "short",
                                             day: "numeric",

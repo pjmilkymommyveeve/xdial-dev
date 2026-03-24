@@ -9,8 +9,6 @@ import ClientRecordings from "./Clientrecordings";
 import CategoryTrends from "./CategoryTrends";
 import Loader from "./components/Loader";
 import DateRangePicker from "./components/DateRangePicker";
-import { convertToNYTime } from "./timezoneUtils";
-
 const getUserRole = () => {
   return localStorage.getItem("role") || sessionStorage.getItem("role");
 };
@@ -2859,7 +2857,7 @@ const MedicareDashboard = () => {
                                 color: "#666",
                               }}
                             >
-                              {convertToNYTime(record.timestamp)}
+                              {record.timestamp}
                             </td>
                             <td
                               style={{
@@ -3250,7 +3248,7 @@ const MedicareDashboard = () => {
                         color: "#333",
                       }}
                     >
-                      {convertToNYTime(selectedCallRecord.timestamp)}
+                      {selectedCallRecord.timestamp}
                     </div>
                   </div>
                 </div>

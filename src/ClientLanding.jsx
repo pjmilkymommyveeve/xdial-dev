@@ -161,7 +161,6 @@ const ClientLanding = () => {
     if (!dateString) return "N/A";
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
-      timeZone: "America/New_York",
       month: "2-digit",
       day: "2-digit",
       year: "2-digit",
