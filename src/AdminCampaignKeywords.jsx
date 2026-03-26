@@ -880,8 +880,11 @@ const AdminCampaignKeywords = () => {
                                                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
                                             >
                                                 <td style={{ padding: "16px" }}>
-                                                    <div style={{ fontWeight: "600", color: "#111827" }}>{model.campaign_name}</div>
-                                                    <div style={{ fontSize: "12px", color: "#6b7280" }}>{model.model_name}</div>
+                                                    <div style={{ fontWeight: "600", color: "#111827", display: "flex", alignItems: "center", gap: "8px" }}>
+                                                        {model.campaign_name}
+                                                        <span style={{ fontSize: "12px", color: "#6b7280", backgroundColor: "#f3f4f6", padding: "2px 6px", borderRadius: "10px", fontWeight: "600" }}>ID: {model.campaign_model_id}</span>
+                                                    </div>
+                                                    <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px" }}>{model.model_name}</div>
                                                 </td>
                                                 <td style={{ padding: "16px" }}>
                                                     {model.total_keywords > 0 ? (
@@ -948,16 +951,21 @@ const AdminCampaignKeywords = () => {
                                             }}
                                         >
                                             <div>
-                                                <h3
-                                                    style={{
-                                                        fontSize: "18px",
-                                                        fontWeight: "700",
-                                                        color: "#111827",
-                                                        marginBottom: "4px",
-                                                    }}
-                                                >
-                                                    {model.campaign_name}
-                                                </h3>
+                                                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                                                    <h3
+                                                        style={{
+                                                            fontSize: "18px",
+                                                            fontWeight: "700",
+                                                            color: "#111827",
+                                                            margin: 0,
+                                                        }}
+                                                    >
+                                                        {model.campaign_name}
+                                                    </h3>
+                                                    <span style={{ fontSize: "12px", color: "#6b7280", backgroundColor: "#f3f4f6", padding: "2px 6px", borderRadius: "10px", fontWeight: "600" }}>
+                                                        ID: {model.campaign_model_id}
+                                                    </span>
+                                                </div>
                                                 <div
                                                     style={{
                                                         fontSize: "14px",
