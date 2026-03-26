@@ -416,7 +416,14 @@ const AdminCampaignKeywords = () => {
                                     </span>
                                 </div>
                             </div>
-                            {/* We removed the old top-right buttons since adding categories is now in the grid, and CSV upload is per-category-view */}
+                            <div>
+                                <button
+                                    onClick={() => setShowCsvModal(true)}
+                                    style={{ padding: "10px 20px", backgroundColor: "#10b981", color: "white", border: "none", borderRadius: "8px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontSize: "14px" }}
+                                >
+                                    <FaCloudUploadAlt /> Upload CSV
+                                </button>
+                            </div>
                         </div>
 
                         {/* Category Selection Boxes */}
@@ -507,8 +514,9 @@ const AdminCampaignKeywords = () => {
                             </div>
                         </div>
 
+
                         {/* Active Category Detail */}
-                        {activeCategory && selectedModel.keywords[activeCategory] && (
+                        {activeCategory && selectedModel.keywords && selectedModel.keywords[activeCategory] && (
                             <div style={{
                                 backgroundColor: "white",
                                 borderRadius: "16px",
@@ -628,16 +636,6 @@ const AdminCampaignKeywords = () => {
                                                     Add
                                                 </button>
                                             </div>
-                                        </div>
-
-                                        {/* Upload CSV */}
-                                        <div>
-                                            <button
-                                                onClick={() => setShowCsvModal(true)}
-                                                style={{ padding: "8px 16px", backgroundColor: "#10b981", color: "white", border: "none", borderRadius: "6px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", height: "37px" }}
-                                            >
-                                                <FaCloudUploadAlt /> Upload CSV
-                                            </button>
                                         </div>
                                     </div>
 
