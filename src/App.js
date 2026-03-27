@@ -52,8 +52,10 @@ function App() {
                     <Route path="/admin-campaign-keywords" element={<AdminCampaignKeywords />} />
                     <Route path="/admin-reporting" element={<AdminReporting />} />
                     <Route path="/admin-scripts" element={<AdminScripts />} />
-                    <Route path="/integration-form" element={<IntegrationForm />} />
                 </Route>
+
+                {/* Integration Form Route (No Sidebar) */}
+                <Route path="/integration-form" element={<IntegrationForm />} />
             </Routes>
         </Router>
     );
