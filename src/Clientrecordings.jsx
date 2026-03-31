@@ -520,42 +520,54 @@ const ClientRecordings = ({ isEmbedded }) => {
                 {/* Pagination Controls */}
                 {pagination && pagination.total_pages > 1 && (
                   <div style={{ padding: "1rem", borderTop: "1px solid #e5e7eb" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <span style={{ fontSize: "0.875rem", color: "#374151" }}>
+                        <span style={{ fontSize: "0.875rem", color: "#6b7280" }}>
                           Showing {((pagination.page - 1) * pagination.page_size) + 1} to {Math.min(pagination.page * pagination.page_size, pagination.total_records)} of {pagination.total_records} recordings
                         </span>
                       </div>
 
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexWrap: "wrap", justifyContent: "center", flex: 1 }}>
                         <button
                           className="btn btn-outline btn-sm"
                           onClick={() => setCurrentPage(1)}
-                          disabled={!pagination.has_prev}
-                          style={{ opacity: !pagination.has_prev ? 0.5 : 1, cursor: !pagination.has_prev ? "not-allowed" : "pointer" }}
+                          disabled={currentPage === 1}
+                          style={{ opacity: currentPage === 1 ? 0.5 : 1, cursor: currentPage === 1 ? "not-allowed" : "pointer", color: "#6b7280" }}
                         >
-                          <i className="bi bi-chevron-double-left"></i>
+                          First
+                        </button>
+
+                        <button
+                          className="btn btn-outline btn-sm"
+                          onClick={() => setCurrentPage(Math.max(1, currentPage - 10))}
+                          disabled={currentPage <= 10}
+                          style={{ opacity: currentPage <= 10 ? 0.5 : 1, cursor: currentPage <= 10 ? "not-allowed" : "pointer", color: "#6b7280" }}
+                        >
+                          -10
                         </button>
 
                         <button
                           className="btn btn-outline btn-sm"
                           onClick={() => setCurrentPage(currentPage - 1)}
                           disabled={!pagination.has_prev}
-                          style={{ opacity: !pagination.has_prev ? 0.5 : 1, cursor: !pagination.has_prev ? "not-allowed" : "pointer" }}
+                          style={{ opacity: !pagination.has_prev ? 0.5 : 1, cursor: !pagination.has_prev ? "not-allowed" : "pointer", color: "#6b7280" }}
                         >
-                          <i className="bi bi-chevron-left" style={{ marginRight: "0.25rem" }}></i>
+                          <i className="bi bi-arrow-left" style={{ marginRight: "0.25rem" }}></i>
                           Previous
                         </button>
 
-                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                        <div style={{ display: "flex", gap: "0.15rem", margin: "0 0.5rem", alignItems: "center" }}>
                           {(() => {
                             const pages = [];
-                            const maxPagesToShow = 3;
-                            let startPage = Math.max(1, currentPage - 1);
-                            let endPage = Math.min(pagination.total_pages, startPage + maxPagesToShow - 1);
+                            const totalPages = pagination.total_pages;
+                            const maxVisible = 9;
 
-                            if (endPage - startPage < maxPagesToShow - 1) {
-                              startPage = Math.max(1, endPage - maxPagesToShow + 1);
+                            let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+                            let endPage = startPage + maxVisible - 1;
+
+                            if (endPage > totalPages) {
+                              endPage = totalPages;
+                              startPage = Math.max(1, endPage - maxVisible + 1);
                             }
 
                             for (let i = startPage; i <= endPage; i++) {
@@ -565,8 +577,28 @@ const ClientRecordings = ({ isEmbedded }) => {
                             return pages.map((page) => (
                               <button
                                 key={page}
-                                className={`btn btn-sm pagination-btn ${page === currentPage ? "btn-primary" : "btn-outline"}`}
                                 onClick={() => setCurrentPage(page)}
+                                onMouseOver={(e) => {
+                                  if (page !== currentPage) e.currentTarget.style.backgroundColor = "#f3f4f6";
+                                }}
+                                onMouseOut={(e) => {
+                                  if (page !== currentPage) e.currentTarget.style.backgroundColor = "transparent";
+                                }}
+                                style={{ 
+                                  minWidth: "32px", 
+                                  height: "32px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  color: page === currentPage ? "#111827" : "#4b5563",
+                                  backgroundColor: page === currentPage ? "#e5e7eb" : "transparent",
+                                  border: "none",
+                                  borderRadius: "4px",
+                                  cursor: "pointer",
+                                  fontWeight: page === currentPage ? "600" : "500",
+                                  fontSize: "0.875rem",
+                                  transition: "background-color 0.15s"
+                                }}
                               >
                                 {page}
                               </button>
@@ -578,19 +610,28 @@ const ClientRecordings = ({ isEmbedded }) => {
                           className="btn btn-outline btn-sm"
                           onClick={() => setCurrentPage(currentPage + 1)}
                           disabled={!pagination.has_next}
-                          style={{ opacity: !pagination.has_next ? 0.5 : 1, cursor: !pagination.has_next ? "not-allowed" : "pointer" }}
+                          style={{ opacity: !pagination.has_next ? 0.5 : 1, cursor: !pagination.has_next ? "not-allowed" : "pointer", color: "#6b7280" }}
                         >
                           Next
-                          <i className="bi bi-chevron-right" style={{ marginLeft: "0.25rem" }}></i>
+                          <i className="bi bi-arrow-right" style={{ marginLeft: "0.25rem" }}></i>
+                        </button>
+
+                        <button
+                          className="btn btn-outline btn-sm"
+                          onClick={() => setCurrentPage(Math.min(pagination.total_pages, currentPage + 10))}
+                          disabled={currentPage >= pagination.total_pages - 10}
+                          style={{ opacity: currentPage >= pagination.total_pages - 10 ? 0.5 : 1, cursor: currentPage >= pagination.total_pages - 10 ? "not-allowed" : "pointer", color: "#6b7280" }}
+                        >
+                          +10
                         </button>
 
                         <button
                           className="btn btn-outline btn-sm"
                           onClick={() => setCurrentPage(pagination.total_pages)}
-                          disabled={!pagination.has_next}
-                          style={{ opacity: !pagination.has_next ? 0.5 : 1, cursor: !pagination.has_next ? "not-allowed" : "pointer" }}
+                          disabled={currentPage === pagination.total_pages}
+                          style={{ opacity: currentPage === pagination.total_pages ? 0.5 : 1, cursor: currentPage === pagination.total_pages ? "not-allowed" : "pointer", color: "#6b7280" }}
                         >
-                          <i className="bi bi-chevron-double-right"></i>
+                          Last
                         </button>
                       </div>
                     </div>
