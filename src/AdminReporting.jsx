@@ -9,7 +9,9 @@ import {
     FaTrashAlt,
     FaCheck,
     FaBan,
-    FaTimes
+    FaTimes,
+    FaChevronDown,
+    FaChevronUp
 } from "react-icons/fa";
 
 const AdminReporting = () => {
@@ -484,6 +486,7 @@ const CallReportsTab = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [pagination, setPagination] = useState({ page: 1, page_size: 20, total: 0, total_pages: 1 });
+    const [expandedReportId, setExpandedReportId] = useState(null);
 
     // Filters
     const [filters, setFilters] = useState({
@@ -717,33 +720,80 @@ const CallReportsTab = () => {
                                 {reports.length === 0 ? (
                                     <tr><td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: '#6b7280' }}>No call reports found.</td></tr>
                                 ) : reports.map((r, index) => (
-                                    <tr key={r.id} style={{ borderBottom: index < reports.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
-                                        <td style={{ padding: '16px', color: '#6b7280', fontSize: '14px' }}>#{r.id}</td>
-                                        <td style={{ padding: '16px', fontWeight: '600', fontSize: '14px' }}>
-                                            <a href={`/admin-dashboard?search=${r.call_id}`} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: '#4f46e5' }}>
-                                                {r.call_id}
-                                            </a>
-                                        </td>
-                                        <td style={{ padding: '16px' }}>
-                                            <CustomBadge bg="info">{r.category_name}</CustomBadge>
-                                        </td>
-                                        <td style={{ padding: '16px', color: '#6b7280', fontSize: '14px' }}>{r.reported_by_username || r.reported_by_id}</td>
-                                        <td style={{ padding: '16px', color: '#6b7280', fontSize: '13px' }}>{formatDate(r.timestamp)}</td>
-                                        <td style={{ padding: '16px' }}>
-                                            <div style={{ maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '14px', color: '#374151' }} title={r.notes}>
-                                                {r.notes || "-"}
-                                            </div>
-                                        </td>
-                                        <td style={{ padding: '16px', textAlign: 'right' }}>
-                                            <button
-                                                onClick={() => handleDeleteReport(r.id)}
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', color: '#ef4444', borderRadius: '4px' }}
-                                                title="Delete Report"
-                                            >
-                                                <FaTimes size={16} />
-                                            </button>
-                                        </td>
-                                    </tr>
+                                    <React.Fragment key={r.id}>
+                                        <tr style={{ borderBottom: expandedReportId === r.id ? 'none' : (index < reports.length - 1 ? '1px solid #f3f4f6' : 'none'), backgroundColor: expandedReportId === r.id ? '#f9fafb' : 'white' }}>
+                                            <td style={{ padding: '16px', color: '#6b7280', fontSize: '14px' }}>#{r.id}</td>
+                                            <td style={{ padding: '16px', fontWeight: '600', fontSize: '14px' }}>
+                                                <a href={`/admin-dashboard?search=${r.call_id}`} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: '#4f46e5' }}>
+                                                    {r.call_id}
+                                                </a>
+                                            </td>
+                                            <td style={{ padding: '16px' }}>
+                                                <CustomBadge bg="info">{r.category_name}</CustomBadge>
+                                            </td>
+                                            <td style={{ padding: '16px', color: '#6b7280', fontSize: '14px' }}>{r.reported_by_username || r.reported_by_id}</td>
+                                            <td style={{ padding: '16px', color: '#6b7280', fontSize: '13px' }}>{formatDate(r.timestamp)}</td>
+                                            <td style={{ padding: '16px' }}>
+                                                <div style={{ maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '14px', color: '#374151' }} title={r.notes}>
+                                                    {r.notes || "-"}
+                                                </div>
+                                            </td>
+                                            <td style={{ padding: '16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                                <button
+                                                    onClick={() => setExpandedReportId(expandedReportId === r.id ? null : r.id)}
+                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', color: '#4b5563', marginRight: '8px', borderRadius: '4px' }}
+                                                    title={expandedReportId === r.id ? "Hide Call Data" : "View Call Data"}
+                                                >
+                                                    {expandedReportId === r.id ? <FaChevronUp size={16} /> : <FaChevronDown size={16} />}
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteReport(r.id)}
+                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', color: '#ef4444', borderRadius: '4px' }}
+                                                    title="Delete Report"
+                                                >
+                                                    <FaTimes size={16} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {expandedReportId === r.id && (
+                                            <tr style={{ backgroundColor: '#f9fafb', borderBottom: index < reports.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                                                <td colSpan={7} style={{ padding: '16px', paddingTop: 0 }}>
+                                                    <div style={{ padding: '16px', backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' }}>
+                                                        <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', color: '#111827' }}>Call Data</h4>
+                                                        {r.call ? (
+                                                            <>
+                                                                <div style={{ display: 'flex', gap: '32px', marginBottom: '16px', fontSize: '14px', color: '#374151', flexWrap: 'wrap' }}>
+                                                                    <div><strong>Phone Number:</strong> {r.call.number || 'N/A'}</div>
+                                                                    <div><strong>Call Category:</strong> {r.call.response_category_name || 'N/A'}</div>
+                                                                    <div><strong>Call Time:</strong> {formatDate(r.call.timestamp)}</div>
+                                                                </div>
+                                                                <h5 style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#374151' }}>Transcripts</h5>
+                                                                {r.call.stages && r.call.stages.length > 0 ? (
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                                        {r.call.stages.map((stg, i) => (
+                                                                            <div key={i} style={{ padding: '12px', backgroundColor: '#f3f4f6', borderRadius: '6px', fontSize: '13px' }}>
+                                                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', color: '#4b5563' }}>
+                                                                                    <span><strong style={{ color: '#111827' }}>Stage {stg.stage}</strong> {stg.response_category_name ? `- ${stg.response_category_name}` : ''}</span>
+                                                                                    <span>{formatDate(stg.timestamp)}</span>
+                                                                                </div>
+                                                                                <div style={{ color: '#1f2937', fontStyle: stg.transcription ? 'normal' : 'italic', whiteSpace: 'pre-wrap' }}>
+                                                                                    {stg.transcription || 'No transcription'}
+                                                                                </div>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                ) : (
+                                                                    <div style={{ fontSize: '13px', color: '#6b7280', fontStyle: 'italic' }}>No stage data available for this call.</div>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <div style={{ fontSize: '14px', color: '#6b7280', fontStyle: 'italic' }}>No associated call data found.</div>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </React.Fragment>
                                 ))}
                             </tbody>
                         </table>
