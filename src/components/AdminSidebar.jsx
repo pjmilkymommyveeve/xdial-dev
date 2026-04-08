@@ -14,7 +14,8 @@ import {
     FaChevronRight,
     FaBars,
     FaClipboardList,
-    FaFileCode
+    FaFileCode,
+    FaVial
 } from 'react-icons/fa';
 
 const AdminSidebar = ({ isOpen, toggleSidebar, connected, agentCount }) => {
@@ -83,6 +84,12 @@ const AdminSidebar = ({ isOpen, toggleSidebar, connected, agentCount }) => {
             path: '/admin-scripts',
             label: 'Scripts',
             icon: <FaFileCode />,
+            show: true
+        },
+        {
+            path: '/admin-keyword-tester',
+            label: 'Keyword Tester',
+            icon: <FaVial />,
             show: true
         },
         {
