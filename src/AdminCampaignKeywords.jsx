@@ -36,7 +36,7 @@ const AdminCampaignKeywords = () => {
     const [searchQuery, setSearchQuery] = useState("");
 
     const [filterHasKeywords, setFilterHasKeywords] = useState(false);
-    const [viewMode, setViewMode] = useState("card");
+    const [viewMode, setViewMode] = useState("list");
 
     // UI State for selected model
     const [newCategoryName, setNewCategoryName] = useState("");
