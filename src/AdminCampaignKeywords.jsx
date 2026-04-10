@@ -426,93 +426,121 @@ const AdminCampaignKeywords = () => {
                             </div>
                         </div>
 
-                        {/* Category Selection Boxes */}
-                        <div style={{
-                            display: "grid",
-                            gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-                            gap: "10px",
-                            marginBottom: "24px",
-                        }}>
-                            {selectedModel.keywords &&
-                                Object.entries(selectedModel.keywords).map(([category, keywords], index) => {
-                                    const isSelected = activeCategory === category;
-                                    const colors = ["#4f46e5", "#0ea5e9", "#f59e0b", "#9f1239", "#dc2626", "#d97706", "#c026d3", "#65a30d"];
-                                    const color = colors[index % colors.length];
+                        {/* Category Selection Boxes partitioned into S1 and S2/S3 */}
+                        {(() => {
+                            const allCategories = selectedModel.keywords ? Object.entries(selectedModel.keywords) : [];
+                            const s1Categories = allCategories.filter(([cat]) => cat.toLowerCase().includes('_s1'));
+                            const s2s3Categories = allCategories.filter(([cat]) => !cat.toLowerCase().includes('_s1'));
 
-                                    return (
+                            let colorIndex = 0;
+                            const colors = ["#4f46e5", "#0ea5e9", "#f59e0b", "#9f1239", "#dc2626", "#d97706", "#c026d3", "#65a30d"];
+
+                            const renderCategoryBox = ([category, keywords]) => {
+                                const isSelected = activeCategory === category;
+                                const color = colors[colorIndex % colors.length];
+                                colorIndex++;
+
+                                return (
+                                    <div
+                                        key={category}
+                                        onClick={() => {
+                                            setActiveCategory(category);
+                                            setKeywordSearchQuery("");
+                                        }}
+                                        style={{
+                                            backgroundColor: "white",
+                                            border: isSelected ? `2px solid ${color}` : "1px solid #e5e7eb",
+                                            borderRadius: "6px",
+                                            padding: "10px 12px",
+                                            cursor: "pointer",
+                                            boxShadow: isSelected ? "0 4px 6px -1px rgba(0, 0, 0, 0.1)" : "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+                                            transition: "all 0.2s ease-in-out",
+                                            display: "flex",
+                                            flexDirection: "column",
+                                        }}
+                                    >
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                            <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
+                                                {isSelected ? (
+                                                    <FaCheck style={{ color: color, fontSize: "14px", flexShrink: 0 }} />
+                                                ) : (
+                                                    <div style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: color, flexShrink: 0 }} />
+                                                )}
+                                                <span style={{ fontSize: "13px", fontWeight: "600", color: "#111827", wordBreak: "break-word" }} title={category}>
+                                                    {category}
+                                                </span>
+                                            </div>
+                                            <span style={{ fontSize: "12px", fontWeight: "500", color: "#6b7280", flexShrink: 0, marginLeft: "8px" }}>
+                                                ({keywords.length})
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            };
+
+                            return (
+                                <div style={{ marginBottom: "24px" }}>
+                                    {/* S1 Categories */}
+                                    {s1Categories.length > 0 && (
+                                        <div style={{
+                                            display: "grid",
+                                            gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+                                            gap: "10px",
+                                            marginBottom: "16px",
+                                            paddingBottom: s2s3Categories.length > 0 ? "16px" : "0",
+                                            borderBottom: s2s3Categories.length > 0 ? "1px dashed #e5e7eb" : "none"
+                                        }}>
+                                            {s1Categories.map(renderCategoryBox)}
+                                        </div>
+                                    )}
+
+                                    {/* S2/S3 Categories */}
+                                    <div style={{
+                                        display: "grid",
+                                        gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+                                        gap: "10px",
+                                    }}>
+                                        {s2s3Categories.map(renderCategoryBox)}
+                                        
                                         <div
-                                            key={category}
                                             onClick={() => {
-                                                setActiveCategory(category);
-                                                setKeywordSearchQuery("");
+                                                const newName = window.prompt("Enter new category name:");
+                                                if (newName && newName.trim()) {
+                                                    api.post(`/campaigns/keywords/campaign-model/${selectedModel.campaign_model_id}/add-category`, { category: newName.trim() })
+                                                        .then(() => fetchModelDetails(selectedModel.campaign_model_id))
+                                                        .catch(err => alert("Failed to add category: " + (err.response?.data?.detail || err.message)));
+                                                }
                                             }}
                                             style={{
-                                                backgroundColor: "white",
-                                                border: isSelected ? `2px solid ${color}` : "1px solid #e5e7eb",
+                                                backgroundColor: "#f9fafb",
+                                                border: "2px dashed #d1d5db",
                                                 borderRadius: "6px",
                                                 padding: "10px 12px",
                                                 cursor: "pointer",
-                                                boxShadow: isSelected ? "0 4px 6px -1px rgba(0, 0, 0, 0.1)" : "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-                                                transition: "all 0.2s ease-in-out",
                                                 display: "flex",
-                                                flexDirection: "column",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                gap: "8px",
+                                                color: "#6b7280",
+                                                fontWeight: "600",
+                                                fontSize: "13px",
+                                                transition: "all 0.2s"
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.borderColor = "#9ca3af";
+                                                e.currentTarget.style.color = "#4b5563";
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.borderColor = "#d1d5db";
+                                                e.currentTarget.style.color = "#6b7280";
                                             }}
                                         >
-                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                                                <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
-                                                    {isSelected ? (
-                                                        <FaCheck style={{ color: color, fontSize: "14px", flexShrink: 0 }} />
-                                                    ) : (
-                                                        <div style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: color, flexShrink: 0 }} />
-                                                    )}
-                                                    <span style={{ fontSize: "13px", fontWeight: "600", color: "#111827", wordBreak: "break-word" }} title={category}>
-                                                        {category}
-                                                    </span>
-                                                </div>
-                                                <span style={{ fontSize: "12px", fontWeight: "500", color: "#6b7280", flexShrink: 0, marginLeft: "8px" }}>
-                                                    ({keywords.length})
-                                                </span>
-                                            </div>
+                                            <FaPlus /> Add Category
                                         </div>
-                                    );
-                                })}
-
-                            <div
-                                onClick={() => {
-                                    const newName = window.prompt("Enter new category name:");
-                                    if (newName && newName.trim()) {
-                                        api.post(`/campaigns/keywords/campaign-model/${selectedModel.campaign_model_id}/add-category`, { category: newName.trim() })
-                                            .then(() => fetchModelDetails(selectedModel.campaign_model_id))
-                                            .catch(err => alert("Failed to add category: " + (err.response?.data?.detail || err.message)));
-                                    }
-                                }}
-                                style={{
-                                    backgroundColor: "#f9fafb",
-                                    border: "2px dashed #d1d5db",
-                                    borderRadius: "6px",
-                                    padding: "10px 12px",
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: "8px",
-                                    color: "#6b7280",
-                                    fontWeight: "600",
-                                    fontSize: "13px",
-                                    transition: "all 0.2s"
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.borderColor = "#9ca3af";
-                                    e.currentTarget.style.color = "#4b5563";
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.borderColor = "#d1d5db";
-                                    e.currentTarget.style.color = "#6b7280";
-                                }}
-                            >
-                                <FaPlus /> Add Category
-                            </div>
-                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
 
 
                         {/* Active Category Detail */}
