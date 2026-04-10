@@ -106,6 +106,17 @@ export default function ClientHeader({
                 Data Export
               </button>
             )}
+
+            {/* Restricted to Admin and Client roles */}
+            {(userRole === "admin" || userRole === "client") && (
+              <button
+                className={`nav-btn ${activePage === "transfer-settings" ? "active" : ""}`}
+                onClick={() => navigateTo("/dashboard", "transfer-settings")}
+              >
+                <i className="bi bi-sliders"></i>
+                Transfer Settings
+              </button>
+            )}
           </div>
 
           <button className="logout-btn" onClick={handleLogout}>

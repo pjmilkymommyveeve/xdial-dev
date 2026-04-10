@@ -11,6 +11,7 @@ import IntegrationForm from './IntegrationForm';
 import RequestCampaign from './RequestCampaign';
 import ManageTeam from './ManageTeam';
 import HistoricalTransferMetrics from './HistoricalTransferMetrics';
+import ClientTransferSettings from './ClientTransferSettings';
 import AdminDataExport from './AdminDataExport';
 import AdminDashboard from './AdminDashboard';
 import AdminLanding from './AdminLanding';

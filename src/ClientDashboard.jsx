@@ -9,6 +9,7 @@ import ClientRecordings from "./Clientrecordings";
 import CategoryTrends from "./CategoryTrends";
 import Loader from "./components/Loader";
 import DateRangePicker from "./components/DateRangePicker";
+import ClientTransferSettings from "./ClientTransferSettings";
 const getUserRole = () => {
   return localStorage.getItem("role") || sessionStorage.getItem("role");
 };
@@ -1570,12 +1571,15 @@ const MedicareDashboard = () => {
               ? "reports"
               : currentView === "recordings"
                 ? "recordings"
-                : "data-export"
+                : currentView === "transfer-settings"
+                  ? "transfer-settings"
+                  : "data-export"
         }
         isAdminView={isAdminView}
       />
       {currentView === "recordings" && <ClientRecordings isEmbedded={true} />}
       <div style={styles.container}>
+        {currentView === "transfer-settings" && <ClientTransferSettings isEmbedded={true} />}
         {/* Statistics View */}
         {/* Statistics View */}
         {currentView === "statistics" && (
