@@ -22,6 +22,8 @@ const ClientRecordings = ({ isEmbedded }) => {
   const [pagination, setPagination] = useState(null);
   const [totalServersQueried, setTotalServersQueried] = useState(0);
   const [serversWithData, setServersWithData] = useState(0);
+  const [durationStats, setDurationStats] = useState([]);
+  const [viewMode, setViewMode] = useState("recordings");
 
   // Audio player states
   const [showPlayer, setShowPlayer] = useState(false);
@@ -154,6 +156,7 @@ const ClientRecordings = ({ isEmbedded }) => {
       setPagination(data.pagination);
       setTotalServersQueried(data.total_servers_queried || 0);
       setServersWithData(data.servers_with_data || 0);
+      setDurationStats(data.duration_stats || []);
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -420,8 +423,50 @@ const ClientRecordings = ({ isEmbedded }) => {
               </div>
             </div>
 
+            {/* View Mode Toggle */}
+            {durationStats && durationStats.length > 0 && (
+              <div style={{ display: 'flex', marginBottom: '1.5rem', gap: '0.5rem' }}>
+                <div style={{ display: 'inline-flex', backgroundColor: '#e5e7eb', borderRadius: '0.5rem', padding: '0.25rem' }}>
+                  <button 
+                    onClick={() => setViewMode('recordings')}
+                    style={{
+                      padding: '0.5rem 1.5rem',
+                      borderRadius: '0.375rem',
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                      border: 'none',
+                      cursor: 'pointer',
+                      backgroundColor: viewMode === 'recordings' ? '#ffffff' : 'transparent',
+                      color: viewMode === 'recordings' ? '#111827' : '#4b5563',
+                      boxShadow: viewMode === 'recordings' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                      transition: 'all 0.2s ease'
+                    }}>
+                    <i className="bi bi-list-ul" style={{ marginRight: "0.5rem" }}></i>
+                    Recordings
+                  </button>
+                  <button 
+                    onClick={() => setViewMode('durations')}
+                    style={{
+                      padding: '0.5rem 1.5rem',
+                      borderRadius: '0.375rem',
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                      border: 'none',
+                      cursor: 'pointer',
+                      backgroundColor: viewMode === 'durations' ? '#ffffff' : 'transparent',
+                      color: viewMode === 'durations' ? '#111827' : '#4b5563',
+                      boxShadow: viewMode === 'durations' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                      transition: 'all 0.2s ease'
+                    }}>
+                    <i className="bi bi-bar-chart" style={{ marginRight: "0.5rem" }}></i>
+                    Durations
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Results Summary */}
-            {!loading && (
+            {!loading && viewMode === 'recordings' && (
               <div style={{ marginBottom: "1rem", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
                   <p style={{ fontSize: "0.875rem", color: "#6b7280" }}>
@@ -436,8 +481,40 @@ const ClientRecordings = ({ isEmbedded }) => {
               </div>
             )}
 
+            {/* Durations Grid */}
+            {!loading && viewMode === 'durations' && (
+              <div className="card" style={{ padding: "1.5rem" }}>
+                <h3 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#111827", marginBottom: "1.25rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <i className="bi bi-clock-history" style={{ color: "#3b82f6" }}></i>
+                  Duration Distribution
+                </h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: "1rem" }}>
+                  {durationStats.map((stat, i) => (
+                    <div key={i} style={{ 
+                        display: "flex", 
+                        flexDirection: "column", 
+                        alignItems: "center", 
+                        backgroundColor: "#f9fafb", 
+                        border: "1px solid #e5e7eb", 
+                        borderRadius: "0.5rem", 
+                        padding: "1.25rem 0.5rem",
+                        boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+                    }}>
+                        <span style={{ fontSize: "1.5rem", color: "#3b82f6", fontWeight: 700, marginBottom: "0.25rem" }}>{stat.count}</span>
+                        <span style={{ fontSize: "0.875rem", color: "#6b7280", fontWeight: 500 }}>{stat.label}</span>
+                    </div>
+                  ))}
+                  {durationStats.length === 0 && (
+                    <div style={{ gridColumn: "1 / -1", textAlign: "center", color: "#6b7280", padding: "3rem" }}>
+                      No duration data available.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Recordings Table */}
-            {!loading && (
+            {!loading && viewMode === 'recordings' && (
               <div className="card">
                 <div style={{ overflowX: "auto" }}>
                   <table>
