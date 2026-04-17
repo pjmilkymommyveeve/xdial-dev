@@ -873,10 +873,6 @@ const MedicareDashboard = () => {
 
   const timeFilteredRecords = getTimeFilteredRecords();
 
-
-
-
-
   // Calculate totals for statistics view
   const qualifiedCount = filteredCallRecords.filter(
     (r) => r.category === "Qualified",
@@ -1666,7 +1662,9 @@ const MedicareDashboard = () => {
                     <i className="bi bi-mic-fill"></i> Voice Stats
                   </h2>
                   <div style={{ fontSize: "14px", color: "#6b7280" }}>
-                    Total Calls: <strong style={{ color: "#111827" }}>{voiceStats.total_calls}</strong> | Transfer Rate: <strong style={{ color: "#4f46e5" }}>{voiceStats.overall_transfer_rate}%</strong> | Null Voice Calls: <strong style={{ color: "#ef4444" }}>{voiceStats.null_voice_calls}</strong>
+                    Total Calls: <strong style={{ color: "#111827" }}>{voiceStats.total_calls?.toLocaleString()}</strong> | 
+                    Transfers: <strong style={{ color: "#4f46e5" }}>{voiceStats.total_transferred?.toLocaleString()} ({voiceStats.overall_transfer_rate}%)</strong> | 
+                    Non-Transfers: <strong style={{ color: "#ef4444" }}>{(voiceStats.total_calls - voiceStats.total_transferred)?.toLocaleString()} ({(100 - parseFloat(voiceStats.overall_transfer_rate)).toFixed(2)}%)</strong>
                   </div>
                 </div>
 
@@ -1681,13 +1679,10 @@ const MedicareDashboard = () => {
                         <tr>
                           <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Voice Name</th>
                           <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Total Calls</th>
+                          <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>A Grade</th>
+                          <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>B Grade</th>
                           <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Transfers</th>
-                          <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Transfer Rate</th>
                           <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Non Transfers</th>
-                          <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Qual. Transfers</th>
-                          <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Qual. Rate</th>
-                          <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Non Qual. Transfers</th>
-                          <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>Non Qual. Rate</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1695,18 +1690,23 @@ const MedicareDashboard = () => {
                           <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
                             <td style={{ padding: "12px", fontSize: "14px", color: "#111827", fontWeight: "600" }}>{voice.voice_name}</td>
                             <td style={{ padding: "12px", fontSize: "14px", color: "#6b7280" }}>{voice.total_calls?.toLocaleString()}</td>
-                            <td style={{ padding: "12px", fontSize: "14px", color: "#10b981" }}>{voice.transferred_calls?.toLocaleString()}</td>
-                            <td style={{ padding: "12px", fontSize: "14px", color: "#4f46e5", fontWeight: "600" }}>{voice.transfer_rate}%</td>
-                            <td style={{ padding: "12px", fontSize: "14px", color: "#6b7280" }}>{voice.non_transferred_calls?.toLocaleString()}</td>
-                            <td style={{ padding: "12px", fontSize: "14px", color: "#059669" }}>{voice.qualified_transferred_calls?.toLocaleString()}</td>
-                            <td style={{ padding: "12px", fontSize: "14px", color: "#4338ca", fontWeight: "600" }}>{voice.qualified_transfer_rate}%</td>
-                            <td style={{ padding: "12px", fontSize: "14px", color: "#dc2626" }}>{voice.non_qualified_transferred_calls?.toLocaleString()}</td>
-                            <td style={{ padding: "12px", fontSize: "14px", color: "#b91c1c", fontWeight: "600" }}>{voice.non_qualified_transfer_rate}%</td>
+                            <td style={{ padding: "12px", fontSize: "14px", color: "#059669" }}>
+                              {voice.a_grade_transferred_calls?.toLocaleString()} <span style={{ fontWeight: "600" }}>({voice.a_grade_transfer_rate}%)</span>
+                            </td>
+                            <td style={{ padding: "12px", fontSize: "14px", color: "#2563eb" }}>
+                              {voice.b_grade_transferred_calls?.toLocaleString()} <span style={{ fontWeight: "600" }}>({voice.b_grade_transfer_rate}%)</span>
+                            </td>
+                            <td style={{ padding: "12px", fontSize: "14px", color: "#4f46e5" }}>
+                              {voice.transferred_calls?.toLocaleString()} <span style={{ fontWeight: "600" }}>({voice.transfer_rate}%)</span>
+                            </td>
+                            <td style={{ padding: "12px", fontSize: "14px", color: "#dc2626" }}>
+                              {voice.non_transferred_calls?.toLocaleString()} <span style={{ fontWeight: "600" }}>({((100 - voice.transfer_rate).toFixed(2))}%)</span>
+                            </td>
                           </tr>
                         ))}
                         {(!voiceStats.voice_stats || voiceStats.voice_stats.length === 0) && (
                           <tr>
-                            <td colSpan="9" style={{ padding: "20px", textAlign: "center", color: "#6b7280", fontSize: "14px" }}>
+                            <td colSpan="6" style={{ padding: "20px", textAlign: "center", color: "#6b7280", fontSize: "14px" }}>
                               No voice stats available for this period.
                             </td>
                           </tr>

@@ -1,4 +1,4 @@
-name: Deply xdial-dev
+name: Deploy xdial-dev
 
 on:
   push:
