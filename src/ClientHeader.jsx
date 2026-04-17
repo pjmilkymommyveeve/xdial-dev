@@ -107,7 +107,8 @@ export default function ClientHeader({
               </button>
             )}
 
-            {/* Restricted to Admin and Client roles */}
+            {/* Restricted to Admin and Client roles - TEMPORARILY HIDDEN */}
+            {/* 
             {(userRole === "admin" || userRole === "client") && (
               <button
                 className={`nav-btn ${activePage === "transfer-settings" ? "active" : ""}`}
@@ -117,6 +118,7 @@ export default function ClientHeader({
                 Transfer Settings
               </button>
             )}
+            */}
           </div>
 
           <button className="logout-btn" onClick={handleLogout}>

@@ -99,82 +99,126 @@ export default function ClientTransferSettings({ isEmbedded }) {
       <style>{`
         * { margin: 0; padding: 0; box-sizing: border-box; }
         .main-content { max-width: 1200px; margin: 0 auto; padding: ${isEmbedded ? '0' : '2rem'}; }
-        .card { background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); padding: 2rem; }
-        .page-title { font-size: 1.875rem; font-weight: 700; color: #111827; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
-        .page-subtitle { color: #6b7280; font-size: 1rem; margin-bottom: 2rem; }
         
-        .presets-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .card { 
+          background: white; 
+          border-radius: 8px; 
+          border: 1px solid #dadce0;
+          padding: 24px; 
+        }
+        
+        .page-title { 
+          font-family: 'Product Sans', 'Roboto', 'Inter', sans-serif;
+          font-size: 22px; 
+          font-weight: 400; 
+          color: #202124; 
+          margin-bottom: 8px; 
+          display: flex; 
+          align-items: center; 
+          gap: 12px; 
+        }
+        
+        .page-title i {
+          color: #1a73e8;
+        }
+
+        .page-subtitle { 
+          color: #5f6368; 
+          font-size: 14px; 
+          margin-bottom: 32px; 
+          font-family: 'Roboto', 'Inter', sans-serif;
+        }
+        
+        .presets-grid { 
+          display: grid; 
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+          gap: 20px; 
+          margin-bottom: 32px; 
+        }
         
         .preset-card {
-          border: 2px solid #e5e7eb;
-          border-radius: 12px;
-          padding: 1.5rem;
+          border: 1px solid #dadce0;
+          border-radius: 8px;
+          padding: 20px;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
           background-color: white;
           position: relative;
           overflow: hidden;
         }
         
-        .preset-card:hover { border-color: #cbd5e1; transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .preset-card.selected { border-color: #3b82f6; background-color: #eff6ff; }
+        .preset-card:hover { 
+          box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
+          border-color: transparent;
+        }
         
-        .preset-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-        .preset-title { font-size: 1.25rem; font-weight: 600; color: #1e293b; }
+        .preset-card.selected { 
+          border: 2px solid #1a73e8; 
+          background-color: rgba(26,115,232,0.04); 
+        }
+        .preset-card.selected:hover {
+          border-color: #1a73e8; 
+        }
+        
+        .preset-header { 
+          display: flex; 
+          justify-content: space-between; 
+          align-items: center; 
+          margin-bottom: 0px; 
+        }
+        
+        .preset-title { 
+          font-size: 16px; 
+          font-weight: 500; 
+          color: #202124; 
+          font-family: 'Google Sans', 'Product Sans', 'Roboto', sans-serif;
+        }
         
         .preset-badge {
-          background-color: #dbeafe;
-          color: #1e40af;
-          padding: 0.25rem 0.75rem;
-          border-radius: 9999px;
-          font-size: 0.75rem;
-          font-weight: 600;
+          background-color: #e8f0fe;
+          color: #1967d2;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          font-weight: 500;
+          letter-spacing: 0.3px;
         }
-        
-        .categories-list { margin-top: 1rem; }
-        .category-item {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          margin-bottom: 0.5rem;
-          color: #475569;
-          font-size: 0.875rem;
-        }
-        
-        .category-item i { color: #10b981; }
         
         .btn-primary {
-          background-color: #3b82f6;
+          background-color: #1a73e8;
           color: white;
-          padding: 0.75rem 1.5rem;
-          border-radius: 8px;
-          font-weight: 600;
-          font-size: 1rem;
+          padding: 0 24px;
+          height: 36px;
+          border-radius: 4px;
+          font-weight: 500;
+          font-size: 14px;
+          font-family: 'Google Sans', 'Roboto', sans-serif;
           border: none;
           cursor: pointer;
-          transition: background-color 0.2s;
+          transition: background-color 0.2s, box-shadow 0.2s;
           display: inline-flex;
           align-items: center;
-          gap: 0.5rem;
+          justify-content: center;
+          gap: 8px;
+          box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
         }
-        .btn-primary:hover { background-color: #2563eb; }
-        .btn-primary:disabled { background-color: #93c5fd; cursor: not-allowed; }
+        .btn-primary:hover { 
+          background-color: #1b66c9; 
+          box-shadow: 0 1px 3px 0 rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15);
+        }
+        .btn-primary:disabled { 
+          background-color: rgba(60,64,67,0.12); 
+          color: rgba(60,64,67,0.38);
+          box-shadow: none;
+          cursor: not-allowed; 
+        }
         
         .actions-bar {
           display: flex;
           justify-content: flex-end;
-          padding-top: 1.5rem;
-          border-top: 1px solid #e5e7eb;
-          margin-top: 2rem;
-        }
-        
-        .success-banner {
-          background-color: #d1fae5;
-          border: 1px solid #34d399;
-          color: #065f46;
-          padding: 1rem;
-          border-radius: 8px;
-          margin-bottom: 1.5rem;
+          padding-top: 24px;
+          border-top: 1px solid #dadce0;
+          margin-top: 32px;
         }
       `}</style>
       
@@ -212,7 +256,7 @@ export default function ClientTransferSettings({ isEmbedded }) {
                 </div>
                 
                 {selectedPreset === preset.key && (
-                  <div style={{ position: "absolute", top: 0, right: 0, borderTopRightRadius: "8px", borderBottomLeftRadius: "8px", backgroundColor: "#3b82f6", color: "white", padding: "0.25rem 0.5rem" }}>
+                  <div style={{ position: "absolute", top: 0, right: 0, borderTopRightRadius: "8px", borderBottomLeftRadius: "8px", backgroundColor: "#1a73e8", color: "white", padding: "0.25rem 0.5rem" }}>
                     <i className="bi bi-check-lg"></i>
                   </div>
                 )}
