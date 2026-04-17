@@ -588,13 +588,13 @@ const AdminVoiceStats = () => {
                         Total Calls
                       </th>
                       <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>
-                        Transferred Calls
+                        A Grade Transfer
                       </th>
                       <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>
-                        Transfer Rate
+                        B Grade Transfer
                       </th>
                       <th style={{ padding: "12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>
-                        Non-Transferred Calls
+                        Transfers
                       </th>
                     </tr>
                   </thead>
@@ -608,13 +608,13 @@ const AdminVoiceStats = () => {
                           {voice.total_calls?.toLocaleString()}
                         </td>
                         <td style={{ padding: "12px", fontSize: "14px", color: "#10b981" }}>
-                          {voice.transferred_calls?.toLocaleString()}
+                          {voice.a_grade_transferred_calls?.toLocaleString()} ({voice.a_grade_transfer_rate}%)
+                        </td>
+                        <td style={{ padding: "12px", fontSize: "14px", color: "#f59e0b" }}>
+                          {voice.b_grade_transferred_calls?.toLocaleString()} ({voice.b_grade_transfer_rate}%)
                         </td>
                         <td style={{ padding: "12px", fontSize: "14px", color: "#4f46e5", fontWeight: "600" }}>
-                          {voice.transfer_rate}%
-                        </td>
-                        <td style={{ padding: "12px", fontSize: "14px", color: "#6b7280" }}>
-                          {voice.non_transferred_calls?.toLocaleString()}
+                          {voice.transferred_calls?.toLocaleString()} ({voice.transfer_rate}%)
                         </td>
                       </tr>
                     ))}
@@ -1039,7 +1039,7 @@ const AdminVoiceStats = () => {
                             {/* Expanded Voice Details */}
                             {expandedCampaignIds.includes(campaign.campaign_id) && campaign.voice_stats && campaign.voice_stats.length > 0 && (
                               <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
-                                <td colSpan="8" style={{ padding: 0, backgroundColor: "#f9fafb" }}>
+                                <td colSpan="9" style={{ padding: 0, backgroundColor: "#f9fafb" }}>
                                   <div style={{ padding: "16px 24px", animation: "slideDown 0.3s ease-out" }}>
                                     <div style={{
                                       fontSize: "13px",
@@ -1076,25 +1076,19 @@ const AdminVoiceStats = () => {
                                             textAlign: "center",
                                             fontWeight: "600",
                                             color: "#4b5563"
-                                          }}>Transferred</th>
+                                          }}>A Grade Transfer</th>
                                           <th style={{
                                             padding: "10px 12px",
                                             textAlign: "center",
                                             fontWeight: "600",
                                             color: "#4b5563"
-                                          }}>Transfer Rate</th>
+                                          }}>B Grade Transfer</th>
                                           <th style={{
                                             padding: "10px 12px",
                                             textAlign: "center",
                                             fontWeight: "600",
                                             color: "#4b5563"
-                                          }}>Qualified</th>
-                                          <th style={{
-                                            padding: "10px 12px",
-                                            textAlign: "center",
-                                            fontWeight: "600",
-                                            color: "#4b5563"
-                                          }}>Non-Qualified</th>
+                                          }}>Transfers</th>
                                         </tr>
                                       </thead>
                                       <tbody>
@@ -1110,23 +1104,14 @@ const AdminVoiceStats = () => {
                                             <td style={{ padding: "10px 12px", textAlign: "center", color: "#6b7280" }}>
                                               {voice.total_calls?.toLocaleString()}
                                             </td>
-                                            <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: "600", color: "#10b981" }}>
-                                              {voice.transferred_calls?.toLocaleString()}
+                                            <td style={{ padding: "10px 12px", textAlign: "center", color: "#059669" }}>
+                                              {voice.a_grade_transferred_calls?.toLocaleString()} ({voice.a_grade_transfer_rate}%)
+                                            </td>
+                                            <td style={{ padding: "10px 12px", textAlign: "center", color: "#d97706" }}>
+                                              {voice.b_grade_transferred_calls?.toLocaleString()} ({voice.b_grade_transfer_rate}%)
                                             </td>
                                             <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: "600", color: "#4f46e5" }}>
-                                              {voice.transfer_rate}%
-                                            </td>
-                                            <td style={{ padding: "10px 12px", textAlign: "center", color: "#059669" }}>
-                                              {voice.qualified_transferred_calls?.toLocaleString()}
-                                              <span style={{ fontSize: "11px", color: "#6b7280", marginLeft: "4px" }}>
-                                                ({voice.qualified_transfer_rate}%)
-                                              </span>
-                                            </td>
-                                            <td style={{ padding: "10px 12px", textAlign: "center", color: "#dc2626" }}>
-                                              {voice.non_qualified_transferred_calls?.toLocaleString()}
-                                              <span style={{ fontSize: "11px", color: "#6b7280", marginLeft: "4px" }}>
-                                                ({voice.non_qualified_transfer_rate}%)
-                                              </span>
+                                              {voice.transferred_calls?.toLocaleString()} ({voice.transfer_rate}%)
                                             </td>
                                           </tr>
                                         ))}
@@ -1168,4 +1153,4 @@ const AdminVoiceStats = () => {
   );
 };
 
-export default AdminVoiceStats; 
+export default AdminVoiceStats;
