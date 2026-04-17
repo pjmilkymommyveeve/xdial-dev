@@ -34,6 +34,8 @@ const AdminDashboard = () => {
   // Dynamic stage filter states
   const [stageFilters, setStageFilters] = useState({});
   const [availableStages, setAvailableStages] = useState([]);
+  // Which stages are collapsed (Set of stage numbers)
+  const [collapsedStages, setCollapsedStages] = useState(new Set());
 
   // Get campaign ID on mount and set today's date
   useEffect(() => {
@@ -242,6 +244,16 @@ const AdminDashboard = () => {
     setDashboardData(data);
   };
 
+  // Toggle collapse for a stage
+  const handleToggleStageCollapse = (stageNum) => {
+    setCollapsedStages(prev => {
+      const s = new Set(prev);
+      if (s.has(stageNum)) s.delete(stageNum);
+      else s.add(stageNum);
+      return s;
+    });
+  };
+
   const getCategoryColor = (category) => {
     if (!dashboardData?.all_categories) return "#6c757d";
     const cat = dashboardData.all_categories.find(
@@ -429,6 +441,11 @@ const AdminDashboard = () => {
   const pageSize = 50;
   const startRecord = (currentPage - 1) * pageSize + 1;
   const endRecord = Math.min(currentPage * pageSize, totalRecords);
+  // Compute total columns for table (used for no-records colspan)
+  const baseCols = 3; // #, Phone No, Voice
+  const stageColsCount = availableStages.reduce((acc, n) => acc + (collapsedStages.has(n) ? 1 : 2), 0);
+  const otherCols = 2; // Timestamp + Action
+  const totalColsCount = baseCols + stageColsCount + otherCols;
 
   if (loading && !dashboardData && fetchTrigger > 0) {
     // Only show full loading if we have NO data yet and are fetching
@@ -833,16 +850,50 @@ const AdminDashboard = () => {
                   <th style={{ textAlign: "left", padding: "12px", fontWeight: 600, minWidth: "80px" }}>
                     Voice
                   </th>
-                  {availableStages.map(stageNum => (
-                    <React.Fragment key={stageNum}>
-                      <th style={{ textAlign: "left", padding: "12px", fontWeight: 600, minWidth: "200px", backgroundColor: stageNum % 2 === 0 ? "#f5f5f5" : "#ffffff" }}>
-                        Stage {stageNum} Transcript
-                      </th>
-                      <th style={{ textAlign: "left", padding: "12px", fontWeight: 600, minWidth: "120px", backgroundColor: stageNum % 2 === 0 ? "#f5f5f5" : "#ffffff" }}>
-                        Stage {stageNum}
-                      </th>
-                    </React.Fragment>
-                  ))}
+                  {availableStages.map(stageNum => {
+                    const collapsed = collapsedStages.has(stageNum);
+                    const bg = stageNum % 2 === 0 ? "#f5f5f5" : "#ffffff";
+
+                    if (collapsed) {
+                      return (
+                        <th
+                          key={stageNum}
+                          style={{ textAlign: "center", padding: "8px", fontWeight: 600, minWidth: "80px", backgroundColor: bg }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                            <span>Stage {stageNum}</span>
+                            <button
+                              onClick={() => handleToggleStageCollapse(stageNum)}
+                              title={`Expand Stage ${stageNum}`}
+                              style={{ background: "transparent", border: "none", cursor: "pointer", color: "#6b7280" }}
+                            >
+                              <i className="bi bi-caret-right-fill" style={{ fontSize: '10px' }}></i>
+                            </button>
+                          </div>
+                        </th>
+                      );
+                    }
+
+                    return (
+                      <React.Fragment key={stageNum}>
+                        <th style={{ textAlign: "left", padding: "12px", fontWeight: 600, minWidth: "200px", backgroundColor: bg }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                            <span>Stage {stageNum} Transcript</span>
+                            <button
+                              onClick={() => handleToggleStageCollapse(stageNum)}
+                              title={`Collapse Stage ${stageNum}`}
+                              style={{ background: "transparent", border: "none", cursor: "pointer", color: "#6b7280" }}
+                            >
+                              <i className="bi bi-caret-left-fill" style={{ fontSize: '10px' }}></i>
+                            </button>
+                          </div>
+                        </th>
+                        <th style={{ textAlign: "left", padding: "12px", fontWeight: 600, minWidth: "120px", backgroundColor: bg }}>
+                          Stage {stageNum}
+                        </th>
+                      </React.Fragment>
+                    );
+                  })}
                   <th
                     style={{ textAlign: "left", padding: "12px", fontWeight: 600, cursor: "pointer", minWidth: "160px", display: 'flex', alignItems: 'center', gap: '4px' }}
                     onClick={() => handleSort("timestamp")}
@@ -860,7 +911,7 @@ const AdminDashboard = () => {
               <tbody style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
                 {!dashboardData?.calls || dashboardData.calls.length === 0 ? (
                   <tr>
-                    <td colSpan={4 + (availableStages.length * 2)} style={{ textAlign: "center", color: "#888", padding: 24 }}>
+                    <td colSpan={totalColsCount} style={{ textAlign: "center", color: "#888", padding: 24 }}>
                       No call records found.
                     </td>
                   </tr>
@@ -878,21 +929,36 @@ const AdminDashboard = () => {
                       </td>
 
                       {availableStages.map(stageNum => {
+                        const collapsed = collapsedStages.has(stageNum);
                         const stageData = record.stages?.find(s => s.stage === stageNum);
+                        const bgClass = stageNum % 2 === 0 ? "stage-bg-even" : "stage-bg-odd";
 
+                        if (collapsed) {
+                          // single narrow cell when collapsed
+                          return (
+                            <td key={stageNum} className={bgClass} style={{ padding: "8px", textAlign: "center", minWidth: "80px" }}>
+                              <button
+                                onClick={() => handleToggleStageCollapse(stageNum)}
+                                title={`Expand Stage ${stageNum}`}
+                                style={{ background: "transparent", border: "none", cursor: "pointer", color: "#6b7280", display: "flex", gap: "6px", alignItems: "center", justifyContent: "center" }}
+                              >
+                                <i className="bi bi-caret-right-fill" style={{ fontSize: '10px' }}></i>
+                                <span style={{ fontWeight: 600, fontSize: 12 }}>
+                                  {stageData?.category || "-"}
+                                </span>
+                              </button>
+                            </td>
+                          );
+                        }
+
+                        // expanded: show transcription + category
                         if (stageData) {
                           return (
                             <React.Fragment key={stageNum}>
-                              <td
-                                className={stageNum % 2 === 0 ? "stage-bg-even" : "stage-bg-odd"}
-                                style={{ padding: "12px", maxWidth: "300px", lineHeight: "1.4" }}
-                              >
+                              <td className={bgClass} style={{ padding: "12px", maxWidth: "300px", lineHeight: "1.4" }}>
                                 {stageData.transcription || "-"}
                               </td>
-                              <td
-                                className={stageNum % 2 === 0 ? "stage-bg-even" : "stage-bg-odd"}
-                                style={{ padding: "12px" }}
-                              >
+                              <td className={bgClass} style={{ padding: "12px" }}>
                                 <span className="category-badge" style={{
                                   padding: "4px 10px",
                                   borderRadius: "4px",
@@ -910,8 +976,8 @@ const AdminDashboard = () => {
                         } else {
                           return (
                             <React.Fragment key={stageNum}>
-                              <td className={stageNum % 2 === 0 ? "stage-bg-even" : "stage-bg-odd"} style={{ padding: "12px", textAlign: "center", color: "#ccc" }}>-</td>
-                              <td className={stageNum % 2 === 0 ? "stage-bg-even" : "stage-bg-odd"} style={{ padding: "12px", textAlign: "center", color: "#ccc" }}>-</td>
+                              <td className={bgClass} style={{ padding: "12px", textAlign: "center", color: "#ccc" }}>-</td>
+                              <td className={bgClass} style={{ padding: "12px", textAlign: "center", color: "#ccc" }}>-</td>
                             </React.Fragment>
                           );
                         }
