@@ -19,6 +19,93 @@ import {
     FaThLarge,
 } from "react-icons/fa";
 
+const ChangesModal = ({ changes, onClose }) => {
+    if (!changes) return null;
+
+    return (
+        <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', zIndex: 1100
+        }}>
+            <div style={{
+                backgroundColor: 'white', padding: '32px', borderRadius: '16px',
+                width: '600px', maxWidth: '90%', maxHeight: '80vh', overflowY: 'auto'
+            }}>
+                <h3 style={{ marginTop: 0, marginBottom: '24px', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FaCheck style={{ color: '#10b981' }} /> Update Summary
+                </h3>
+                
+                {changes.new_categories?.length > 0 && (
+                    <div style={{ marginBottom: '16px' }}>
+                        <h4 style={{ margin: '0 0 8px 0', color: '#059669', fontSize: '15px' }}>New Categories Created ({changes.new_categories.length})</h4>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                            {changes.new_categories.map(c => <span key={c} style={{ backgroundColor: '#ecfdf5', color: '#064e3b', padding: '4px 8px', borderRadius: '4px', fontSize: '13px' }}>{c}</span>)}
+                        </div>
+                    </div>
+                )}
+
+                {changes.updated_categories?.length > 0 && (
+                    <div style={{ marginBottom: '16px' }}>
+                        <h4 style={{ margin: '0 0 8px 0', color: '#4f46e5', fontSize: '15px' }}>Categories Updated ({changes.updated_categories.length})</h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {changes.updated_categories.map(c => (
+                                <div key={c.category} style={{ display: 'flex', justifyContent: 'space-between', backgroundColor: '#e0e7ff', color: '#3730a3', padding: '8px 12px', borderRadius: '4px', fontSize: '13px' }}>
+                                    <strong>{c.category}</strong>
+                                    <span>
+                                        {c.keywords_added ? <span style={{color: '#059669', marginLeft: '8px'}}>+{c.keywords_added} added</span> : null}
+                                        {c.keywords_removed ? <span style={{color: '#e11d48', marginLeft: '8px'}}>-{c.keywords_removed} removed</span> : null}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {changes.deleted_categories?.length > 0 && (
+                    <div style={{ marginBottom: '16px' }}>
+                        <h4 style={{ margin: '0 0 8px 0', color: '#e11d48', fontSize: '15px' }}>Categories Deleted ({changes.deleted_categories.length})</h4>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                            {changes.deleted_categories.map(c => <span key={c} style={{ backgroundColor: '#ffe4e6', color: '#9f1239', padding: '4px 8px', borderRadius: '4px', fontSize: '13px' }}>{c}</span>)}
+                        </div>
+                    </div>
+                )}
+
+                {changes.renamed && (
+                    <div style={{ marginBottom: '16px' }}>
+                        <h4 style={{ margin: '0 0 8px 0', color: '#d97706', fontSize: '15px' }}>Category Renamed</h4>
+                        <div style={{ backgroundColor: '#fef3c7', color: '#92400e', padding: '8px 12px', borderRadius: '4px', fontSize: '13px' }}>
+                            <strong>{changes.renamed.from}</strong> → <strong>{changes.renamed.to}</strong>
+                        </div>
+                    </div>
+                )}
+
+                {changes.unchanged_categories?.length > 0 && (
+                    <div style={{ marginBottom: '16px' }}>
+                        <h4 style={{ margin: '0 0 8px 0', color: '#6b7280', fontSize: '15px' }}>Unchanged Categories ({changes.unchanged_categories.length})</h4>
+                        <div style={{ fontSize: '13px', color: '#9ca3af' }}>
+                            {changes.unchanged_categories.join(', ')}
+                        </div>
+                    </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px' }}>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            padding: '10px 24px', backgroundColor: '#4f46e5',
+                            color: 'white', border: 'none', borderRadius: '8px',
+                            cursor: 'pointer', fontWeight: '600'
+                        }}
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const AdminCampaignKeywords = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
@@ -52,6 +139,7 @@ const AdminCampaignKeywords = () => {
     // New states for single category view
     const [activeCategory, setActiveCategory] = useState(null);
     const [keywordSearchQuery, setKeywordSearchQuery] = useState("");
+    const [actionChanges, setActionChanges] = useState(null);
 
     useEffect(() => {
         fetchCampaigns();
@@ -138,10 +226,11 @@ const AdminCampaignKeywords = () => {
     const handleAddCategory = async () => {
         if (!newCategoryName.trim()) return;
         try {
-            await api.post(
+            const response = await api.post(
                 `/campaigns/keywords/campaign-model/${selectedModel.campaign_model_id}/add-category`,
                 { category: newCategoryName }
             );
+            if (response.data?.changes) setActionChanges(response.data.changes);
             setNewCategoryName("");
             fetchModelDetails(selectedModel.campaign_model_id);
         } catch (err) {
@@ -155,13 +244,14 @@ const AdminCampaignKeywords = () => {
             return;
         }
         try {
-            await api.post(
+            const response = await api.post(
                 `/campaigns/keywords/campaign-model/${selectedModel.campaign_model_id}/rename-category`,
                 {
                     old_name: oldName,
                     new_name: renameCategoryName,
                 }
             );
+            if (response.data?.changes) setActionChanges(response.data.changes);
             setEditingCategory(null);
             fetchModelDetails(selectedModel.campaign_model_id);
         } catch (err) {
@@ -179,10 +269,11 @@ const AdminCampaignKeywords = () => {
         )
             return;
         try {
-            await api.post(
+            const response = await api.post(
                 `/campaigns/keywords/campaign-model/${selectedModel.campaign_model_id}/delete-category`,
                 { category }
             );
+            if (response.data?.changes) setActionChanges(response.data.changes);
             fetchModelDetails(selectedModel.campaign_model_id);
         } catch (err) {
             alert(
@@ -201,13 +292,14 @@ const AdminCampaignKeywords = () => {
             .filter((k) => k);
 
         try {
-            await api.post(
+            const response = await api.post(
                 `/campaigns/keywords/campaign-model/${selectedModel.campaign_model_id}/bulk-add-keywords`,
                 {
                     category,
                     keywords,
                 }
             );
+            if (response.data?.changes) setActionChanges(response.data.changes);
             setBulkKeywordsInput("");
             setAddingKeywordsToCategory(null);
             fetchModelDetails(selectedModel.campaign_model_id);
@@ -220,13 +312,14 @@ const AdminCampaignKeywords = () => {
 
     const handleRemoveKeywords = async (category, keywordsToRemove) => {
         try {
-            await api.post(
+            const response = await api.post(
                 `/campaigns/keywords/campaign-model/${selectedModel.campaign_model_id}/bulk-remove-keywords`,
                 {
                     category,
                     keywords: keywordsToRemove,
                 }
             );
+            if (response.data?.changes) setActionChanges(response.data.changes);
             setSelectedKeywords([]);
             setRemovingKeywordsMode(null);
             fetchModelDetails(selectedModel.campaign_model_id);
@@ -244,7 +337,7 @@ const AdminCampaignKeywords = () => {
 
         try {
             setLoading(true);
-            await api.post(
+            const response = await api.post(
                 `/campaigns/keywords/campaign-model/${selectedModel.campaign_model_id}/upload-csv`,
                 formData,
                 {
@@ -254,8 +347,12 @@ const AdminCampaignKeywords = () => {
                 }
             );
             setShowCsvModal(false);
+            if (response.data?.changes) {
+                setActionChanges(response.data.changes);
+            } else {
+                alert("Keywords replaced successfully from CSV.");
+            }
             fetchModelDetails(selectedModel.campaign_model_id);
-            alert("Keywords replaced successfully from CSV.");
         } catch (err) {
             console.error(err);
             alert("Failed to upload CSV: " + (err.response?.data?.detail || err.message));
@@ -411,9 +508,16 @@ const AdminCampaignKeywords = () => {
                                     >
                                         Model: {selectedModel.model_name}
                                     </span>
-                                    <span style={{ color: "#9ca3af", fontSize: "14px" }}>
-                                        Last Updated: {new Date(selectedModel.last_updated).toLocaleString()}
-                                    </span>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                                        <span style={{ color: "#9ca3af", fontSize: "14px" }}>
+                                            Last Updated: {selectedModel.last_updated ? new Date(selectedModel.last_updated).toLocaleString() : 'Never'}
+                                        </span>
+                                        {selectedModel.last_uploaded_filename && (
+                                            <span style={{ color: "#6b7280", fontSize: "13px", fontWeight: "500", marginTop: "2px" }}>
+                                                Source File: {selectedModel.last_uploaded_filename}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                             <div>
@@ -507,7 +611,10 @@ const AdminCampaignKeywords = () => {
                                                 const newName = window.prompt("Enter new category name:");
                                                 if (newName && newName.trim()) {
                                                     api.post(`/campaigns/keywords/campaign-model/${selectedModel.campaign_model_id}/add-category`, { category: newName.trim() })
-                                                        .then(() => fetchModelDetails(selectedModel.campaign_model_id))
+                                                        .then((res) => {
+                                                            if (res.data?.changes) setActionChanges(res.data.changes);
+                                                            fetchModelDetails(selectedModel.campaign_model_id);
+                                                        })
                                                         .catch(err => alert("Failed to add category: " + (err.response?.data?.detail || err.message)));
                                                 }
                                             }}
@@ -562,8 +669,11 @@ const AdminCampaignKeywords = () => {
                                             onClick={() => {
                                                 const newName = window.prompt("Enter new name for category:", activeCategory);
                                                 if (newName && newName.trim() && newName.trim() !== activeCategory) {
-                                                    api.post(`/campaigns/keywords/campaign-model/${selectedModel.campaign_model_id}/rename-category`, { old_name: activeCategory, new_name: newName.trim() })
-                                                        .then(() => fetchModelDetails(selectedModel.campaign_model_id))
+                                                        api.post(`/campaigns/keywords/campaign-model/${selectedModel.campaign_model_id}/rename-category`, { old_name: activeCategory, new_name: newName.trim() })
+                                                            .then((res) => {
+                                                                if (res.data?.changes) setActionChanges(res.data.changes);
+                                                                fetchModelDetails(selectedModel.campaign_model_id);
+                                                            })
                                                         .catch(err => alert("Failed to rename: " + (err.response?.data?.detail || err.message)));
                                                 }
                                             }}
@@ -638,7 +748,8 @@ const AdminCampaignKeywords = () => {
                                                             if (bulkKeywordsInput.trim()) {
                                                                 const keywords = bulkKeywordsInput.split(",").map(k => k.trim()).filter(k => k);
                                                                 api.post(`/campaigns/keywords/campaign-model/${selectedModel.campaign_model_id}/bulk-add-keywords`, { category: activeCategory, keywords })
-                                                                    .then(() => {
+                                                                    .then((res) => {
+                                                                        if (res.data?.changes) setActionChanges(res.data.changes);
                                                                         setBulkKeywordsInput("");
                                                                         fetchModelDetails(selectedModel.campaign_model_id);
                                                                     })
@@ -653,7 +764,8 @@ const AdminCampaignKeywords = () => {
                                                         if (!bulkKeywordsInput.trim()) return;
                                                         const keywords = bulkKeywordsInput.split(",").map((k) => k.trim()).filter((k) => k);
                                                         api.post(`/campaigns/keywords/campaign-model/${selectedModel.campaign_model_id}/bulk-add-keywords`, { category: activeCategory, keywords })
-                                                            .then(() => {
+                                                            .then((res) => {
+                                                                if (res.data?.changes) setActionChanges(res.data.changes);
                                                                 setBulkKeywordsInput("");
                                                                 fetchModelDetails(selectedModel.campaign_model_id);
                                                             })
@@ -757,6 +869,7 @@ const AdminCampaignKeywords = () => {
                                 </div>
                             </div>
                         )}
+                        <ChangesModal changes={actionChanges} onClose={() => setActionChanges(null)} />
 
                     </div>
                 ) : (
