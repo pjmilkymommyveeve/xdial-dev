@@ -530,11 +530,23 @@ const AdminCampaignKeywords = () => {
                             </div>
                         </div>
 
-                        {/* Category Selection Boxes partitioned into S1 and S2/S3 */}
+                        {/* Category Selection Boxes partitioned into S1, S2, and S3 */}
                         {(() => {
+                            const extractPNumber = (catName) => {
+                                const match = catName.match(/_p(\d+)(?:_|$)/i);
+                                return match ? parseInt(match[1], 10) : 999;
+                            };
+
                             const allCategories = selectedModel.keywords ? Object.entries(selectedModel.keywords) : [];
-                            const s1Categories = allCategories.filter(([cat]) => cat.toLowerCase().includes('_s1'));
-                            const s2s3Categories = allCategories.filter(([cat]) => !cat.toLowerCase().includes('_s1'));
+                            const s1Categories = allCategories
+                                .filter(([cat]) => cat.toLowerCase().includes('_s1'))
+                                .sort((a, b) => extractPNumber(a[0]) - extractPNumber(b[0]));
+                            const s2Categories = allCategories
+                                .filter(([cat]) => cat.toLowerCase().includes('_s2') && !cat.toLowerCase().includes('_s1'))
+                                .sort((a, b) => extractPNumber(a[0]) - extractPNumber(b[0]));
+                            const s3Categories = allCategories
+                                .filter(([cat]) => !cat.toLowerCase().includes('_s1') && !cat.toLowerCase().includes('_s2'))
+                                .sort((a, b) => extractPNumber(a[0]) - extractPNumber(b[0]));
 
                             let colorIndex = 0;
                             const colors = ["#4f46e5", "#0ea5e9", "#f59e0b", "#9f1239", "#dc2626", "#d97706", "#c026d3", "#65a30d"];
@@ -591,20 +603,34 @@ const AdminCampaignKeywords = () => {
                                             gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
                                             gap: "10px",
                                             marginBottom: "16px",
-                                            paddingBottom: s2s3Categories.length > 0 ? "16px" : "0",
-                                            borderBottom: s2s3Categories.length > 0 ? "1px dashed #e5e7eb" : "none"
+                                            paddingBottom: (s2Categories.length > 0 || s3Categories.length > 0) ? "16px" : "0",
+                                            borderBottom: (s2Categories.length > 0 || s3Categories.length > 0) ? "1px dashed #e5e7eb" : "none"
                                         }}>
                                             {s1Categories.map(renderCategoryBox)}
                                         </div>
                                     )}
 
-                                    {/* S2/S3 Categories */}
+                                    {/* S2 Categories */}
+                                    {s2Categories.length > 0 && (
+                                        <div style={{
+                                            display: "grid",
+                                            gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+                                            gap: "10px",
+                                            marginBottom: "16px",
+                                            paddingBottom: s3Categories.length > 0 ? "16px" : "0",
+                                            borderBottom: s3Categories.length > 0 ? "1px dashed #e5e7eb" : "none"
+                                        }}>
+                                            {s2Categories.map(renderCategoryBox)}
+                                        </div>
+                                    )}
+
+                                    {/* S3 Categories & Add Button */}
                                     <div style={{
                                         display: "grid",
                                         gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
                                         gap: "10px",
                                     }}>
-                                        {s2s3Categories.map(renderCategoryBox)}
+                                        {s3Categories.map(renderCategoryBox)}
                                         
                                         <div
                                             onClick={() => {
