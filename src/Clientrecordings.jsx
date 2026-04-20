@@ -488,28 +488,93 @@ const ClientRecordings = ({ isEmbedded }) => {
                   <i className="bi bi-clock-history" style={{ color: "#3b82f6" }}></i>
                   Duration Distribution
                 </h3>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: "1rem" }}>
-                  {durationStats.map((stat, i) => (
-                    <div key={i} style={{ 
-                        display: "flex", 
-                        flexDirection: "column", 
-                        alignItems: "center", 
-                        backgroundColor: "#f9fafb", 
-                        border: "1px solid #e5e7eb", 
-                        borderRadius: "0.5rem", 
-                        padding: "1.25rem 0.5rem",
-                        boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-                    }}>
-                        <span style={{ fontSize: "1.5rem", color: "#3b82f6", fontWeight: 700, marginBottom: "0.25rem" }}>{stat.count}</span>
-                        <span style={{ fontSize: "0.875rem", color: "#6b7280", fontWeight: 500 }}>{stat.label}</span>
+                {(() => {
+                  const formatDualDuration = (label) => {
+                    if (!label) return label;
+                    
+                    const formatSecsToMin = (secStr) => {
+                      const sec = parseInt(secStr, 10);
+                      if (isNaN(sec)) return "";
+                      const mins = Math.floor(sec / 60);
+                      const secs = sec % 60;
+                      if (mins === 0) return `${secs}s`;
+                      return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+                    };
+
+                    const cleanLabel = label.replace(/s/g, ''); 
+                    let minFormat = "";
+
+                    if (cleanLabel.includes('-')) {
+                      const parts = cleanLabel.split('-');
+                      if (parts.length === 2) {
+                        const min1 = formatSecsToMin(parts[0].trim());
+                        const min2 = formatSecsToMin(parts[1].trim());
+                        if (min1 && min2) {
+                          minFormat = `${min1} - ${min2}`;
+                        }
+                      }
+                    } else {
+                      minFormat = formatSecsToMin(cleanLabel.trim());
+                    }
+
+                    const hasMinutes = (secStr) => {
+                      const sec = parseInt(secStr, 10);
+                      return !isNaN(sec) && sec >= 60;
+                    };
+                    
+                    const needsConversion = cleanLabel.includes('-') 
+                        ? (hasMinutes(cleanLabel.split('-')[0]) || hasMinutes(cleanLabel.split('-')[1]))
+                        : hasMinutes(cleanLabel);
+
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: '95px', flexShrink: 0 }}>
+                        <span style={{ fontSize: "0.875rem", color: "#4b5563", fontWeight: 600, lineHeight: 1.2 }}>{label}</span>
+                        {needsConversion && minFormat && (
+                          <span style={{ fontSize: '0.7rem', color: '#6b7280', lineHeight: 1, fontWeight: 500 }}>
+                            {minFormat}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  };
+
+                  const maxCount = Math.max(...durationStats.map(s => s.count), 1);
+                  return (
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "1rem" }}>
+                      {durationStats.map((stat, i) => (
+                        <div key={i} style={{ 
+                            display: "flex", 
+                            alignItems: "center", 
+                            backgroundColor: "#ffffff", 
+                            border: "1px solid #e5e7eb", 
+                            borderRadius: "0.5rem", 
+                            padding: "0.75rem 1rem",
+                            boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+                            transition: "all 0.15s ease",
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
+                        >
+                            {formatDualDuration(stat.label)}
+                            <div style={{ flex: 1, margin: "0 1rem", height: "8px", backgroundColor: "#f3f4f6", borderRadius: "999px", overflow: "hidden" }}>
+                                <div style={{ 
+                                  height: "100%", 
+                                  backgroundColor: "#3b82f6", 
+                                  width: `${(stat.count / maxCount) * 100}%`,
+                                  borderRadius: "999px"
+                                }} />
+                            </div>
+                            <span style={{ fontSize: "0.875rem", color: "#111827", fontWeight: 700, width: "40px", textAlign: "right", flexShrink: 0 }}>{stat.count}</span>
+                        </div>
+                      ))}
+                      {durationStats.length === 0 && (
+                        <div style={{ gridColumn: "1 / -1", textAlign: "center", color: "#6b7280", padding: "3rem" }}>
+                          No duration data available.
+                        </div>
+                      )}
                     </div>
-                  ))}
-                  {durationStats.length === 0 && (
-                    <div style={{ gridColumn: "1 / -1", textAlign: "center", color: "#6b7280", padding: "3rem" }}>
-                      No duration data available.
-                    </div>
-                  )}
-                </div>
+                  );
+                })()}
               </div>
             )}
 
