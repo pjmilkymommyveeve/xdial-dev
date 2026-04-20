@@ -80,14 +80,7 @@ const ChangesModal = ({ changes, onClose }) => {
                     </div>
                 )}
 
-                {changes.unchanged_categories?.length > 0 && (
-                    <div style={{ marginBottom: '16px' }}>
-                        <h4 style={{ margin: '0 0 8px 0', color: '#6b7280', fontSize: '15px' }}>Unchanged Categories ({changes.unchanged_categories.length})</h4>
-                        <div style={{ fontSize: '13px', color: '#9ca3af' }}>
-                            {changes.unchanged_categories.join(', ')}
-                        </div>
-                    </div>
-                )}
+
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px' }}>
                     <button
