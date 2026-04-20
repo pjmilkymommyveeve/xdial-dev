@@ -36,6 +36,7 @@ const AdminDashboard = () => {
   const [availableStages, setAvailableStages] = useState([]);
   // Which stages are collapsed (Set of stage numbers)
   const [collapsedStages, setCollapsedStages] = useState(new Set());
+  const [hideScreenshotColumns, setHideScreenshotColumns] = useState(false);
 
   // Get campaign ID on mount and set today's date
   useEffect(() => {
@@ -442,8 +443,10 @@ const AdminDashboard = () => {
   const startRecord = (currentPage - 1) * pageSize + 1;
   const endRecord = Math.min(currentPage * pageSize, totalRecords);
   // Compute total columns for table (used for no-records colspan)
-  const baseCols = 3; // #, Phone No, Voice
-  const stageColsCount = availableStages.reduce((acc, n) => acc + (collapsedStages.has(n) ? 1 : 2), 0);
+  const baseCols = hideScreenshotColumns ? 2 : 3; // #, Phone No, (Voice)
+  const stageColsCount = availableStages
+    .filter(n => !hideScreenshotColumns || n !== 1)
+    .reduce((acc, n) => acc + (collapsedStages.has(n) ? 1 : 2), 0);
   const otherCols = 2; // Timestamp + Action
   const totalColsCount = baseCols + stageColsCount + otherCols;
 
@@ -835,6 +838,18 @@ const AdminDashboard = () => {
               </div>
               <p style={{ margin: 0, fontSize: "12px", color: "#999" }}>All times are displayed in US Eastern Time (EST/EDT)</p>
             </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <input
+                type="checkbox"
+                id="hideScreenshotCols"
+                checked={hideScreenshotColumns}
+                onChange={(e) => setHideScreenshotColumns(e.target.checked)}
+                style={{ cursor: "pointer", width: "16px", height: "16px", accentColor: "#4f46e5" }}
+              />
+              <label htmlFor="hideScreenshotCols" style={{ fontSize: "13px", color: "#666", cursor: "pointer", userSelect: "none", fontWeight: 500 }}>
+                Hide Voice & Stage 1 (Screenshot)
+              </label>
+            </div>
           </div>
 
           <div className="table-container" style={{ overflowX: "auto" }}>
@@ -847,10 +862,12 @@ const AdminDashboard = () => {
                   <th style={{ textAlign: "left", padding: "12px", fontWeight: 600, minWidth: "130px" }}>
                     Phone No
                   </th>
-                  <th style={{ textAlign: "left", padding: "12px", fontWeight: 600, minWidth: "80px" }}>
-                    Voice
-                  </th>
-                  {availableStages.map(stageNum => {
+                  {!hideScreenshotColumns && (
+                    <th style={{ textAlign: "left", padding: "12px", fontWeight: 600, minWidth: "80px" }}>
+                      Voice
+                    </th>
+                  )}
+                  {availableStages.filter(stageNum => !hideScreenshotColumns || stageNum !== 1).map(stageNum => {
                     const collapsed = collapsedStages.has(stageNum);
                     const bg = stageNum % 2 === 0 ? "#f5f5f5" : "#ffffff";
 
@@ -924,11 +941,13 @@ const AdminDashboard = () => {
                     >
                       <td style={{ padding: "12px", fontWeight: 500 }}>{record.id}</td>
                       <td style={{ padding: "12px" }}>{record.number}</td>
-                      <td style={{ padding: "12px", color: "#666" }}>
-                        {record.stages?.[0]?.voice || "-"}
-                      </td>
+                      {!hideScreenshotColumns && (
+                        <td style={{ padding: "12px", color: "#666" }}>
+                          {record.stages?.[0]?.voice || "-"}
+                        </td>
+                      )}
 
-                      {availableStages.map(stageNum => {
+                      {availableStages.filter(stageNum => !hideScreenshotColumns || stageNum !== 1).map(stageNum => {
                         const collapsed = collapsedStages.has(stageNum);
                         const stageData = record.stages?.find(s => s.stage === stageNum);
                         const bgClass = stageNum % 2 === 0 ? "stage-bg-even" : "stage-bg-odd";
