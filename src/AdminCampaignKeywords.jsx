@@ -22,6 +22,39 @@ import {
 const ChangesModal = ({ changes, onClose }) => {
     if (!changes) return null;
 
+    if (typeof changes === 'string') {
+        return (
+            <div style={{
+                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', zIndex: 1100
+            }}>
+                <div style={{
+                    backgroundColor: 'white', padding: '32px', borderRadius: '16px',
+                    width: '400px', maxWidth: '90%', textAlign: 'center'
+                }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                        <div style={{ backgroundColor: '#ecfdf5', padding: '16px', borderRadius: '50%' }}>
+                            <FaCheck style={{ color: '#10b981', fontSize: '32px' }} />
+                        </div>
+                    </div>
+                    <h3 style={{ margin: '0 0 16px 0', color: '#111827', fontSize: '20px' }}>Success</h3>
+                    <p style={{ color: '#4b5563', margin: '0 0 24px 0', fontSize: '15px' }}>{changes}</p>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            padding: '10px 24px', backgroundColor: '#4f46e5',
+                            color: 'white', border: 'none', borderRadius: '8px',
+                            cursor: 'pointer', fontWeight: '600', width: '100%'
+                        }}
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -49,15 +82,34 @@ const ChangesModal = ({ changes, onClose }) => {
                     <div style={{ marginBottom: '16px' }}>
                         <h4 style={{ margin: '0 0 8px 0', color: '#4f46e5', fontSize: '15px' }}>Categories Updated ({changes.updated_categories.length})</h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {changes.updated_categories.map(c => (
-                                <div key={c.category} style={{ display: 'flex', justifyContent: 'space-between', backgroundColor: '#e0e7ff', color: '#3730a3', padding: '8px 12px', borderRadius: '4px', fontSize: '13px' }}>
-                                    <strong>{c.category}</strong>
-                                    <span>
-                                        {c.keywords_added ? <span style={{color: '#059669', marginLeft: '8px'}}>+{c.keywords_added} added</span> : null}
-                                        {c.keywords_removed ? <span style={{color: '#e11d48', marginLeft: '8px'}}>-{c.keywords_removed} removed</span> : null}
-                                    </span>
-                                </div>
-                            ))}
+                            {changes.updated_categories.map(c => {
+                                const addedList = Array.isArray(c.keywords_added) ? c.keywords_added : (c.added_keywords || c.added_keywords_ui || []);
+                                const removedList = Array.isArray(c.keywords_removed) ? c.keywords_removed : (c.removed_keywords || c.removed_keywords_ui || []);
+                                const addedCount = typeof c.keywords_added === 'number' ? c.keywords_added : addedList.length;
+                                const removedCount = typeof c.keywords_removed === 'number' ? c.keywords_removed : removedList.length;
+
+                                return (
+                                    <div key={c.category} style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#e0e7ff', color: '#3730a3', padding: '10px 12px', borderRadius: '4px', fontSize: '13px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: (addedList.length || removedList.length) ? '6px' : '0' }}>
+                                            <strong>{c.category}</strong>
+                                            <span>
+                                                {addedCount ? <span style={{color: '#059669', marginLeft: '8px'}}>+{addedCount} added</span> : null}
+                                                {removedCount ? <span style={{color: '#e11d48', marginLeft: '8px'}}>-{removedCount} removed</span> : null}
+                                            </span>
+                                        </div>
+                                        {addedList.length > 0 && (
+                                            <div style={{ color: '#059669', fontSize: '12px', marginTop: '2px' }}>
+                                                <strong>Added:</strong> {addedList.join(', ')}
+                                            </div>
+                                        )}
+                                        {removedList.length > 0 && (
+                                            <div style={{ color: '#e11d48', fontSize: '12px', marginTop: '2px' }}>
+                                                <strong>Removed:</strong> {removedList.join(', ')}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 )}
@@ -292,7 +344,9 @@ const AdminCampaignKeywords = () => {
                     keywords,
                 }
             );
-            if (response.data?.changes) setActionChanges(response.data.changes);
+            if (response.data) {
+                setActionChanges(response.data.message || "Keywords updated successfully.");
+            }
             setBulkKeywordsInput("");
             setAddingKeywordsToCategory(null);
             fetchModelDetails(selectedModel.campaign_model_id);
@@ -303,7 +357,7 @@ const AdminCampaignKeywords = () => {
         }
     };
 
-    const handleRemoveKeywords = async (category, keywordsToRemove, showPopup = true) => {
+    const handleRemoveKeywords = async (category, keywordsToRemove) => {
         try {
             const response = await api.post(
                 `/campaigns/keywords/campaign-model/${selectedModel.campaign_model_id}/bulk-remove-keywords`,
@@ -312,7 +366,9 @@ const AdminCampaignKeywords = () => {
                     keywords: keywordsToRemove,
                 }
             );
-            if (response.data?.changes && showPopup) setActionChanges(response.data.changes);
+            if (response.data) {
+                setActionChanges(response.data.message || "Keywords updated successfully.");
+            }
             setSelectedKeywords([]);
             setRemovingKeywordsMode(null);
             fetchModelDetails(selectedModel.campaign_model_id);
@@ -768,7 +824,9 @@ const AdminCampaignKeywords = () => {
                                                                 const keywords = bulkKeywordsInput.split(",").map(k => k.trim()).filter(k => k);
                                                                 api.post(`/campaigns/keywords/campaign-model/${selectedModel.campaign_model_id}/bulk-add-keywords`, { category: activeCategory, keywords })
                                                                     .then((res) => {
-                                                                        if (res.data?.changes) setActionChanges(res.data.changes);
+                                                                        if (res.data) {
+                                                                            setActionChanges(res.data.message || "Keywords updated successfully.");
+                                                                        }
                                                                         setBulkKeywordsInput("");
                                                                         fetchModelDetails(selectedModel.campaign_model_id);
                                                                     })
@@ -784,7 +842,9 @@ const AdminCampaignKeywords = () => {
                                                         const keywords = bulkKeywordsInput.split(",").map((k) => k.trim()).filter((k) => k);
                                                         api.post(`/campaigns/keywords/campaign-model/${selectedModel.campaign_model_id}/bulk-add-keywords`, { category: activeCategory, keywords })
                                                             .then((res) => {
-                                                                if (res.data?.changes) setActionChanges(res.data.changes);
+                                                                if (res.data) {
+                                                                    setActionChanges(res.data.message || "Keywords updated successfully.");
+                                                                }
                                                                 setBulkKeywordsInput("");
                                                                 fetchModelDetails(selectedModel.campaign_model_id);
                                                             })
@@ -815,7 +875,7 @@ const AdminCampaignKeywords = () => {
                                                         <button
                                                             onClick={() => {
                                                                 if (window.confirm(`Remove keyword "${keyword}"?`)) {
-                                                                    handleRemoveKeywords(activeCategory, [keyword], false);
+                                                                    handleRemoveKeywords(activeCategory, [keyword]);
                                                                 }
                                                             }}
                                                             style={{ color: "#ef4444", background: "none", border: "none", fontWeight: "600", fontSize: "14px", cursor: "pointer" }}
