@@ -558,6 +558,27 @@ const AdminDashboard = () => {
 
 
             <button
+              onClick={() => window.open(`/admin-stage-data?campaign_id=${campaignId}`, "_blank")}
+              style={{
+                padding: "10px 20px",
+                backgroundColor: "#f59e0b",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "14px",
+                fontWeight: "600",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                transition: "background-color 0.2s"
+              }}
+            >
+              <i className="bi bi-bar-chart-steps"></i>
+              Stage Data
+            </button>
+
+            <button
               onClick={() => window.open(`/dashboard?campaign_id=${campaignId}&view=dashboard&admin_view=true`, "_blank")}
               style={{
                 padding: "10px 20px",

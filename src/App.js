@@ -23,6 +23,7 @@ import AdminCampaignKeywords from './AdminCampaignKeywords';
 import AdminReporting from './AdminReporting';
 import AdminScripts from './AdminScripts';
 import AdminKeywordTester from './AdminKeywordTester';
+import AdminStageData from './AdminStageData';
 
 import AdminLayout from './components/AdminLayout';
 
@@ -55,6 +56,7 @@ function App() {
                     <Route path="/admin-reporting" element={<AdminReporting />} />
                     <Route path="/admin-scripts" element={<AdminScripts />} />
                     <Route path="/admin-keyword-tester" element={<AdminKeywordTester />} />
+                    <Route path="/admin-stage-data" element={<AdminStageData />} />
                 </Route>
 
                 {/* Integration Form Route (No Sidebar) */}
