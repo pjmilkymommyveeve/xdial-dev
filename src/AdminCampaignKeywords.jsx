@@ -303,7 +303,7 @@ const AdminCampaignKeywords = () => {
         }
     };
 
-    const handleRemoveKeywords = async (category, keywordsToRemove) => {
+    const handleRemoveKeywords = async (category, keywordsToRemove, showPopup = true) => {
         try {
             const response = await api.post(
                 `/campaigns/keywords/campaign-model/${selectedModel.campaign_model_id}/bulk-remove-keywords`,
@@ -312,7 +312,7 @@ const AdminCampaignKeywords = () => {
                     keywords: keywordsToRemove,
                 }
             );
-            if (response.data?.changes) setActionChanges(response.data.changes);
+            if (response.data?.changes && showPopup) setActionChanges(response.data.changes);
             setSelectedKeywords([]);
             setRemovingKeywordsMode(null);
             fetchModelDetails(selectedModel.campaign_model_id);
@@ -815,7 +815,7 @@ const AdminCampaignKeywords = () => {
                                                         <button
                                                             onClick={() => {
                                                                 if (window.confirm(`Remove keyword "${keyword}"?`)) {
-                                                                    handleRemoveKeywords(activeCategory, [keyword]);
+                                                                    handleRemoveKeywords(activeCategory, [keyword], false);
                                                                 }
                                                             }}
                                                             style={{ color: "#ef4444", background: "none", border: "none", fontWeight: "600", fontSize: "14px", cursor: "pointer" }}
