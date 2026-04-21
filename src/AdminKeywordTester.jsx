@@ -55,30 +55,28 @@ const AdminKeywordTester = () => {
         const startTime = Date.now();
 
         try {
-            const formData = new FormData();
-            formData.append('campaign', campaign);
-            formData.append('speech_text', speechText);
-            formData.append('stage', stage);
-            formData.append('version', 'v2');
+            const payload = {
+                campaign_id: Number(campaign),
+                stage: stage,
+                speech_text: speechText,
+            };
 
-            // Use the absolute URL as requested
-            const response = await fetch('https://keywordmatchercore.xdialnetworks.com/api/test-matcher', {
-                method: 'POST',
-                body: formData
-            });
-
-            const data = await response.json();
+            const response = await api.post('/campaigns/keywords/test-matcher', payload);
+            const data = response.data;
             const timeTaken = Date.now() - startTime;
             setResponseTime(timeTaken);
 
-            if (response.ok) {
-                setTestResult(data);
+            // Extract result string from response body
+            const resultValue = data?.response?.result ?? data?.result ?? null;
+            if (resultValue !== null && resultValue !== undefined) {
+                setTestResult(String(resultValue));
             } else {
-                setErrorMsg(data.error || 'Unknown error occurred');
+                setErrorMsg('No result returned from matcher');
             }
         } catch (error) {
             setResponseTime(null);
-            setErrorMsg(`Network error: ${error.message}`);
+            const serverMsg = error?.response?.data?.error || error?.message;
+            setErrorMsg(`Network error: ${serverMsg}`);
         } finally {
             setLoading(false);
         }
@@ -94,8 +92,9 @@ const AdminKeywordTester = () => {
     // Helper functions to mirror JS result logic in the example
     const getResultDetails = () => {
         if (!testResult) return null;
-        
-        let value = testResult.result || 'N/A';
+
+        // testResult may be a plain string (we store only result)
+        const value = (typeof testResult === 'string') ? testResult : (testResult?.result || 'N/A');
         let title = '';
         let titleColor = '';
         let valueColor = '';
@@ -104,7 +103,7 @@ const AdminKeywordTester = () => {
             valueColor = '#4b5563'; // gray-600
             title = 'No Match Found';
             titleColor = '#4b5563';
-        } else if (value.toLowerCase().includes('dnq') || value.toLowerCase().includes('not') || value.toLowerCase().includes('no')) {
+        } else if (typeof value === 'string' && (value.toLowerCase().includes('dnq') || value.toLowerCase().includes('not') || value.toLowerCase().includes('no'))) {
             valueColor = '#dc2626'; // red-600
             title = 'Match Found: ' + value;
             titleColor = '#dc2626';
@@ -230,11 +229,12 @@ const AdminKeywordTester = () => {
                             >
                                 <option value="">Select a campaign...</option>
                                 {campaigns.map((c, i) => (
-                                    <option key={i} value={c.model_name || c.campaign_name}>
+                                    <option key={i} value={c.campaign_model_id}>
                                         {c.campaign_name} {c.model_name ? `(${c.model_name})` : ''}
                                     </option>
                                 ))}
                             </select>
+
                         </div>
 
                         {/* Stage V2 */}
@@ -336,73 +336,13 @@ const AdminKeywordTester = () => {
 
                 {/* API Result */}
                 {testResult && !loading && details && (
-                    <>
-                        <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', padding: '24px', marginBottom: '24px' }}>
-                            <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: details.titleColor, margin: '0 0 16px 0' }}>{details.title}</h3>
-                            
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                <div style={{ backgroundColor: '#f9fafb', borderRadius: '8px', padding: '16px' }}>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '16px', alignItems: 'center' }}>
-                                        <div>
-                                            <p style={{ fontSize: '12px', fontWeight: '500', color: '#4b5563', margin: '0 0 4px 0' }}>Result</p>
-                                            <p style={{ fontSize: '18px', fontWeight: 'bold', color: details.valueColor, margin: 0 }}>{details.value}</p>
-                                        </div>
-                                        <div>
-                                            <p style={{ fontSize: '12px', fontWeight: '500', color: '#4b5563', margin: '0 0 4px 0' }}>Stage</p>
-                                            <p style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>{testResult.stage || stage}</p>
-                                        </div>
-                                        <div>
-                                            <p style={{ fontSize: '12px', fontWeight: '500', color: '#4b5563', margin: '0 0 4px 0' }}>Campaign</p>
-                                            <p style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: 0, wordBreak: 'break-all' }}>{testResult.campaign || campaign}</p>
-                                        </div>
-                                    </div>
-                                    {testResult.matched_keyword && testResult.category && (
-                                        <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '12px', marginTop: '12px' }}>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px' }}>
-                                                <div>
-                                                    <p style={{ fontSize: '12px', fontWeight: '500', color: '#4b5563', margin: '0 0 4px 0' }}>Matched Keyword</p>
-                                                    <p style={{ fontSize: '18px', fontWeight: '600', color: '#16a34a', margin: 0 }}>{testResult.matched_keyword}</p>
-                                                </div>
-                                                <div>
-                                                    <p style={{ fontSize: '12px', fontWeight: '500', color: '#4b5563', margin: '0 0 4px 0' }}>Category</p>
-                                                    <p style={{ fontSize: '18px', fontWeight: '600', color: '#16a34a', margin: 0 }}>{testResult.category}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
+                    <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', padding: '24px', marginBottom: '24px' }}>
+                        <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: details.titleColor, margin: '0 0 12px 0' }}>{details.title}</h3>
+                        <div style={{ backgroundColor: '#f9fafb', borderRadius: '8px', padding: '16px' }}>
+                            <p style={{ fontSize: '18px', fontWeight: '600', color: details.valueColor, margin: 0 }}>{details.value}</p>
                         </div>
-
-                        {/* Test Details */}
-                        <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', padding: '24px', marginBottom: '24px' }}>
-                            <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#1f2937', margin: '0 0 16px 0' }}>Test Details</h3>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '16px' }}>
-                                    <div style={{ backgroundColor: '#f9fafb', borderRadius: '8px', padding: '12px' }}>
-                                        <p style={{ fontSize: '12px', fontWeight: '500', color: '#4b5563', margin: '0 0 4px 0' }}>Version</p>
-                                        <p style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937', margin: 0 }}>V2</p>
-                                    </div>
-                                    <div style={{ backgroundColor: '#f9fafb', borderRadius: '8px', padding: '12px' }}>
-                                        <p style={{ fontSize: '12px', fontWeight: '500', color: '#4b5563', margin: '0 0 4px 0' }}>Campaign</p>
-                                        <p style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937', margin: 0, wordBreak: 'break-all' }}>{testResult.campaign || campaign}</p>
-                                    </div>
-                                    <div style={{ backgroundColor: '#f9fafb', borderRadius: '8px', padding: '12px' }}>
-                                        <p style={{ fontSize: '12px', fontWeight: '500', color: '#4b5563', margin: '0 0 4px 0' }}>Stage</p>
-                                        <p style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937', margin: 0 }}>{testResult.stage || stage}</p>
-                                    </div>
-                                    <div style={{ backgroundColor: '#f9fafb', borderRadius: '8px', padding: '12px' }}>
-                                        <p style={{ fontSize: '12px', fontWeight: '500', color: '#4b5563', margin: '0 0 4px 0' }}>Response Time</p>
-                                        <p style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937', margin: 0 }}>{responseTime || 'N/A'}ms</p>
-                                    </div>
-                                </div>
-                                <div style={{ backgroundColor: '#f9fafb', borderRadius: '8px', padding: '12px' }}>
-                                    <p style={{ fontSize: '12px', fontWeight: '500', color: '#4b5563', margin: '0 0 4px 0' }}>Speech Text</p>
-                                    <p style={{ fontSize: '14px', color: '#1f2937', fontFamily: 'monospace', wordBreak: 'break-all', margin: 0 }}>{speechText}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </>
+                        <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '12px' }}>Response Time: {responseTime || 'N/A'}ms</p>
+                    </div>
                 )}
 
             </div>
