@@ -301,10 +301,13 @@ const AdminVoiceManagement = () => {
             console.log("Campaign Model Voices Detailed Response:", voicesResponse.data);
             setCampaignModelVoicesData(voicesResponse.data);
 
-            // Fetch assigned categories
+            // Fetch assigned categories — keep them in insertion order (by assignment id)
             const categoriesResponse = await api.get(`/voice-categories/campaign-models/${campaignModelId}/categories`);
             console.log("Campaign Model Categories Response:", categoriesResponse.data);
-            setAssignedCategories(categoriesResponse.data || []);
+            const cats = categoriesResponse.data || [];
+            // Sort by assignment id ascending to preserve the order the user assigned them
+            cats.sort((a, b) => a.id - b.id);
+            setAssignedCategories(cats);
         } catch (err) {
             console.error("Error fetching CMV detailed or categories:", err);
             setCampaignModelVoicesData(null);
@@ -585,6 +588,25 @@ const AdminVoiceManagement = () => {
         localStorage.clear();
         sessionStorage.clear();
         navigate("/");
+    };
+
+    // ==================== CATEGORY REORDER FUNCTIONS ====================
+    const handleMoveCategoryUp = (index) => {
+        if (index === 0) return;
+        setAssignedCategories(prev => {
+            const updated = [...prev];
+            [updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
+            return updated;
+        });
+    };
+
+    const handleMoveCategoryDown = (index) => {
+        setAssignedCategories(prev => {
+            if (index >= prev.length - 1) return prev;
+            const updated = [...prev];
+            [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
+            return updated;
+        });
     };
 
     // Get assigned voices from the detailed response
@@ -1001,7 +1023,7 @@ const AdminVoiceManagement = () => {
                                                         No categories assigned to this model. Add a category above to start managing recordings.
                                                     </div>
                                                 ) : (
-                                                    assignedCategories.map((category) => (
+                                                    assignedCategories.map((category, catIndex) => (
                                                         <div key={category.id} style={{ display: "grid", gridTemplateColumns: `160px repeat(${assignedVoices.length}, 1fr)`, borderBottom: "1px solid #e5e7eb" }}>
                                                             {/* Category Label */}
                                                             <div style={{ padding: "16px 20px", backgroundColor: "#f9fafb", borderRight: "1px solid #e5e7eb", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
@@ -1009,16 +1031,42 @@ const AdminVoiceManagement = () => {
                                                                     <div style={{ fontWeight: "600", color: "#111827", fontSize: "13px", marginBottom: "2px" }}>{category.voice_category_name}</div>
                                                                     <div style={{ fontSize: "10px", color: "#6b7280" }}>ID: {category.voice_category_id}</div>
                                                                 </div>
-                                                                <button
-                                                                    onClick={() => handleRemoveCategoryFromModel(category.id)}
-                                                                    style={{
-                                                                        marginTop: "10px", backgroundColor: "transparent", color: "#ef4444",
-                                                                        border: "1px solid #ef4444", borderRadius: "4px", padding: "4px 8px",
-                                                                        fontSize: "11px", cursor: "pointer", alignSelf: "start", fontWeight: "600"
-                                                                    }}
-                                                                >
-                                                                    Remove
-                                                                </button>
+                                                                <div style={{ display: "flex", gap: "4px", marginTop: "8px", alignItems: "center" }}>
+                                                                    <button
+                                                                        onClick={() => handleMoveCategoryUp(catIndex)}
+                                                                        disabled={catIndex === 0}
+                                                                        title="Move up"
+                                                                        style={{
+                                                                            padding: "2px 6px", backgroundColor: catIndex === 0 ? "#e5e7eb" : "#eff6ff",
+                                                                            color: catIndex === 0 ? "#9ca3af" : "#3b82f6", border: "1px solid " + (catIndex === 0 ? "#d1d5db" : "#93c5fd"),
+                                                                            borderRadius: "4px", fontSize: "12px", cursor: catIndex === 0 ? "default" : "pointer",
+                                                                            fontWeight: "700", lineHeight: "1"
+                                                                        }}
+                                                                    >▲</button>
+                                                                    <button
+                                                                        onClick={() => handleMoveCategoryDown(catIndex)}
+                                                                        disabled={catIndex === assignedCategories.length - 1}
+                                                                        title="Move down"
+                                                                        style={{
+                                                                            padding: "2px 6px", backgroundColor: catIndex === assignedCategories.length - 1 ? "#e5e7eb" : "#eff6ff",
+                                                                            color: catIndex === assignedCategories.length - 1 ? "#9ca3af" : "#3b82f6",
+                                                                            border: "1px solid " + (catIndex === assignedCategories.length - 1 ? "#d1d5db" : "#93c5fd"),
+                                                                            borderRadius: "4px", fontSize: "12px",
+                                                                            cursor: catIndex === assignedCategories.length - 1 ? "default" : "pointer",
+                                                                            fontWeight: "700", lineHeight: "1"
+                                                                        }}
+                                                                    >▼</button>
+                                                                    <button
+                                                                        onClick={() => handleRemoveCategoryFromModel(category.id)}
+                                                                        style={{
+                                                                            marginLeft: "4px", backgroundColor: "transparent", color: "#ef4444",
+                                                                            border: "1px solid #ef4444", borderRadius: "4px", padding: "4px 8px",
+                                                                            fontSize: "11px", cursor: "pointer", fontWeight: "600"
+                                                                        }}
+                                                                    >
+                                                                        Remove
+                                                                    </button>
+                                                                </div>
                                                             </div>
 
                                                             {/* Voice Cells */}
