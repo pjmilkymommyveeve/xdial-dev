@@ -129,10 +129,10 @@ export default function ClientTransferSettings({ isEmbedded }) {
           font-family: 'Roboto', 'Inter', sans-serif;
         }
         
-        .presets-grid { 
-          display: grid; 
-          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
-          gap: 20px; 
+        .presets-list { 
+          display: flex; 
+          flex-direction: column;
+          gap: 12px; 
           margin-bottom: 32px; 
         }
         
@@ -241,7 +241,7 @@ export default function ClientTransferSettings({ isEmbedded }) {
           
           {error && <div style={{ color: "#ef4444", marginBottom: "1rem" }}>{error}</div>}
           
-          <div className="presets-grid">
+          <div className="presets-list">
             {settingsData?.presets?.map((preset) => (
               <div 
                 key={preset.key} 
