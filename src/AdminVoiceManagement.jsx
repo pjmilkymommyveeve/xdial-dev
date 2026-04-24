@@ -65,6 +65,11 @@ const AdminVoiceManagement = () => {
     const [selectedCategoryToAssign, setSelectedCategoryToAssign] = useState("");
     const [isAssigningCategory, setIsAssigningCategory] = useState(false);
 
+    // Staged files for batch upload
+    const [stagedFiles, setStagedFiles] = useState([]); // [{ id, file, cmvId, cmvcId, voiceName, categoryName }]
+    const [isBulkUploading, setIsBulkUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(null); // { current, total }
+
     // Fetch initial data
     useEffect(() => {
         fetchInitialData();
@@ -473,41 +478,84 @@ const AdminVoiceManagement = () => {
         }
     };
 
-    const handleUploadRecording = async (cmvId, cmvcId, file) => {
-        if (!file) return;
-        setUploadingCell({ cmvId, cmvcId });
+    // Stage files locally instead of uploading immediately
+    const handleStageFiles = (cmvId, cmvcId, files, voiceName, categoryName) => {
+        if (!files || files.length === 0) return;
+        const newStaged = Array.from(files).map(file => ({
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            file,
+            cmvId,
+            cmvcId,
+            voiceName: voiceName || `Voice ${cmvId}`,
+            categoryName: categoryName || `Category ${cmvcId}`,
+        }));
+        setStagedFiles(prev => [...prev, ...newStaged]);
+        setCmvActionMessage({ type: "success", text: `${newStaged.length} file(s) staged. Click "Upload All" to deploy to servers.` });
+    };
+
+    const handleRemoveStagedFile = (stagedId) => {
+        setStagedFiles(prev => prev.filter(f => f.id !== stagedId));
+    };
+
+    const handleClearAllStaged = () => {
+        if (stagedFiles.length === 0) return;
+        if (!window.confirm(`Clear all ${stagedFiles.length} staged file(s)?`)) return;
+        setStagedFiles([]);
+    };
+
+    const getStagedFilesForCell = (cmvId, cmvcId) => {
+        return stagedFiles.filter(f => f.cmvId === cmvId && f.cmvcId === cmvcId);
+    };
+
+    // Batch upload all staged files in one API call
+    const handleBulkUpload = async () => {
+        if (stagedFiles.length === 0) return;
+        setIsBulkUploading(true);
+        setUploadProgress({ current: 0, total: stagedFiles.length });
+        setCmvActionMessage({ type: "info", text: `Uploading ${stagedFiles.length} file(s) to all servers...` });
+
         const formData = new FormData();
-        formData.append("files", file);
+        const mappings = [];
 
-        // New API format: mappings as JSON string
-        const mappings = [{
-            filename: file.name,
-            campaign_model_voice_id: cmvId,
-            campaign_model_voice_category_id: cmvcId
-        }];
+        stagedFiles.forEach((staged) => {
+            formData.append("files", staged.file);
+            mappings.push({
+                filename: staged.file.name,
+                campaign_model_voice_id: staged.cmvId,
+                campaign_model_voice_category_id: staged.cmvcId
+            });
+        });
+
         formData.append("mappings", JSON.stringify(mappings));
-
-        console.log("Upload Recording - Mappings:", mappings);
+        console.log("Bulk Upload - Mappings:", mappings);
 
         try {
             const response = await api.post("/voice-recordings/upload", formData, {
                 headers: { "Content-Type": "multipart/form-data" }
             });
-            console.log("Upload Recording Response:", response.data);
+            console.log("Bulk Upload Response:", response.data);
 
-            // Show specific message as requested: DB saved -> Deploying
-            setCmvActionMessage({
-                type: "success",
-                text: "Recording saved to database. Deploying to servers in background..."
-            });
+            const uploaded = response.data.uploaded_count || stagedFiles.length;
+            const failed = response.data.failed_count || 0;
+            const deployResult = response.data.deployment_result;
 
-            // Refresh recordings for all voices
+            let msg = `✅ ${uploaded} recording(s) saved to database.`;
+            if (failed > 0) msg += ` ⚠️ ${failed} failed.`;
+            if (deployResult) {
+                msg += ` Deployed to ${deployResult.success_count || 0}/${(deployResult.success_count || 0) + (deployResult.fail_count || 0)} servers.`;
+            } else {
+                msg += ` Deploying to servers in background...`;
+            }
+
+            setCmvActionMessage({ type: failed > 0 ? "error" : "success", text: msg });
+            setStagedFiles([]);
             await fetchAllRecordingsForVoices();
         } catch (err) {
-            console.error("Error uploading recording:", err);
-            setCmvActionMessage({ type: "error", text: formatErrorMessage(err.response?.data?.detail) || "Upload failed" });
+            console.error("Error bulk uploading:", err);
+            setCmvActionMessage({ type: "error", text: formatErrorMessage(err.response?.data?.detail) || "Bulk upload failed" });
         } finally {
-            setUploadingCell(null);
+            setIsBulkUploading(false);
+            setUploadProgress(null);
         }
     };
 
@@ -938,9 +986,42 @@ const AdminVoiceManagement = () => {
                                 <>
                                     {/* Manage Categories Section */}
                                     <div style={{ padding: "20px", borderBottom: "1px solid #334155" }}>
-                                        <h3 style={{ fontSize: "16px", fontWeight: "600", color: "#111827", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                                            <span style={{ fontSize: "18px" }}>🏷️</span> Manage Categories for {selectedCampaignModel.campaign?.name} / {selectedCampaignModel.model?.name}
-                                        </h3>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
+                                            <h3 style={{ fontSize: "16px", fontWeight: "600", color: "#111827", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                                                <span style={{ fontSize: "18px" }}>🏷️</span> Manage Categories for {selectedCampaignModel.campaign?.name} / {selectedCampaignModel.model?.name}
+                                            </h3>
+                                            {stagedFiles.length > 0 && (
+                                                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                                    <span style={{ fontSize: "13px", color: "#1d4ed8", fontWeight: "600", backgroundColor: "#dbeafe", padding: "4px 10px", borderRadius: "12px" }}>
+                                                        📎 {stagedFiles.length} file{stagedFiles.length !== 1 ? 's' : ''} staged
+                                                    </span>
+                                                    <button
+                                                        onClick={handleClearAllStaged}
+                                                        style={{
+                                                            padding: "8px 14px", backgroundColor: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5",
+                                                            borderRadius: "6px", fontSize: "12px", cursor: "pointer", fontWeight: "600"
+                                                        }}
+                                                    >Clear All</button>
+                                                    <button
+                                                        onClick={handleBulkUpload}
+                                                        disabled={isBulkUploading}
+                                                        style={{
+                                                            padding: "10px 24px", backgroundColor: isBulkUploading ? "#9ca3af" : "#16a34a", color: "white",
+                                                            border: "none", borderRadius: "8px", fontSize: "14px", cursor: isBulkUploading ? "not-allowed" : "pointer",
+                                                            fontWeight: "700", display: "flex", alignItems: "center", gap: "8px",
+                                                            boxShadow: isBulkUploading ? "none" : "0 4px 14px rgba(22,163,74,0.4)",
+                                                            animation: isBulkUploading ? "none" : "uploadPulse 2s infinite"
+                                                        }}
+                                                    >
+                                                        {isBulkUploading ? (
+                                                            <><span style={{ animation: "pulse 1s infinite" }}>⏳</span> Uploading to servers...</>
+                                                        ) : (
+                                                            <>🚀 Upload All ({stagedFiles.length}) to Servers</>
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
 
                                         <div style={{ display: "flex", gap: "10px", alignItems: "flex-end", marginBottom: "20px", padding: "16px", backgroundColor: "#f9fafb", borderRadius: "8px", border: "1px solid #e5e7eb" }}>
                                             <div style={{ flex: 1 }}>
@@ -1072,7 +1153,7 @@ const AdminVoiceManagement = () => {
                                                             {/* Voice Cells */}
                                                             {assignedVoices.map((cmv) => {
                                                                 const cellRecordings = getRecordingsForCell(cmv, category);
-                                                                const isUploading = uploadingCell?.cmvId === cmv.id && uploadingCell?.cmvcId === category.id;
+                                                                const cellStaged = getStagedFilesForCell(cmv.id, category.id);
                                                                 const cellKey = `${cmv.id}-${category.id}`;
 
                                                                 return (
@@ -1089,6 +1170,7 @@ const AdminVoiceManagement = () => {
                                                                             </div>
                                                                         ) : (
                                                                             <>
+                                                                                {/* Existing uploaded recordings */}
                                                                                 {cellRecordings.length > 0 && (
                                                                                     <div style={{ marginBottom: "8px" }}>
                                                                                         {cellRecordings.map((rec) => (
@@ -1108,46 +1190,57 @@ const AdminVoiceManagement = () => {
                                                                                     </div>
                                                                                 )}
 
-                                                                                {isUploading ? (
-                                                                                    <div style={{ padding: "16px", textAlign: "center", color: "#4f46e5", fontSize: "12px", fontWeight: "600" }}>
-                                                                                        <span style={{ animation: "pulse 1s infinite" }}>⏳ Uploading...</span>
+                                                                                {/* Staged files (pending upload) */}
+                                                                                {cellStaged.length > 0 && (
+                                                                                    <div style={{ marginBottom: "8px" }}>
+                                                                                        {cellStaged.map((staged) => (
+                                                                                            <div key={staged.id} style={{
+                                                                                                display: "flex", alignItems: "center", justifyContent: "space-between",
+                                                                                                padding: "6px 8px", backgroundColor: "#eff6ff", border: "1px dashed #93c5fd", borderRadius: "6px", marginBottom: "4px"
+                                                                                            }}>
+                                                                                                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                                                                                    <span style={{ color: "#3b82f6", fontSize: "12px" }}>📎</span>
+                                                                                                    <span style={{ fontSize: "11px", color: "#1d4ed8", maxWidth: "110px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: "500" }}>
+                                                                                                        {staged.file.name}
+                                                                                                    </span>
+                                                                                                    <span style={{ fontSize: "9px", color: "#60a5fa", backgroundColor: "#dbeafe", padding: "1px 4px", borderRadius: "3px" }}>staged</span>
+                                                                                                </div>
+                                                                                                <button onClick={() => handleRemoveStagedFile(staged.id)} style={{ background: "none", border: "none", color: "#3b82f6", cursor: "pointer", fontSize: "14px", padding: "0 2px", fontWeight: "700" }}>✕</button>
+                                                                                            </div>
+                                                                                        ))}
                                                                                     </div>
-                                                                                ) : (
-                                                                                    <label style={{
-                                                                                        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                                                                                        padding: "12px", border: "2px dashed #d1d5db", borderRadius: "8px", cursor: "pointer",
-                                                                                        minHeight: cellRecordings.length > 0 ? "50px" : "60px", textAlign: "center",
-                                                                                        backgroundColor: "#f9fafb"
-                                                                                    }}>
-                                                                                        <input
-                                                                                            type="file"
-                                                                                            accept=".mp3,audio/*"
-                                                                                            style={{ display: "none" }}
-                                                                                            onChange={(e) => {
-                                                                                                if (e.target.files[0]) handleUploadRecording(cmv.id, category.id, e.target.files[0]);
-                                                                                                e.target.value = null;
-                                                                                            }}
-                                                                                        />
-                                                                                        <span style={{ fontSize: "20px", color: "#9ca3af", marginBottom: "4px" }}>☁️</span>
-                                                                                        <span style={{ fontSize: "12px", color: "#6b7280", fontWeight: "500" }}>Drag MP3 here</span>
-                                                                                        <span style={{ fontSize: "10px", color: "#9ca3af" }}>or click to browse</span>
-                                                                                    </label>
                                                                                 )}
 
-                                                                                {cellRecordings.length > 0 && (
-                                                                                    <label style={{ display: "block", marginTop: "6px", fontSize: "12px", color: "#4f46e5", cursor: "pointer", textAlign: "center", fontWeight: "600" }}>
-                                                                                        + Add Variation
-                                                                                        <input
-                                                                                            type="file"
-                                                                                            accept=".mp3,audio/*"
-                                                                                            style={{ display: "none" }}
-                                                                                            onChange={(e) => {
-                                                                                                if (e.target.files[0]) handleUploadRecording(cmv.id, category.id, e.target.files[0]);
-                                                                                                e.target.value = null;
-                                                                                            }}
-                                                                                        />
-                                                                                    </label>
-                                                                                )}
+                                                                                {/* File picker - always visible, supports multiple */}
+                                                                                <label style={{
+                                                                                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                                                                                    padding: "12px", border: "2px dashed #d1d5db", borderRadius: "8px", cursor: "pointer",
+                                                                                    minHeight: (cellRecordings.length > 0 || cellStaged.length > 0) ? "50px" : "60px", textAlign: "center",
+                                                                                    backgroundColor: "#f9fafb", transition: "border-color 0.2s, background-color 0.2s"
+                                                                                }}
+                                                                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#93c5fd'; e.currentTarget.style.backgroundColor = '#eff6ff'; }}
+                                                                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#d1d5db'; e.currentTarget.style.backgroundColor = '#f9fafb'; }}
+                                                                                >
+                                                                                    <input
+                                                                                        type="file"
+                                                                                        accept=".mp3,audio/*"
+                                                                                        multiple
+                                                                                        style={{ display: "none" }}
+                                                                                        onChange={(e) => {
+                                                                                            if (e.target.files && e.target.files.length > 0) {
+                                                                                                handleStageFiles(
+                                                                                                    cmv.id, category.id, e.target.files,
+                                                                                                    cmv.voice_name || `Voice ${cmv.voice_id}`,
+                                                                                                    category.voice_category_name
+                                                                                                );
+                                                                                            }
+                                                                                            e.target.value = null;
+                                                                                        }}
+                                                                                    />
+                                                                                    <span style={{ fontSize: "20px", color: "#9ca3af", marginBottom: "4px" }}>☁️</span>
+                                                                                    <span style={{ fontSize: "12px", color: "#6b7280", fontWeight: "500" }}>Select MP3 files</span>
+                                                                                    <span style={{ fontSize: "10px", color: "#9ca3af" }}>click to browse (multi-select)</span>
+                                                                                </label>
                                                                             </>
                                                                         )}
                                                                     </div>
@@ -1230,6 +1323,10 @@ const AdminVoiceManagement = () => {
                 @keyframes pulse {
                     0%, 100% { opacity: 1; }
                     50% { opacity: 0.5; }
+                }
+                @keyframes uploadPulse {
+                    0%, 100% { box-shadow: 0 4px 14px rgba(22,163,74,0.4); }
+                    50% { box-shadow: 0 4px 24px rgba(22,163,74,0.7); }
                 }
             `}</style>
         </div >
