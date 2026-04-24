@@ -237,7 +237,7 @@ export default function ClientTransferSettings({ isEmbedded }) {
             <i className="bi bi-sliders"></i>
             Transfer Category Settings
           </h1>
-          <p className="page-subtitle">Select the categories that are allowed for transfers in this campaign.</p>
+          <p className="page-subtitle">Determine which call results will be transferred to your team.</p>
           
           {error && <div style={{ color: "#ef4444", marginBottom: "1rem" }}>{error}</div>}
           
