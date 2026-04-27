@@ -717,7 +717,7 @@ const AdminDashboard = () => {
                     <i className="bi bi-check-circle"></i> Calls Forwarded
                   </div>
                   <div style={{ fontSize: "48px", fontWeight: "800", color: "#111827", marginBottom: "16px" }}>
-                    {currentStageData.transferred_to_next}
+                    {currentStageData.forwarded_calls ?? currentStageData.transferred_calls ?? currentStageData.transferred_to_next ?? currentStageData.transferred ?? currentStageData.forwarded ?? currentStageData.transfers ?? 0}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#6b7280", fontSize: "14px" }}>
                     <span style={{ backgroundColor: "#10b981", color: "white", padding: "2px 8px", borderRadius: "4px", fontSize: "12px", fontWeight: "bold" }}>
