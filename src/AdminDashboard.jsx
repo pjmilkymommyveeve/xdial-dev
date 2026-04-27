@@ -659,95 +659,6 @@ const AdminDashboard = () => {
 
       <div className="main-container" style={{ maxWidth: "1800px", margin: "0 auto", padding: "24px 32px" }}>
 
-        {/* Stage Progression Block */}
-        {!stageProgressionLoading && stageProgressionData && stageProgressionData.stages && stageProgressionData.stages.length > 0 && (
-          <div style={{ backgroundColor: "white", borderRadius: "8px", padding: "24px", marginBottom: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-            <h2 style={{ margin: "0 0 20px 0", fontSize: "16px", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px" }}>
-              <i className="bi bi-bar-chart-steps" style={{ color: "#4f46e5" }}></i>
-              Stage Progression
-            </h2>
-            
-            {/* Tabs */}
-            <div style={{ display: "flex", borderBottom: "1px solid #e5e7eb", marginBottom: "24px" }}>
-              {stageProgressionData.stages.map((stage) => (
-                <button
-                  key={stage.stage}
-                  onClick={() => setActiveStage(stage.stage)}
-                  style={{
-                    padding: "12px 24px",
-                    backgroundColor: "transparent",
-                    border: "none",
-                    borderBottom: activeStage === stage.stage ? "2px solid #3b82f6" : "2px solid transparent",
-                    color: activeStage === stage.stage ? "#3b82f6" : "#6b7280",
-                    fontSize: "15px",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    transition: "all 0.2s"
-                  }}
-                >
-                  <i className="bi bi-chat-dots"></i>
-                  Stage {stage.stage}
-                </button>
-              ))}
-            </div>
-
-            {/* Stage Content */}
-            {currentStageData ? (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "24px" }}>
-                
-                {/* Total Calls Card */}
-                <div style={{ border: "1px solid #e5e7eb", borderRadius: "8px", padding: "24px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: "#fff" }}>
-                  <div style={{ color: "#1e3a8a", fontWeight: "700", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <i className="bi bi-telephone-fill"></i> Total Calls
-                  </div>
-                  <div style={{ fontSize: "48px", fontWeight: "800", color: "#111827", marginBottom: "16px" }}>
-                    {currentStageData.total_calls}
-                  </div>
-                  <div style={{ color: "#6b7280", fontSize: "14px" }}>
-                    Stage {currentStageData.stage} interactions
-                  </div>
-                </div>
-
-                {/* Calls Forwarded Card */}
-                <div style={{ border: "1px solid #d1fae5", borderRadius: "8px", padding: "24px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: "#ecfdf5" }}>
-                  <div style={{ color: "#065f46", fontWeight: "700", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <i className="bi bi-check-circle"></i> Calls Forwarded
-                  </div>
-                  <div style={{ fontSize: "48px", fontWeight: "800", color: "#111827", marginBottom: "16px" }}>
-                    {currentStageData.forwarded_calls ?? currentStageData.transferred_calls ?? currentStageData.transferred_to_next ?? currentStageData.transferred ?? currentStageData.forwarded ?? currentStageData.transfers ?? 0}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#6b7280", fontSize: "14px" }}>
-                    <span style={{ backgroundColor: "#10b981", color: "white", padding: "2px 8px", borderRadius: "4px", fontSize: "12px", fontWeight: "bold" }}>
-                      {currentStageData.transfer_rate.toFixed(1)}%
-                    </span>
-                    of stage {currentStageData.stage} calls
-                  </div>
-                </div>
-
-                {/* Calls Dropped Card */}
-                <div style={{ border: "1px solid #fee2e2", borderRadius: "8px", padding: "24px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: "#fef2f2" }}>
-                  <div style={{ color: "#991b1b", fontWeight: "700", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <i className="bi bi-x-circle"></i> Calls Dropped
-                  </div>
-                  <div style={{ fontSize: "48px", fontWeight: "800", color: "#111827", marginBottom: "16px" }}>
-                    {currentStageData.dropped_calls}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#6b7280", fontSize: "14px" }}>
-                    <span style={{ backgroundColor: "#ef4444", color: "white", padding: "2px 8px", borderRadius: "4px", fontSize: "12px", fontWeight: "bold" }}>
-                      {currentStageData.drop_rate.toFixed(1)}%
-                    </span>
-                    of stage {currentStageData.stage} calls
-                  </div>
-                </div>
-
-              </div>
-            ) : null}
-          </div>
-        )}
-
         {/* Search & Filter Section */}
         <div className="search-section" style={{ backgroundColor: "white", borderRadius: "8px", padding: "24px", marginBottom: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
@@ -1250,6 +1161,96 @@ const AdminDashboard = () => {
             </div>
           </div>
         </div>
+
+        {/* Stage Progression Block */}
+        {!stageProgressionLoading && stageProgressionData && stageProgressionData.stages && stageProgressionData.stages.length > 0 && (
+          <div style={{ backgroundColor: "white", borderRadius: "8px", padding: "24px", marginTop: "24px", marginBottom: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+            <h2 style={{ margin: "0 0 20px 0", fontSize: "16px", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px" }}>
+              <i className="bi bi-bar-chart-steps" style={{ color: "#4f46e5" }}></i>
+              Stage Progression
+            </h2>
+            
+            {/* Tabs */}
+            <div style={{ display: "flex", borderBottom: "1px solid #e5e7eb", marginBottom: "24px" }}>
+              {stageProgressionData.stages.map((stage) => (
+                <button
+                  key={stage.stage}
+                  onClick={() => setActiveStage(stage.stage)}
+                  style={{
+                    padding: "12px 24px",
+                    backgroundColor: "transparent",
+                    border: "none",
+                    borderBottom: activeStage === stage.stage ? "2px solid #3b82f6" : "2px solid transparent",
+                    color: activeStage === stage.stage ? "#3b82f6" : "#6b7280",
+                    fontSize: "15px",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    transition: "all 0.2s"
+                  }}
+                >
+                  <i className="bi bi-chat-dots"></i>
+                  Stage {stage.stage}
+                </button>
+              ))}
+            </div>
+
+            {/* Stage Content */}
+            {currentStageData ? (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "24px" }}>
+                
+                {/* Total Calls Card */}
+                <div style={{ border: "1px solid #e5e7eb", borderRadius: "8px", padding: "24px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: "#fff" }}>
+                  <div style={{ color: "#1e3a8a", fontWeight: "700", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <i className="bi bi-telephone-fill"></i> Total Calls
+                  </div>
+                  <div style={{ fontSize: "48px", fontWeight: "800", color: "#111827", marginBottom: "16px" }}>
+                    {currentStageData.total_calls}
+                  </div>
+                  <div style={{ color: "#6b7280", fontSize: "14px" }}>
+                    Stage {currentStageData.stage} interactions
+                  </div>
+                </div>
+
+                {/* Calls Forwarded Card */}
+                <div style={{ border: "1px solid #d1fae5", borderRadius: "8px", padding: "24px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: "#ecfdf5" }}>
+                  <div style={{ color: "#065f46", fontWeight: "700", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <i className="bi bi-check-circle"></i> Calls Forwarded
+                  </div>
+                  <div style={{ fontSize: "48px", fontWeight: "800", color: "#111827", marginBottom: "16px" }}>
+                    {currentStageData.forwarded_calls ?? currentStageData.transferred_calls ?? currentStageData.transferred_to_next ?? currentStageData.transferred ?? currentStageData.forwarded ?? currentStageData.transfers ?? 0}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#6b7280", fontSize: "14px" }}>
+                    <span style={{ backgroundColor: "#10b981", color: "white", padding: "2px 8px", borderRadius: "4px", fontSize: "12px", fontWeight: "bold" }}>
+                      {currentStageData.transfer_rate.toFixed(1)}%
+                    </span>
+                    of stage {currentStageData.stage} calls
+                  </div>
+                </div>
+
+                {/* Calls Dropped Card */}
+                <div style={{ border: "1px solid #fee2e2", borderRadius: "8px", padding: "24px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: "#fef2f2" }}>
+                  <div style={{ color: "#991b1b", fontWeight: "700", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <i className="bi bi-x-circle"></i> Calls Dropped
+                  </div>
+                  <div style={{ fontSize: "48px", fontWeight: "800", color: "#111827", marginBottom: "16px" }}>
+                    {currentStageData.dropped_calls}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#6b7280", fontSize: "14px" }}>
+                    <span style={{ backgroundColor: "#ef4444", color: "white", padding: "2px 8px", borderRadius: "4px", fontSize: "12px", fontWeight: "bold" }}>
+                      {currentStageData.drop_rate.toFixed(1)}%
+                    </span>
+                    of stage {currentStageData.stage} calls
+                  </div>
+                </div>
+
+              </div>
+            ) : null}
+          </div>
+        )}
+
       </div>
 
       <link
