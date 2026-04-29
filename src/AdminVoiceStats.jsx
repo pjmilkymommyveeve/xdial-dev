@@ -14,6 +14,15 @@ const AdminVoiceStats = () => {
   const [endDate, setEndDate] = useState("");
   const [expandedCampaignIds, setExpandedCampaignIds] = useState([]);
 
+  // Transferred call voice stats (new section)
+  const [transferredCampaignId, setTransferredCampaignId] = useState("");
+  const [transferredStartDate, setTransferredStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [transferredEndDate, setTransferredEndDate] = useState("");
+  const [transferredFormat, setTransferredFormat] = useState("json"); // json | csv
+  const [transferredLoading, setTransferredLoading] = useState(false);
+  const [transferredError, setTransferredError] = useState(null);
+  const [transferredStatus, setTransferredStatus] = useState(null);
+
   // Sort state
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
@@ -29,6 +38,77 @@ const AdminVoiceStats = () => {
   const callsChartInstance = useRef(null);
   const transfersChartInstance = useRef(null);
   const abortControllerRef = useRef(null);
+
+  const toYYYYMMDD = (dateStr) => {
+    if (!dateStr) return "";
+    // Accept either YYYY-MM-DD or YYYYMMDD (or anything with dashes).
+    return String(dateStr).replaceAll("-", "");
+  };
+
+  const downloadBlob = (blob, filename) => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const fetchTransferredCallVoiceStats = async () => {
+    setTransferredLoading(true);
+    setTransferredError(null);
+    setTransferredStatus(null);
+
+    const campaignId = String(transferredCampaignId || "").trim();
+    if (!campaignId) {
+      setTransferredLoading(false);
+      setTransferredError("Campaign ID is required.");
+      return;
+    }
+
+    try {
+      const params = {
+        start_date: toYYYYMMDD(transferredStartDate),
+        format: transferredFormat,
+      };
+      const endDate = toYYYYMMDD(transferredEndDate);
+      if (endDate) params.end_date = endDate;
+
+      if (transferredFormat === "csv") {
+        const response = await api.get(`/transferred-calls/campaign/${campaignId}`, {
+          params,
+          responseType: "blob",
+          timeout: 180000,
+          headers: { accept: "application/octet-stream" },
+        });
+
+        const cd = response.headers?.["content-disposition"] || "";
+        const match = cd.match(/filename\*?=(?:UTF-8'')?("?)([^"]+)\1/i);
+        const filename = match?.[2] || `transferred-calls-campaign-${campaignId}-${params.start_date || "start"}.zip`;
+
+        downloadBlob(response.data, filename);
+        setTransferredStatus(`Download started: ${filename}`);
+      } else {
+        await api.get(`/transferred-calls/campaign/${campaignId}`, {
+          params,
+          timeout: 180000,
+        });
+        setTransferredStatus("Fetched successfully.");
+      }
+    } catch (err) {
+      console.error("❌ Error fetching transferred call voice stats:", err);
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.detail ||
+        err.message ||
+        "Failed to fetch transferred call voice stats";
+      setTransferredError(msg);
+    } finally {
+      setTransferredLoading(false);
+    }
+  };
 
   const fetchStats = async () => {
     if (abortControllerRef.current) {
@@ -1131,6 +1211,170 @@ const AdminVoiceStats = () => {
             )}
           </>
         )}
+
+        {/* Transferred Call Voice Stats (new) */}
+        <div style={{
+          backgroundColor: "white",
+          borderRadius: "12px",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+          overflow: "hidden",
+          marginTop: "24px"
+        }}>
+          <div style={{
+            padding: "20px",
+            borderBottom: "1px solid #e5e7eb",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px"
+          }}>
+            <div>
+              <h2 style={{ fontSize: "18px", fontWeight: "700", color: "#111827", margin: 0 }}>
+                Transferred Call Voice Stats
+              </h2>
+              <div style={{ marginTop: "6px", fontSize: "13px", color: "#6b7280", lineHeight: 1.4 }}>
+                Returns a ZIP containing all calls with durations, 15 minute plus and 20 minute plus calls.
+              </div>
+            </div>
+
+            <button
+              onClick={fetchTransferredCallVoiceStats}
+              disabled={transferredLoading}
+              style={{
+                padding: "10px 14px",
+                borderRadius: "8px",
+                border: "none",
+                backgroundColor: transferredLoading ? "#9ca3af" : "#4f46e5",
+                color: "white",
+                fontWeight: "700",
+                cursor: transferredLoading ? "not-allowed" : "pointer",
+                minWidth: "120px"
+              }}
+            >
+              {transferredLoading ? "Running..." : "Run"}
+            </button>
+          </div>
+
+          <div style={{ padding: "20px" }}>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "16px",
+              alignItems: "end"
+            }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "12px", color: "#6b7280", fontWeight: "700" }}>Campaign ID</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 256"
+                  value={transferredCampaignId}
+                  onChange={(e) => setTransferredCampaignId(e.target.value)}
+                  style={{
+                    padding: "10px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid #d1d5db",
+                    fontSize: "14px",
+                    outline: "none",
+                    color: "#374151",
+                    height: "40px",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "12px", color: "#6b7280", fontWeight: "700" }}>Start Date</label>
+                <input
+                  type="date"
+                  value={transferredStartDate}
+                  onChange={(e) => setTransferredStartDate(e.target.value)}
+                  style={{
+                    padding: "10px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid #d1d5db",
+                    fontSize: "14px",
+                    outline: "none",
+                    color: "#374151",
+                    height: "40px",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "12px", color: "#6b7280", fontWeight: "700" }}>End Date</label>
+                <input
+                  type="date"
+                  value={transferredEndDate}
+                  onChange={(e) => setTransferredEndDate(e.target.value)}
+                  style={{
+                    padding: "10px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid #d1d5db",
+                    fontSize: "14px",
+                    outline: "none",
+                    color: "#374151",
+                    height: "40px",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "12px", color: "#6b7280", fontWeight: "700" }}>Format</label>
+                <select
+                  value={transferredFormat}
+                  onChange={(e) => setTransferredFormat(e.target.value)}
+                  style={{
+                    padding: "10px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid #d1d5db",
+                    fontSize: "14px",
+                    outline: "none",
+                    color: "#374151",
+                    height: "40px",
+                    boxSizing: "border-box",
+                    backgroundColor: "white"
+                  }}
+                >
+                  <option value="json">json</option>
+                  <option value="csv">csv (ZIP)</option>
+                </select>
+              </div>
+            </div>
+
+            {transferredError && (
+              <div style={{
+                marginTop: "16px",
+                backgroundColor: "#fef2f2",
+                border: "1px solid #fecaca",
+                color: "#991b1b",
+                padding: "12px 14px",
+                borderRadius: "10px",
+                fontSize: "13px",
+                fontWeight: "600"
+              }}>
+                ⚠️ {transferredError}
+              </div>
+            )}
+
+            {transferredStatus && !transferredError && (
+              <div style={{
+                marginTop: "16px",
+                backgroundColor: "#ecfdf5",
+                border: "1px solid #a7f3d0",
+                color: "#065f46",
+                padding: "12px 14px",
+                borderRadius: "10px",
+                fontSize: "13px",
+                fontWeight: "700"
+              }}>
+                {transferredStatus}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <style>{`
