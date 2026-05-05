@@ -18,7 +18,7 @@ const AdminVoiceStats = () => {
   const [transferredCampaignId, setTransferredCampaignId] = useState("");
   const [transferredStartDate, setTransferredStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [transferredEndDate, setTransferredEndDate] = useState("");
-  const [transferredFormat, setTransferredFormat] = useState("json"); // json | csv
+  const [transferredFormat, setTransferredFormat] = useState("csv"); // json | csv
   const [transferredLoading, setTransferredLoading] = useState(false);
   const [transferredError, setTransferredError] = useState(null);
   const [transferredStatus, setTransferredStatus] = useState(null);
@@ -1338,7 +1338,6 @@ const AdminVoiceStats = () => {
                     backgroundColor: "white"
                   }}
                 >
-                  <option value="json">json</option>
                   <option value="csv">csv (ZIP)</option>
                 </select>
               </div>
