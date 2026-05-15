@@ -25,7 +25,7 @@ const AdminKeywordTester = () => {
             .catch(err => console.error('Failed to load campaigns:', err));
 
         // Fetch categories
-        api.get('/response-categories/')
+        api.get('/response-categories/basic')
             .then(res => {
                 if (res.data && res.data.categories) {
                     setCategories(res.data.categories);
