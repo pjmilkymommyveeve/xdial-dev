@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, createContext, useContext } from 'r
 import { Outlet } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
 
-// Create Context for Admin State (WebSocket data)
 const AdminContext = createContext(null);
 
 export const useAdminContext = () => {
@@ -17,10 +16,19 @@ const AdminLayout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [connected, setConnected] = useState(false);
     const [agents, setAgents] = useState({});
+    const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
 
-    // WebSocket Logic
     const wsRef = useRef(null);
     const reconnectTimeoutRef = useRef(null);
+
+
+    useEffect(() => {
+    if (darkMode) {
+        document.body.classList.add('dark');
+    } else {
+        document.body.classList.remove('dark');
+    }
+    }, [darkMode]);
 
     useEffect(() => {
         connectWebSocket();
@@ -78,7 +86,6 @@ const AdminLayout = () => {
         wsRef.current = ws;
     };
 
-    // Agent cleanup interval
     useEffect(() => {
         const interval = setInterval(() => {
             const now = Date.now();
@@ -100,21 +107,36 @@ const AdminLayout = () => {
 
     const agentList = Object.values(agents);
 
-    return (
-        <AdminContext.Provider value={{ agents, connected, agentCount: agentList.length }}>
-            <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f9fafb', fontFamily: 'Arial, sans-serif' }}>
-                <AdminSidebar
-                    isOpen={isSidebarOpen}
-                    toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-                    connected={connected}
-                    agentCount={agentList.length}
-                />
-                <div style={{ flex: 1, height: '100vh', overflowY: 'auto', position: 'relative' }}>
-                    <Outlet context={{ isSidebarOpen }} />
-                </div>
+    const toggleDarkMode = () => {
+        setDarkMode(prev => {
+            localStorage.setItem('darkMode', !prev);
+            return !prev;
+        });
+    };
+
+return (
+    <AdminContext.Provider value={{ agents, connected, agentCount: agentList.length, darkMode }}>
+        <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: darkMode ? '#0f172a' : '#f9fafb', fontFamily: 'Arial, sans-serif' }}>
+            <AdminSidebar
+                isOpen={isSidebarOpen}
+                toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                connected={connected}
+                agentCount={agentList.length}
+                darkMode={darkMode}
+                toggleDarkMode={toggleDarkMode}
+            />
+            <div style={{ 
+                flex: 1, 
+                height: '100vh', 
+                overflowY: 'auto', 
+                position: 'relative',
+                filter: darkMode ? 'invert(1) hue-rotate(180deg)' : 'none'
+            }}>
+                <Outlet context={{ isSidebarOpen }} />
             </div>
-        </AdminContext.Provider>
-    );
+        </div>
+    </AdminContext.Provider>
+);
 };
 
 export default AdminLayout;
